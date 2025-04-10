@@ -9,6 +9,9 @@ namespace VM {
         LOADK,      // Load constant: R(A) = K(Bx)
         LOADNULL,   // Load nil: R(A) through R(A+B) = null
         MOVE,       // Assign: R(A) = R(B)
+        ADD,        // R(A) + RK(B) + RK(C)
+        EQ,         // skip next instruction if (RK(B) == RK(C)) equals R(A)
+        JMP         // pc += B (instead of usual pc++); A currently unused
     }
 
     public class Instruction
@@ -38,6 +41,8 @@ namespace VM {
         public List<Value> constants = new List<Value>();
         public List<Value> registers = new List<Value>();
         public int pc = 0;
+        
+        public const int regLimit = 250;   // starting here, RK operands access constants instead of registers
 
         public void AddInstruction(Instruction instruction)
         {
@@ -87,6 +92,29 @@ namespace VM {
                     registers[instruction.A] = registers[instruction.B];
                     pc++;
                     break;
+                case OpCode.ADD:
+                    {
+                        Value b = instruction.B < regLimit ? registers[instruction.B] : constants[instruction.B - regLimit];
+                        Value c = instruction.C < regLimit ? registers[instruction.C] : constants[instruction.C - regLimit];
+                        registers[instruction.A] = b + c;
+                        pc++;
+                    } break;
+                case OpCode.EQ:
+                    {
+                        Value b = instruction.B < regLimit ? registers[instruction.B] : constants[instruction.B - regLimit];
+                        Value c = instruction.C < regLimit ? registers[instruction.C] : constants[instruction.C - regLimit];
+                        if ((b == c ? 1 : 0) != instruction.A) pc++;
+                        // Note: The Lua VM actually assumes the next instruction is a JMP, and handles that
+                        // case immediately (in the same machine cycle).  We're not doing that (yet).
+                        pc++;
+                    }
+                    break;
+                case OpCode.JMP:
+                    // Note: Lua uses opcode A to control closing upvalues.
+                    // That's not a thing for us (yet).
+                    pc += instruction.B;
+                    break;
+
                 default:
                     throw new Exception("Unknown instruction: " + instruction.opcode);
             }

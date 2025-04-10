@@ -13,9 +13,12 @@
 
 ### 10 Apr 2025
 
-Well, it's a start.  We have just three instructions: LOADK, LOADNIL, and MOVE.  With these we can run a program
-equivalent to `a = 42; b = a`, stepping through one instruction at a time and dumping the machine state.
+We have a simple VM with a handful of instructions; enough to load constants into registers, do addition with them,
+test for equality, and jump (conditional or unconditional).  We can poke a program into the machine, and step through
+the execution one instruction at a time, printing the machine state on each step.
 
-The next step should probably be to add JUMP and IF, which should be enough to write the _sum_ and _fib_ functions (reading the result directly out of the final register).
+We've implemented the _sum_ demo; still need to do _fib_ (iterative Fibonacci).
 
 I might like to also improve the machine state display a bit, printing registers and constants next to each other in two columns, just to make it neater and easier to read.  We should also start thinking about a better assembly language format.
+What we have right now is a very direct translation of the instruction format, but we could be slightly less direct and
+make it a lot easier to read and write.
