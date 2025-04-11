@@ -46,27 +46,35 @@ namespace VM {
         
         public const int regLimit = 250;   // starting here, RK operands access constants instead of registers
 
-        public void AddInstruction(Instruction instruction)
-        {
+        public void AddInstruction(Instruction instruction) {
             instructions.Add(instruction);
         }
 
-        public void PrintState(int contextLines = 10)
-        {
+        void PrintTwoColumns(string col1, string col2) {
+            const string spaces = "                                        ";  // width of col1
+            int w = spaces.Length;
+            if (col1.Length > 40) col1 = col1.Substring(0, w-1) + "…";
+            else col1 = col1 + spaces.Substring(0, w - col1.Length);
+            Console.WriteLine(col1 + col2);
+        }
+
+        public void PrintState(int contextLines = 10) {
             Console.WriteLine("--- VM State ---");
             int firstLine = Math.Max(0, pc - contextLines / 2);
             int lastLine = Math.Min(instructions.Count - 1, pc + contextLines / 2);
 
-            for (int i = firstLine; i <= lastLine; i++) {
+            int i;
+            for (i = firstLine; i <= lastLine; i++) {
                 Console.WriteLine((i == pc ? "-->" : "   ") + $" {i}: {instructions[i]}");
             }
-            Console.WriteLine($"Registers ({registers.Count}): ");
-            for (int i = 0; i < registers.Count; i++) {
-                Console.WriteLine($"  R{i}: {registers[i]}");
-            }
-            Console.WriteLine($"Constants ({constants.Count}): ");
-            for (int i = 0; i < constants.Count; i++) { 
-                Console.WriteLine($"  K{i}: {constants[i]}");
+            PrintTwoColumns($"Registers ({registers.Count}):", $"Constants ({constants.Count}):");
+            i = 0;
+            while (true) {
+                if (i >= registers.Count && i >= constants.Count) break;
+                string r = (i < registers.Count ? $"  R{i}: {registers[i]}": "");
+                string k = (i < constants.Count ? $"  K{i}: {constants[i]}": "");
+                PrintTwoColumns(r, k);
+                i++;
             }
         }
 

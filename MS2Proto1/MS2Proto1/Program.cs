@@ -6,7 +6,6 @@ namespace MS2Proto1
 {
     class Program
     {
-
         static void Load42(VM.VM vm) {
             // Program to add 40 + 2 (using two variables, just for the sake of it)
             vm.constants.Add(new Value(40));

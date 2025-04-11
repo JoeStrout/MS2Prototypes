@@ -21,6 +21,6 @@ We've implemented the _sum_ demo and _fib_ demos.
 
 So, the next big step is function calls, and the _rfib_ test program.
 
-I might like to also improve the machine state display a bit, printing registers and constants next to each other in two columns, just to make it neater and easier to read.  We should also start thinking about a better assembly language format.
+We should also start thinking about a better assembly language format.
 What we have right now is a very direct translation of the instruction format, but we could be slightly less direct and
 make it a lot easier to read and write.
