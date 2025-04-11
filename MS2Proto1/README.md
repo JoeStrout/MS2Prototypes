@@ -24,3 +24,18 @@ So, the next big step is function calls, and the _rfib_ test program.
 We should also start thinking about a better assembly language format.
 What we have right now is a very direct translation of the instruction format, but we could be slightly less direct and
 make it a lot easier to read and write.
+
+
+### 11 Apr 2025
+
+Added support for function calls, and implemented _rfib_.  Seems to work.
+
+In this prototype, function code lives in the same VM instruction list as the global code.  Functions are not
+first-class objects.  In the next prototype, let's tackle that: we need a function datatype that either contains
+the code, or knows where in the machine instruction set the code lives.
+
+We should also start thinking about lists and maps — especially maps, and how we're going to index into them,
+and how this relates to locals which can be accessed via the `locals` map while still being stored in registers.
+
+Or, maybe the next prototype just improves the assembly format and gives us a mini-assembler we can work in
+interactively.
