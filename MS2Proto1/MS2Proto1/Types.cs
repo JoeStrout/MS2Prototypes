@@ -1,3 +1,5 @@
+using System;
+
 namespace Types {
 
     public enum ValueType {
@@ -51,6 +53,19 @@ namespace Types {
             throw new Exception("Not implemented");
         }
 
+        public static Value operator -(Value a, Value b) {
+            if (a.type == ValueType.Null || b.type == ValueType.Null) return Null;
+            if (a.type == ValueType.Number) {
+                return new Value((double)a.value - (double)b.value);
+            } else if (a.type == ValueType.String) {
+                string astr = (string)a.value;
+                string bstr = (string)b.value;
+                if (astr.EndsWith(bstr)) astr = astr.Substring(0, astr.Length - bstr.Length);
+                return new Value(astr);
+            }
+            throw new Exception("Not implemented");
+        }
+
         public static bool operator ==(Value a, Value b) {
             if (a.type != b.type) return false;
             if (a.type == ValueType.Number) {
@@ -58,6 +73,8 @@ namespace Types {
                 return diff < 1E-16;
             } else if (a.type == ValueType.String) {
                 return (string)a.value == (string)b.value;
+            } else if (a.type == ValueType.Null) {
+                return true;    // (since we already know they're the same type)
             }
             return false;
         }
@@ -65,6 +82,27 @@ namespace Types {
         public static bool operator !=(Value a, Value b) {
             return !(a == b);
         }
+
+        public static bool operator <(Value a, Value b) {
+            if (a.type != b.type) return false;
+            if (a.type == ValueType.Number) {
+                return (double)a.value < (double)b.value;
+            } else if (a.type == ValueType.String) {
+                return string.Compare((string)a.value, (string)b.value, StringComparison.InvariantCulture) < 0;
+            }
+            return false;
+        }
+
+        public static bool operator >(Value a, Value b) {
+            if (a.type != b.type) return false;
+            if (a.type == ValueType.Number) {
+                return (double)a.value > (double)b.value;
+            } else if (a.type == ValueType.String) {
+                return string.Compare((string)a.value, (string)b.value, StringComparison.InvariantCulture) > 0;
+            }
+            return false;
+        }
+
 
     }
 }

@@ -9,8 +9,10 @@ namespace VM {
         LOADK,      // Load constant: R(A) = K(Bx)
         LOADNULL,   // Load nil: R(A) through R(A+B) = null
         MOVE,       // Assign: R(A) = R(B)
-        ADD,        // R(A) + RK(B) + RK(C)
+        ADD,        // R(A) = RK(B) + RK(C)
+        SUB,        // R(A) = RK(B) - RK(C)
         EQ,         // skip next instruction if (RK(B) == RK(C)) equals R(A)
+        LT,         // skip next instruction if (RK(B) < RK(C)) equals R(A)
         JMP         // pc += B (instead of usual pc++); A currently unused
     }
 
@@ -99,11 +101,28 @@ namespace VM {
                         registers[instruction.A] = b + c;
                         pc++;
                     } break;
+                case OpCode.SUB:
+                    {
+                        Value b = instruction.B < regLimit ? registers[instruction.B] : constants[instruction.B - regLimit];
+                        Value c = instruction.C < regLimit ? registers[instruction.C] : constants[instruction.C - regLimit];
+                        registers[instruction.A] = b - c;
+                        pc++;
+                    } break;
                 case OpCode.EQ:
                     {
                         Value b = instruction.B < regLimit ? registers[instruction.B] : constants[instruction.B - regLimit];
                         Value c = instruction.C < regLimit ? registers[instruction.C] : constants[instruction.C - regLimit];
                         if ((b == c ? 1 : 0) != instruction.A) pc++;
+                        // Note: The Lua VM actually assumes the next instruction is a JMP, and handles that
+                        // case immediately (in the same machine cycle).  We're not doing that (yet).
+                        pc++;
+                    }
+                    break;
+                case OpCode.LT:
+                    {
+                        Value b = instruction.B < regLimit ? registers[instruction.B] : constants[instruction.B - regLimit];
+                        Value c = instruction.C < regLimit ? registers[instruction.C] : constants[instruction.C - regLimit];
+                        if ((b < c ? 1 : 0) != instruction.A) pc++;
                         // Note: The Lua VM actually assumes the next instruction is a JMP, and handles that
                         // case immediately (in the same machine cycle).  We're not doing that (yet).
                         pc++;

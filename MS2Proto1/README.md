@@ -17,7 +17,9 @@ We have a simple VM with a handful of instructions; enough to load constants int
 test for equality, and jump (conditional or unconditional).  We can poke a program into the machine, and step through
 the execution one instruction at a time, printing the machine state on each step.
 
-We've implemented the _sum_ demo; still need to do _fib_ (iterative Fibonacci).
+We've implemented the _sum_ demo and _fib_ demos.
+
+So, the next big step is function calls, and the _rfib_ test program.
 
 I might like to also improve the machine state display a bit, printing registers and constants next to each other in two columns, just to make it neater and easier to read.  We should also start thinking about a better assembly language format.
 What we have right now is a very direct translation of the instruction format, but we could be slightly less direct and
