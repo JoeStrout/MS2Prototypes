@@ -6,6 +6,11 @@ bin
 *.so
 *.dylib
 *.dll
+
+# Executables
 *.exe
-fib_nanbox
 *_nanbox
+*_classic
+
+# Claude Code settings
+.claude/
