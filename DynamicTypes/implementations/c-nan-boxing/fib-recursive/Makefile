@@ -5,7 +5,7 @@ SOURCE = fib.c
 
 all: $(TARGET)
 
-$(TARGET): $(SOURCE) nanbox.h
+$(TARGET): $(SOURCE) ../nanbox.h
 	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCE)
 
 clean:

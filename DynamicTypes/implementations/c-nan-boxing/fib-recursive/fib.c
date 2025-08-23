@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <time.h>
-#include "nanbox.h"
+#include "../nanbox.h"
 
 Value rfib(Value n_val) {
     if (!is_int(n_val)) {
