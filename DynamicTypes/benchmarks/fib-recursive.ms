@@ -11,7 +11,7 @@ runBenchmark = function(n=30)
 	t0 = time
 	x = rfib(n)
 	t1 = time
-	print "rfib(" + n + ") time: " + round(t1 - t0, 3)
+	print "rfib(" + n + ") = " + x + ", time: " + round(t1 - t0, 3) + " seconds"
 	results["rfib(" + n + ")"] = round(t1 - t0, 3)
 end function
 

@@ -1,2 +1,11 @@
 obj
 bin
+
+# C/C++ build products
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+fib_nanbox
+*_nanbox
