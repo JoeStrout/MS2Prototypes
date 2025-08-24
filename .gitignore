@@ -15,3 +15,6 @@ example_shadow_stack
 
 # Claude Code settings
 .claude/
+
+# Geany project file
+*.geany
