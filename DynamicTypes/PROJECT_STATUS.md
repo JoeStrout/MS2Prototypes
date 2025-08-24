@@ -137,9 +137,39 @@ To make the MiniScript C++ code compile standalone, these modifications were mad
 Of course these results are preliminary, on limited benchmarks, and not really fair since the C NaN Boxing implementation leaks all allocated memory, and doesn't have any Unicode support.  But it does provide a sort of upper bound on what performance could possibly be.
 
 ## Next Steps / Future Work
-- **Add memory manager** with garbage collection for strings/lists (and later, maps)
+
+### Refinements to current code
+
+The current memory manager/GC in c-nan-boxing was the result of some late-night hacking.  It works, but is probably not ideal.  We will want to try a few things:
+
+- **Go back to storing `Value*` instead of `Value` in the root lists**, so that we can simply protect (register with GC) every local Value in a function, even before assigning it any actual value; and then if it is overwritten within the function, we don't have to tell GC about it.
+- **Embrace the shadow stack**: clarify our paradigm of making a stack of (pointers to) local variables in GC that shadow (mirror) the actual C call stack.  But I do think this means that each expression must allocate no more than once; more complex expressions must be broken up to use locals, so that we never have a value held only in a register when an allocation is made.
+- **Don't worry about protecting return values (GC_POP_SCOPE_AND_RETURN) by defining that GC collection can only happen at safe points: allocation, or explicit gc_collect calls.  Therefore it can't happen when a value is being returned.
+- **Have an aggressive-collect mode** (compiler flag) that causes GC to collect on _every_ allocation... and have the deallocator overwrite blocks with garbage when it deallocates.  These should help us discover if we have missed any edge cases.
+
+All that should get us to a point where the current simple GC system is really solid.  
+
+### Performance enhancements
+
+Once the existing code is solid, we'll want to make a c-nan-boxing-v2 and c-nan-boxing-v3 that add some likely performance enhancements:
+
+1. Add a "tiny string" type, for strings whose content is small enough (in bytes) to fit within the NaN box.  These should dramatically decrease GC thrashing on string code.  But we need to make the String vs. TinyString difference transparent to user code.
+2. Add interning for (non-tiny) strings.
+
+### Extending functionality
+
+- **Add Unicode support** to our string code (based on UnicodeUtil in the C++ code)
 - **Add more benchmarks** from the MiniScript benchmark suite
 - **Create additional type system implementations** (e.g. maps.)
+
+### Consider other GC strategies
+
+The world of GC is complex, and we've barely scratched the surface.  At some point we'll want to consider:
+
+- **Handles** to enable a "moving" GC (moves allocations around to stay compact)
+- **Generations** to distinguish short-lived temps from longer-lived allocations
+- **Incremental GC** rather than STW (Stop The World) collection
+
 
 ## Usage Notes
 - Run `make` in any implementation directory to build

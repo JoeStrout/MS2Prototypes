@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-#include "../nanbox.h"
+#include "../nanbox_gc.h"
 
 // Global word arrays - equivalent to MiniScript's split arrays
 Value singles;
@@ -15,23 +15,47 @@ void initializeWordArrays() {
     // singles = " one two three four five six seven eight nine ".split
     Value singles_str = make_string(" one two three four five six seven eight nine ");
     Value space = make_string(" ");
+    GC_PROTECT(singles_str);
+    GC_PROTECT(space);
     singles = string_split(singles_str, space);
+    GC_PROTECT(singles);
     
     // teens = "ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen ".split
     Value teens_str = make_string("ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen ");
+    GC_PROTECT(teens_str);
     teens = string_split(teens_str, space);
+    GC_PROTECT(teens);
     
     // tys = "  twenty thirty forty fifty sixty seventy eighty ninety".split
     Value tys_str = make_string("  twenty thirty forty fifty sixty seventy eighty ninety");
+    GC_PROTECT(tys_str);
     tys = string_split(tys_str, space);
+    GC_PROTECT(tys);
     
     // ions = "thousand million billion".split
     Value ions_str = make_string("thousand million billion");
+    GC_PROTECT(ions_str);
     ions = string_split(ions_str, space);
+    GC_PROTECT(ions);
+    
+    // Clean up temporary strings but KEEP the global arrays protected for the entire program
+    GC_UNPROTECT(); // ions_str
+    GC_UNPROTECT(); // tys_str
+    GC_UNPROTECT(); // teens_str
+    GC_UNPROTECT(); // space
+    GC_UNPROTECT(); // singles_str
+    // NOTE: singles, teens, tys, ions remain protected and should not be unprotected
 }
 
 Value numberToText(long n) {
-    if (n == 0) return make_string("zero");
+    GC_PUSH_SCOPE();
+    gc_disable();  // Enter critical section - no GC during complex string operations
+    
+    if (n == 0) {
+        Value result = make_string("zero");
+        gc_enable();   // Exit critical section
+        GC_POP_SCOPE_AND_RETURN(result);
+    }
     
     long a = labs(n);
     Value r = make_string("");  // result
@@ -99,23 +123,33 @@ Value numberToText(long n) {
     int end = len - 1;
     while (end >= 0 && r_str[end] == ' ') end--;
     
+    Value result;
     if (start <= end) {
         char* trimmed = malloc(end - start + 2);
         strncpy(trimmed, r_str + start, end - start + 1);
         trimmed[end - start + 1] = '\0';
-        Value result = make_string(trimmed);
+        result = make_string(trimmed);
         free(trimmed);
-        return result;
     } else {
-        return make_string("");
+        result = make_string("");
     }
+    gc_enable();   // Exit critical section
+    GC_POP_SCOPE_AND_RETURN(result);
 }
 
 long textToNumber(Value s) {
-    if (!is_string(s)) return 0;
+    gc_disable();  // Enter critical section - no GC during complex string operations
+    
+    if (!is_string(s)) {
+        gc_enable();   // Exit critical section
+        return 0;
+    }
     
     Value zero_str = make_string("zero");
-    if (string_equals(s, zero_str)) return 0;
+    if (string_equals(s, zero_str)) {
+        gc_enable();   // Exit critical section
+        return 0;
+    }
     
     // Replace hyphens with spaces and split
     Value hyphen = make_string("-");
@@ -189,6 +223,7 @@ long textToNumber(Value s) {
     result += ionVal;
     if (negative) result = -result;
     
+    gc_enable();   // Exit critical section
     return result;
 }
 
@@ -203,11 +238,13 @@ void runBenchmark(long n) {
     
     for (long i = 0; i < n; i++) {
         Value s = numberToText(i);
+        // s is already protected by numberToText scope system
         long i2 = textToNumber(s);
         if (i2 != i) {
             printf("Oops! Failed on %ld:\n", i);
             printf("'%s' --> %ld\n", as_cstring(s), i2);
         }
+        GC_UNPROTECT(); // s from numberToText
     }
     
     double t1 = get_time();
@@ -225,27 +262,43 @@ void runCorrectnessTests() {
     for (int i = 0; i < numTests; i++) {
         long n = testNumbers[i];
         Value words = numberToText(n);
+        // words is already protected by numberToText scope system
         long backToNum = textToNumber(words);
         
         printf("%ld: %s -> %ld", n, as_cstring(words), backToNum);
         if (backToNum != n) {
             printf(" ERROR --^");
+            GC_UNPROTECT(); // words from numberToText
             return;
         }
         printf("\n");
+        GC_UNPROTECT(); // words from numberToText
     }
 }
 
 int main() {
-    printf("NaN Boxing NumberWords Benchmark\n");
-    printf("================================\n\n");
+    printf("NaN Boxing NumberWords Benchmark (with GC)\n");
+    printf("==========================================\n\n");
     
+    // Initialize garbage collector
+    gc_init();
+    
+    printf("Before initialization: %zu bytes allocated\n", gc.bytes_allocated);
     initializeWordArrays();
+    printf("After initialization: %zu bytes allocated\n", gc.bytes_allocated);
     
     runCorrectnessTests();
+    printf("After correctness tests: %zu bytes allocated\n", gc.bytes_allocated);
     printf("\n");
     
     runBenchmark(10000);
+    
+    printf("After benchmark: %zu bytes allocated\n", gc.bytes_allocated);
+    gc_collect();  // Force final collection
+    printf("After final GC: %zu bytes remaining\n", gc.bytes_allocated);
+    
+    // Shutdown garbage collector
+    gc_shutdown();
     
     return 0;
 }

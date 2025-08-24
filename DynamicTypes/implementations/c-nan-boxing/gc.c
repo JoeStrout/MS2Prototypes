@@ -1,0 +1,199 @@
+#include "nanbox_gc.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+
+// All type definitions and inline functions now come from nanbox_gc.h
+
+// Global GC instance
+GC gc = {0};
+
+void gc_init(void) {
+    gc.all_objects = NULL;
+    gc.root_set.roots = malloc(sizeof(Value) * 64);  // Array of Values, not Value*
+    gc.root_set.count = 0;
+    gc.root_set.capacity = 64;
+    gc.scope_count = 0;
+    gc.bytes_allocated = 0;
+    gc.gc_threshold = 1024 * 1024;  // 1MB initial threshold
+    gc.disable_count = 0;
+}
+
+void gc_shutdown(void) {
+    // Force final collection to clean up everything
+    gc_collect();
+    
+    // Free any remaining objects (shouldn't be any)
+    GCObject* obj = gc.all_objects;
+    while (obj) {
+        GCObject* next = obj->next;
+        free(obj);
+        obj = next;
+    }
+    
+    // Free root set
+    free(gc.root_set.roots);
+    memset(&gc, 0, sizeof(gc));
+}
+
+void gc_push_value(Value val) {
+    if (gc.root_set.count >= gc.root_set.capacity) {
+        gc.root_set.capacity *= 2;
+        gc.root_set.roots = realloc(gc.root_set.roots, 
+                                   sizeof(Value) * gc.root_set.capacity);
+    }
+    gc.root_set.roots[gc.root_set.count++] = val;
+}
+
+void gc_pop_value(void) {
+    assert(gc.root_set.count > 0);
+    gc.root_set.count--;
+}
+
+void gc_push_scope(void) {
+    assert(gc.scope_count < 64);
+    gc.scope_stack[gc.scope_count].start_index = gc.root_set.count;
+    gc.scope_count++;
+}
+
+void gc_pop_scope(void) {
+    assert(gc.scope_count > 0);
+    gc.scope_count--;
+    int start = gc.scope_stack[gc.scope_count].start_index;
+    
+    // Unprotect everything added in this scope - just reset count directly
+    gc.root_set.count = start;
+}
+
+void gc_disable(void) {
+    gc.disable_count++;
+}
+
+void gc_enable(void) {
+    assert(gc.disable_count > 0);
+    gc.disable_count--;
+}
+
+void* gc_allocate(size_t size) {
+    // Add space for GC header
+    size_t total_size = sizeof(GCObject) + size;
+    GCObject* obj = malloc(total_size);
+    
+    if (!obj) {
+        // Try collecting garbage and retry
+        gc_collect();
+        obj = malloc(total_size);
+        if (!obj) {
+            fprintf(stderr, "Out of memory!\n");
+            exit(1);
+        }
+    }
+    
+    // Initialize GC header
+    obj->next = gc.all_objects;
+    obj->marked = false;
+    obj->size = total_size;
+    gc.all_objects = obj;
+    
+    gc.bytes_allocated += total_size;
+    
+    // Trigger collection if threshold exceeded
+    if (gc.disable_count == 0 && gc.bytes_allocated > gc.gc_threshold) {
+        gc_collect();
+    }
+    
+    // Return pointer to data area (after header)
+    return (char*)obj + sizeof(GCObject);
+}
+
+void gc_mark_value(Value v) {
+    if (is_string(v)) {
+        String* str = as_string(v);
+        if (str) gc_mark_string(str);
+    } else if (is_list(v)) {
+        List* list = as_list(v);
+        if (list) gc_mark_list(list);
+    }
+    // Numbers, ints, nil don't need marking
+}
+
+void gc_mark_string(String* str) {
+    if (!str) return;
+    
+    // Get GC object header (it's right before the String data)
+    GCObject* obj = (GCObject*)((char*)str - sizeof(GCObject));
+    
+    if (!obj->marked) {
+        obj->marked = true;
+    }
+    // Strings don't contain other Values, so we're done
+}
+
+void gc_mark_list(List* list) {
+    if (!list) return;
+    
+    // Get GC object header
+    GCObject* obj = (GCObject*)((char*)list - sizeof(GCObject));
+    
+    if (obj->marked) return;  // Already marked
+    
+    obj->marked = true;
+    
+    // Mark all items in the list
+    for (int i = 0; i < list->count; i++) {
+        gc_mark_value(list->items[i]);
+    }
+}
+
+static void gc_mark_phase(void) {
+    // Mark all objects reachable from roots
+    for (int i = 0; i < gc.root_set.count; i++) {
+        Value root = gc.root_set.roots[i];
+        gc_mark_value(root);
+    }
+}
+
+static void gc_sweep_phase(void) {
+    GCObject** obj_ptr = &gc.all_objects;
+    
+    while (*obj_ptr) {
+        GCObject* obj = *obj_ptr;
+        
+        if (obj->marked) {
+            // Object is live, clear mark for next collection
+            obj->marked = false;
+            obj_ptr = &obj->next;
+        } else {
+            // Object is garbage, remove from list and free
+            *obj_ptr = obj->next;
+            gc.bytes_allocated -= obj->size;
+            free(obj);
+        }
+    }
+}
+
+void gc_collect(void) {
+#ifdef GC_DEBUG
+	printf("gc_collect: disable_count=%d, bytes_allocated=%ld\n", gc.disable_count, gc.bytes_allocated);
+#endif
+    if (gc.disable_count > 0) return;
+    
+    size_t before = gc.bytes_allocated;
+    
+    // Mark & Sweep
+    gc_mark_phase();
+    gc_sweep_phase();
+    
+    // Adjust threshold based on how much we freed
+    size_t freed = before - gc.bytes_allocated;
+    if (freed < gc.gc_threshold / 4) {
+        // Didn't free much, increase threshold
+        gc.gc_threshold *= 2;
+    }
+    
+#ifdef GC_DEBUG
+    printf("GC: freed %zu bytes, %zu bytes remaining, threshold now %zu\n", 
+           freed, gc.bytes_allocated, gc.gc_threshold);
+#endif
+}

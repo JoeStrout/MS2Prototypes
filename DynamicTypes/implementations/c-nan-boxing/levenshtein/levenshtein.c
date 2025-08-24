@@ -2,31 +2,45 @@
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../nanbox.h"
+#include "../nanbox_gc.h"
 
 Value editDistance(Value s1_val, Value s2_val) {
+    GC_PUSH_SCOPE();
+    
+    // Protect input parameters in this scope
+    GC_PROTECT(s1_val);
+    GC_PROTECT(s2_val);
+    
     if (!is_string(s1_val) || !is_string(s2_val)) {
-        return make_nil();
+        GC_POP_SCOPE_AND_RETURN(make_nil());
     }
     
     int n = string_length(s1_val);
     int m = string_length(s2_val);
     
     // Handle edge cases
-    if (n == 0) return make_int(m);
-    if (m == 0) return make_int(n);
+    if (n == 0) {
+        GC_POP_SCOPE_AND_RETURN(make_int(m));
+    }
+    if (m == 0) {
+        GC_POP_SCOPE_AND_RETURN(make_int(n));
+    }
     
     // Split strings into character lists
     Value empty_delim = make_string("");
     Value s1chars = string_split(s1_val, empty_delim);
     Value s2chars = string_split(s2_val, empty_delim);
+    GC_PROTECT(empty_delim);
+    GC_PROTECT(s1chars);
+    GC_PROTECT(s2chars);
     
-    // Allocate distance array (d in the original)
-    int* d = malloc((m + 1) * sizeof(int));
+    // Allocate distance array as a List (more consistent with GC system)
+    Value d_list = make_list(m + 1);
+    GC_PROTECT(d_list);
     
     // Initialize d array with range(0, m)
     for (int i = 0; i <= m; i++) {
-        d[i] = i;
+        list_add(d_list, make_int(i));
     }
     
     int lastCost = 0;
@@ -35,19 +49,21 @@ Value editDistance(Value s1_val, Value s2_val) {
     // Main algorithm loop
     for (int i = 1; i <= n; i++) {
         Value s1char = list_get(s1chars, i - 1);
+        GC_PROTECT(s1char);
         lastCost = i;
         int jMinus1 = 0;
         
         for (int j = 1; j <= m; j++) {
             Value s2char = list_get(s2chars, jMinus1);
+            GC_PROTECT(s2char);
             
             // Calculate cost (0 if characters match, 1 if different)
             int cost = string_equals(s1char, s2char) ? 0 : 1;
             
             // Calculate the three possibilities
-            int a = d[j] + 1;           // deletion
+            int a = as_int(list_get(d_list, j)) + 1;           // deletion
             int b = lastCost + 1;       // insertion
-            int c = cost + d[jMinus1];  // substitution
+            int c = cost + as_int(list_get(d_list, jMinus1));  // substitution
             
             // Find minimum using nested if statements (matching original)
             if (a < b) {
@@ -64,16 +80,20 @@ Value editDistance(Value s1_val, Value s2_val) {
                 }
             }
             
-            d[jMinus1] = lastCost;
+            list_set(d_list, jMinus1, make_int(lastCost));
             lastCost = nextCost;
             jMinus1 = j;
+            
+            GC_UNPROTECT(); // s2char
         }
-        d[m] = lastCost;
+        list_set(d_list, m, make_int(lastCost));
+        GC_UNPROTECT(); // s1char
     }
     
     int result = nextCost;
-    free(d);
-    return make_int(result);
+    Value final_result = make_int(result);
+    
+    GC_POP_SCOPE_AND_RETURN(final_result);
 }
 
 double get_time() {
@@ -83,15 +103,24 @@ double get_time() {
 }
 
 void runTest() {
+    GC_PUSH_SCOPE();
+    
     // Test 1: "kitten" -> "sitting" = 3
     Value s1 = make_string("kitten");
     Value s2 = make_string("sitting");
+    GC_PROTECT(s1);
+    GC_PROTECT(s2);
     Value result1 = editDistance(s1, s2);
+    // result1 is already protected by editDistance's scope system
+    // No need to protect again
     
     // Test 2: "this is a test..." -> "that was a test..." 
     Value s3 = make_string("this is a test of a slightly longer string");
     Value s4 = make_string("that was a test of a slightly longer string");
+    GC_PROTECT(s3);
+    GC_PROTECT(s4);
     Value result2 = editDistance(s3, s4);
+    // result2 is already protected by editDistance's scope system
     
     // Test 3: Gettysburg Address variants
     Value ga1 = make_string(
@@ -104,10 +133,16 @@ void runTest() {
 "But, in a larger sense, we can not dedicate -- we can not consecrate -- we can not hallow -- this ground. The brave men, living and dead, who struggled here, have consecrated it, far above our poor power to add or subtract. The world will little note, nor long remember what we say here (ha ha as if), but it can never forget what they did here. It is for us the living, rather, to be dedicated here to the unfinished work which they who fought here have thus far so nobly advanced. "
 "It is rather for us to be here dedicated to the great task remaining before us -- that from these honored dead we take increased devotion to that cause for which they gave the last full measure of devotion -- that we here highly resolve that these dead shall not have died in vain -- that this nation, with its constitutionally guaranteed separation of church and state, shall have a new birth of freedom -- and that government of the people, by the people, for the people, shall not disappear from Earth.");
     
+    GC_PROTECT(ga1);
+    GC_PROTECT(ga2);
     Value result3 = editDistance(ga1, ga2);
+    // result3 is already protected by editDistance's scope system
     
     // Test 4: Very different strings
-    Value result4 = editDistance(ga1, make_string("banana"));
+    Value banana = make_string("banana");
+    GC_PROTECT(banana);
+    Value result4 = editDistance(ga1, banana);
+    // result4 is already protected by editDistance's scope system
     
     // Store results (we'll print them for verification)
     printf("Test results:\n");
@@ -115,6 +150,14 @@ void runTest() {
     printf("Short sentence test: %d\n", as_int(result2));
     printf("Gettysburg variants: %d\n", as_int(result3));
     printf("GA1 -> \"banana\": %d\n", as_int(result4));
+    
+    // Unprotect the return values from editDistance calls
+    GC_UNPROTECT(); // result4
+    GC_UNPROTECT(); // result3
+    GC_UNPROTECT(); // result2
+    GC_UNPROTECT(); // result1
+    
+    GC_POP_SCOPE(); // Clean up all protected values
 }
 
 void runBenchmark() {
@@ -154,13 +197,30 @@ void runCorrectnessTests() {
 }
 
 int main() {
-    printf("NaN Boxing Levenshtein Benchmark\n");
-    printf("================================\n\n");
+    printf("NaN Boxing Levenshtein Benchmark (with GC)\n");
+    printf("==========================================\n\n");
+    
+    // Initialize garbage collector
+    gc_init();
+    
+    printf("Before tests: %zu bytes allocated\n", gc.bytes_allocated);
     
     runCorrectnessTests();
+    gc_collect();  // Force final collection
+    printf("After gc_collect(): %zu bytes remaining\n", gc.bytes_allocated);
+
     printf("\n");
     
+    printf("After correctness tests: %zu bytes allocated\n", gc.bytes_allocated);
+    
     runBenchmark();
+    
+    printf("After benchmark: %zu bytes allocated\n", gc.bytes_allocated);
+    gc_collect();  // Force final collection
+    printf("After final GC: %zu bytes remaining\n", gc.bytes_allocated);
+    
+    // Shutdown garbage collector
+    gc_shutdown();
     
     return 0;
 }

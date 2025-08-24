@@ -1,9 +1,9 @@
 CC = gcc
 CFLAGS = -O3 -std=c99 -Wall -Wextra -I..
 TARGET = numberWords_nanbox
-SOURCES = numberWords.c
+SOURCES = numberWords.c ../gc.c
 
-$(TARGET): $(SOURCES) ../nanbox.h
+$(TARGET): $(SOURCES) ../nanbox_gc.h
 	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCES)
 
 clean:

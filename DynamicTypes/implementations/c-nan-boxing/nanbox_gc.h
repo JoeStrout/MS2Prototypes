@@ -1,14 +1,18 @@
-#ifndef NANBOX_H
-#define NANBOX_H
+#ifndef NANBOX_GC_H
+#define NANBOX_GC_H
+
+// This header combines nanbox and gc functionality properly
 
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <assert.h>
 
-// Forward declaration for GC function
-void* gc_allocate(size_t size);
+#define GC_DEBUG 1
 
 typedef uint64_t Value;
 
@@ -21,6 +25,90 @@ typedef uint64_t Value;
 #define LIST_MASK          0xfffd000000000000ULL
 
 #define NULL_VALUE         0x7ffe000000000000ULL
+
+// String and List structures
+typedef struct {
+    int len;
+    char data[];
+} String;
+
+typedef struct {
+    int count;
+    int capacity;
+    Value items[];
+} List;
+
+// GC Object header - minimal overhead
+typedef struct GCObject {
+    struct GCObject* next;  // Linked list of all objects
+    bool marked;           // Mark bit for GC
+    size_t size;          // Size for sweep phase
+} GCObject;
+
+// Scope management for RAII-style protection
+typedef struct GCScope {
+    int start_index;      // Where this scope starts in the root stack
+} GCScope;
+
+// Root set management
+typedef struct GCRootSet {
+    Value* roots;         // Array of Values (not pointers to Values)
+    int count;
+    int capacity;
+} GCRootSet;
+
+// GC state
+typedef struct GC {
+    GCObject* all_objects;    // Linked list of all allocated objects
+    GCRootSet root_set;       // Stack of root values
+    GCScope scope_stack[64];  // Stack of scopes for RAII-style protection
+    int scope_count;          // Number of active scopes
+    size_t bytes_allocated;   // Total allocated memory
+    size_t gc_threshold;      // Trigger collection when exceeded
+    int disable_count;        // Counter for nested disable/enable calls
+} GC;
+
+// Global GC instance
+extern GC gc;
+
+// GC lifecycle functions
+void gc_init(void);
+void gc_shutdown(void);
+void gc_collect(void);
+
+// Root set management (new Value-based approach)
+void gc_push_value(Value val);
+void gc_pop_value(void);
+
+// Scope management
+void gc_push_scope(void);
+void gc_pop_scope(void);
+
+// Critical section management
+void gc_disable(void);
+void gc_enable(void);
+
+// Object allocation
+void* gc_allocate(size_t size);
+
+// Mark functions for different object types
+void gc_mark_value(Value v);
+void gc_mark_string(String* str);
+void gc_mark_list(List* list);
+
+// Utility macros for root management
+#define GC_PROTECT(val) gc_push_value(val)
+#define GC_UNPROTECT() gc_pop_value()
+
+// Scope-based protection macros
+#define GC_PUSH_SCOPE() gc_push_scope()
+#define GC_POP_SCOPE() gc_pop_scope()
+#define GC_POP_SCOPE_AND_RETURN(val) \
+    do { gc_pop_scope(); gc_push_value(val); return (val); } while(0)
+
+// SCOPE-BASED PROTECTION STANDARD:
+// Functions should use GC_PUSH_SCOPE()/GC_POP_SCOPE_AND_RETURN() for clean management.
+// Return values are automatically protected for the caller.
 
 // Type checking macros
 static inline bool is_number(Value v) {
@@ -80,12 +168,6 @@ static inline void* as_pointer(Value v) {
     return (void*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
 }
 
-// String structure and functions
-typedef struct {
-    int len;
-    char data[];
-} String;
-
 static inline Value make_string(const char* str) {
     if (str == NULL) return make_nil();
     int len = strlen(str);
@@ -111,13 +193,86 @@ static inline int string_length(Value v) {
     return s->len;
 }
 
-// String operations
+static inline Value make_list(int capacity) {
+    if (capacity <= 0) capacity = 8; // Default capacity
+    List* list = (List*)gc_allocate(sizeof(List) + capacity * sizeof(Value));
+    list->count = 0;
+    list->capacity = capacity;
+    return LIST_MASK | ((uintptr_t)list & 0xFFFFFFFFFFFFULL);
+}
+
+static inline List* as_list(Value v) {
+    if (!is_list(v)) return NULL;
+    return (List*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
+}
+
+static inline void list_add(Value list_val, Value item) {
+    List* list = as_list(list_val);
+    if (list && list->count < list->capacity) {
+        list->items[list->count++] = item;
+    }
+}
+
+static inline Value list_get(Value list_val, int index) {
+    List* list = as_list(list_val);
+    if (list && index >= 0 && index < list->count) {
+        return list->items[index];
+    }
+    return make_nil();
+}
+
+static inline void list_set(Value list_val, int index, Value item) {
+    List* list = as_list(list_val);
+    if (list && index >= 0 && index < list->count) {
+        list->items[index] = item;
+    }
+}
+
+static inline int list_count(Value list_val) {
+    List* list = as_list(list_val);
+    return list ? list->count : 0;
+}
+
+static inline bool is_truthy(Value v) {
+    if (is_nil(v)) return false;
+    if (is_number(v)) return as_number(v) != 0.0;
+    if (is_int(v)) return as_int(v) != 0;
+    return true;
+}
+
+static inline bool values_equal(Value a, Value b) {
+    if (is_number(a) && is_number(b)) {
+        return as_number(a) == as_number(b);
+    }
+    if (is_string(a) && is_string(b)) {
+        String* sa = as_string(a);
+        String* sb = as_string(b);
+        if (sa->len != sb->len) return false;
+        return strcmp(sa->data, sb->data) == 0;
+    }
+    return a == b;
+}
+
 static inline bool string_equals(Value a, Value b) {
     if (!is_string(a) || !is_string(b)) return false;
     String* sa = as_string(a);
     String* sb = as_string(b);
     if (sa->len != sb->len) return false;
     return strcmp(sa->data, sb->data) == 0;
+}
+
+static inline int list_indexOf(Value list_val, Value item) {
+    List* list = as_list(list_val);
+    if (!list) return -1;
+    
+    for (int i = 0; i < list->count; i++) {
+        if (is_string(list->items[i]) && is_string(item)) {
+            if (string_equals(list->items[i], item)) return i;
+        } else if (values_equal(list->items[i], item)) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 static inline Value string_concat(Value a, Value b) {
@@ -135,16 +290,6 @@ static inline Value string_concat(Value a, Value b) {
     strcat(result->data, sb);
     
     return STRING_MASK | ((uintptr_t)result & 0xFFFFFFFFFFFFULL);
-}
-
-static inline int string_indexOf(Value haystack, Value needle) {
-    const char* h = as_cstring(haystack);
-    const char* n = as_cstring(needle);
-    if (!h || !n) return -1;
-    
-    char* pos = strstr(h, n);
-    if (pos == NULL) return -1;
-    return pos - h;
 }
 
 static inline Value string_replace(Value str, Value from, Value to) {
@@ -201,84 +346,6 @@ static inline Value string_replace(Value str, Value from, Value to) {
     }
     
     return STRING_MASK | ((uintptr_t)result & 0xFFFFFFFFFFFFULL);
-}
-
-// List structure 
-typedef struct {
-    int count;
-    int capacity;
-    Value items[];
-} List;
-
-static inline Value make_list(int capacity) {
-    if (capacity <= 0) capacity = 8; // Default capacity
-    List* list = (List*)gc_allocate(sizeof(List) + capacity * sizeof(Value));
-    list->count = 0;
-    list->capacity = capacity;
-    return LIST_MASK | ((uintptr_t)list & 0xFFFFFFFFFFFFULL);
-}
-
-static inline List* as_list(Value v) {
-    if (!is_list(v)) return NULL;
-    return (List*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
-}
-
-static inline void list_add(Value list_val, Value item) {
-    List* list = as_list(list_val);
-    if (list && list->count < list->capacity) {
-        list->items[list->count++] = item;
-    }
-}
-
-static inline Value list_get(Value list_val, int index) {
-    List* list = as_list(list_val);
-    if (list && index >= 0 && index < list->count) {
-        return list->items[index];
-    }
-    return make_nil();
-}
-
-static inline void list_set(Value list_val, int index, Value item) {
-    List* list = as_list(list_val);
-    if (list && index >= 0 && index < list->count) {
-        list->items[index] = item;
-    }
-}
-
-static inline int list_count(Value list_val) {
-    List* list = as_list(list_val);
-    return list ? list->count : 0;
-}
-
-static inline bool is_truthy(Value v) {
-    if (is_nil(v)) return false;
-    if (is_number(v)) return as_number(v) != 0.0;
-    if (is_int(v)) return as_int(v) != 0;
-    return true;
-}
-
-static inline bool values_equal(Value a, Value b) {
-    if (is_number(a) && is_number(b)) {
-        return as_number(a) == as_number(b);
-    }
-    if (is_string(a) && is_string(b)) {
-        return string_equals(a, b);
-    }
-    return a == b;
-}
-
-static inline int list_indexOf(Value list_val, Value item) {
-    List* list = as_list(list_val);
-    if (!list) return -1;
-    
-    for (int i = 0; i < list->count; i++) {
-        if (is_string(list->items[i]) && is_string(item)) {
-            if (string_equals(list->items[i], item)) return i;
-        } else if (values_equal(list->items[i], item)) {
-            return i;
-        }
-    }
-    return -1;
 }
 
 static inline Value string_split(Value str, Value delimiter) {

@@ -1,12 +1,12 @@
 CC = gcc
 CFLAGS = -O3 -Wall -Wextra -std=c99
 TARGET = fib_nanbox
-SOURCE = fib.c
+SOURCES = fib.c ../gc.c
 
 all: $(TARGET)
 
-$(TARGET): $(SOURCE) ../nanbox.h
-	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCE)
+$(TARGET): $(SOURCES) ../nanbox_gc.h
+	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCES)
 
 clean:
 	rm -f $(TARGET)
