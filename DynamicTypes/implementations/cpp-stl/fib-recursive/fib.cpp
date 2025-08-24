@@ -32,37 +32,6 @@ Value rfib(Value n_val) {
 	
     memo.insert({n, Value(static_cast<double>(result))});
 	return memo[n];
-	
-	/*
-    // Check if the value is a number (integer)
-    if (n_val.type != ValueType::Number) {
-        return Value::null;
-    }
-    
-    int32_t n = n_val.IntValue();
-    
-    if (n <= 0) return Value(0.0);
-    if (n <= 2) return Value(1.0);
-    
-    Value n_minus_1(static_cast<double>(n - 1));
-    Value n_minus_2(static_cast<double>(n - 2));
-    
-    Value fib1 = rfib(n_minus_1);
-    Value fib2 = rfib(n_minus_2);
-    
-    if (fib1.type != ValueType::Number || fib2.type != ValueType::Number) {
-        std::cout << "ERROR: Non-number result in rfib(" << n << ")" << std::endl;
-        return Value::null;
-    }
-    
-    int32_t val1 = fib1.IntValue();
-    int32_t val2 = fib2.IntValue();
-    int32_t result = val1 + val2;
-    
-    //std::cout << "rfib(" << n << "): " << val1 << " + " << val2 << " = " << result << std::endl;
-    
-    return Value(static_cast<double>(result));
-    */
 }
 
 double get_time() {
