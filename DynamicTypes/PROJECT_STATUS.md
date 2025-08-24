@@ -83,14 +83,14 @@ DynamicTypes/
 - **Technique**: Based on [Piotr Duperas article](https://piotrduperas.com/posts/nan-boxing)
 - **Key masks**: `NANISH_MASK`, `INTEGER_MASK`, `STRING_MASK`, `LIST_MASK`
 - **Types supported**: 32-bit integers, doubles, strings, lists, nil
-- **String features**: Full UTF-8 support, split/replace operations preserving empty tokens
+- **String features**: No UTF-8 support yet; split/replace operations correctly preserve empty tokens
 - **List features**: Dynamic arrays with capacity management, mixed-type support
 - **Performance**: Excellent across all workloads due to unified Value representation
 
 ### MiniScript Classic Approach (`cpp-classic`)
 - **Source**: Authentic MiniScript 1.x C++ codebase (modified for standalone compilation)
 - **Key types**: `Value`, `String`, `ValueList`, `StringList` 
-- **Features**: Full dynamic typing with reference counting, robust string handling
+- **Features**: Full dynamic typing with reference counting, robust string handling, Unicode support
 - **Performance**: Very good, about 2x slower than NaN boxing for pure numeric work
 - **Strength**: Excellent string/list manipulation capabilities
 
@@ -138,17 +138,6 @@ Of course these results are preliminary, on limited benchmarks, and not really f
 
 ## Next Steps / Future Work
 
-### Refinements to current code
-
-The current memory manager/GC in c-nan-boxing was the result of some late-night hacking.  It works, but is probably not ideal.  We will want to try a few things:
-
-- **Go back to storing `Value*` instead of `Value` in the root lists**, so that we can simply protect (register with GC) every local Value in a function, even before assigning it any actual value; and then if it is overwritten within the function, we don't have to tell GC about it.
-- **Embrace the shadow stack**: clarify our paradigm of making a stack of (pointers to) local variables in GC that shadow (mirror) the actual C call stack.  But I do think this means that each expression must allocate no more than once; more complex expressions must be broken up to use locals, so that we never have a value held only in a register when an allocation is made.
-- **Don't worry about protecting return values (GC_POP_SCOPE_AND_RETURN) by defining that GC collection can only happen at safe points: allocation, or explicit gc_collect calls.  Therefore it can't happen when a value is being returned.
-- **Have an aggressive-collect mode** (compiler flag) that causes GC to collect on _every_ allocation... and have the deallocator overwrite blocks with garbage when it deallocates.  These should help us discover if we have missed any edge cases.
-
-All that should get us to a point where the current simple GC system is really solid.  
-
 ### Performance enhancements
 
 Once the existing code is solid, we'll want to make a c-nan-boxing-v2 and c-nan-boxing-v3 that add some likely performance enhancements:
@@ -164,7 +153,7 @@ Once the existing code is solid, we'll want to make a c-nan-boxing-v2 and c-nan-
 
 ### Consider other GC strategies
 
-The world of GC is complex, and we've barely scratched the surface.  At some point we'll want to consider:
+The world of GC is complex, and we've barely scratched the surface.  At some point we'll want to consider more prototype versions to explore:
 
 - **Handles** to enable a "moving" GC (moves allocations around to stay compact)
 - **Generations** to distinguish short-lived temps from longer-lived allocations

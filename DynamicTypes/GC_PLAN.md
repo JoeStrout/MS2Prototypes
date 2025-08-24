@@ -5,7 +5,7 @@ Add memory management and garbage collection to the C NaN boxing implementation 
 
 ## Phased Implementation Strategy
 
-### Phase 1: Unified Tracing GC with Precise Root Tracking
+### ✅ Phase 1: Unified Tracing GC with Precise Root Tracking
 **Goal**: Implement mark-and-sweep garbage collection for both strings and lists
 
 **Approach**:
@@ -20,7 +20,15 @@ Add memory management and garbage collection to the C NaN boxing implementation 
 - Precise tracking gives predictable behavior and easier debugging
 - Clean performance baseline without conservative scanning overhead
 
-### Phase 2: Add String Interning
+### Phase 2: Add TinyString
+**Goal**: Optimize operations on strings small enough to fit in a NaN box, avoiding allocations on these entirely
+
+**Approach**:
+- Define another type and bitmask for "tiny strings"
+- `make_string` returns this type or the original string type as needed
+- `is_anystring` returns true for any string; `is_tinystring` returns true for tiny ones; `is_string` returns true for big strings.  Most user code only checks `is_anystring`, and string-handling APIs work for either string type, so that user code doesn't need to know or care exactly what string type it's working with.
+
+### Phase 3: Add String Interning
 **Goal**: Optimize string operations through interning with GC integration
 
 **Approach**:
@@ -34,7 +42,7 @@ Add memory management and garbage collection to the C NaN boxing implementation 
 - Reduced memory usage for duplicate strings
 - Common optimization in dynamic language implementations
 
-### Phase 3: Conservative Stack Scanning (If Needed)
+### Phase 4: Conservative Stack Scanning (If Needed)
 **Goal**: Simplify programming model if precise tracking proves cumbersome
 
 **Approach**:
