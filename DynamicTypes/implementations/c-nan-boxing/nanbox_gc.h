@@ -12,7 +12,8 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define GC_DEBUG 1
+// #define GC_DEBUG 1
+// #define GC_AGGRESSIVE 1  // Collect on every allocation (for testing)
 
 typedef uint64_t Value;
 
@@ -50,9 +51,9 @@ typedef struct GCScope {
     int start_index;      // Where this scope starts in the root stack
 } GCScope;
 
-// Root set management
+// Root set management - shadow stack of pointers to local Values
 typedef struct GCRootSet {
-    Value* roots;         // Array of Values (not pointers to Values)
+    Value** roots;        // Array of pointers to Values (shadow stack)
     int count;
     int capacity;
 } GCRootSet;
@@ -76,9 +77,9 @@ void gc_init(void);
 void gc_shutdown(void);
 void gc_collect(void);
 
-// Root set management (new Value-based approach)
-void gc_push_value(Value val);
-void gc_pop_value(void);
+// Root set management (shadow stack approach)
+void gc_protect_value(Value* val_ptr);
+void gc_unprotect_value(void);
 
 // Scope management
 void gc_push_scope(void);
@@ -97,18 +98,33 @@ void gc_mark_string(String* str);
 void gc_mark_list(List* list);
 
 // Utility macros for root management
-#define GC_PROTECT(val) gc_push_value(val)
-#define GC_UNPROTECT() gc_pop_value()
+#define GC_PROTECT(val_ptr) gc_protect_value(val_ptr)
+#define GC_UNPROTECT() gc_unprotect_value()
 
 // Scope-based protection macros
 #define GC_PUSH_SCOPE() gc_push_scope()
 #define GC_POP_SCOPE() gc_pop_scope()
-#define GC_POP_SCOPE_AND_RETURN(val) \
-    do { gc_pop_scope(); gc_push_value(val); return (val); } while(0)
 
-// SCOPE-BASED PROTECTION STANDARD:
-// Functions should use GC_PUSH_SCOPE()/GC_POP_SCOPE_AND_RETURN() for clean management.
-// Return values are automatically protected for the caller.
+// SHADOW STACK PROTECTION STANDARD:
+// 1. Call GC_PUSH_SCOPE() at start of function
+// 2. GC_PROTECT(&local_var) for all local Value variables (pass pointer!)
+// 3. Call GC_POP_SCOPE() before return
+// 4. Collection only happens at safe points (allocation, explicit gc_collect)
+// 5. When reassigning protected values, the shadow stack automatically tracks them
+//
+// Example usage:
+//   void my_function() {
+//       GC_PUSH_SCOPE();
+//       Value str = make_nil();
+//       Value list = make_nil();
+//       GC_PROTECT(&str);    // Protect pointer to str
+//       GC_PROTECT(&list);   // Protect pointer to list
+//       
+//       str = make_string("hello");  // Reassignment is fine
+//       list = make_list(10);        // Shadow stack sees new values
+//       
+//       GC_POP_SCOPE();
+//   }
 
 // Type checking macros
 static inline bool is_number(Value v) {

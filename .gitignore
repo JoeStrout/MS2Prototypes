@@ -11,6 +11,7 @@ bin
 *.exe
 *_nanbox
 *_classic
+example_shadow_stack
 
 # Claude Code settings
 .claude/

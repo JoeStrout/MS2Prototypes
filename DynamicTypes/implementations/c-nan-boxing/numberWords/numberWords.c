@@ -12,39 +12,46 @@ Value tys;
 Value ions;
 
 void initializeWordArrays() {
+    GC_PUSH_SCOPE();
+    
+    // Declare and protect local variables
+    Value singles_str = make_nil();
+    Value space = make_nil();
+    Value teens_str = make_nil();
+    Value tys_str = make_nil();
+    Value ions_str = make_nil();
+    
+    GC_PROTECT(&singles_str);
+    GC_PROTECT(&space);
+    GC_PROTECT(&teens_str);
+    GC_PROTECT(&tys_str);
+    GC_PROTECT(&ions_str);
+    
+    // Initialize space delimiter
+    space = make_string(" ");
+    
     // singles = " one two three four five six seven eight nine ".split
-    Value singles_str = make_string(" one two three four five six seven eight nine ");
-    Value space = make_string(" ");
-    GC_PROTECT(singles_str);
-    GC_PROTECT(space);
+    singles_str = make_string(" one two three four five six seven eight nine ");
     singles = string_split(singles_str, space);
-    GC_PROTECT(singles);
+    GC_PROTECT(&singles);  // Protect global variable
     
     // teens = "ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen ".split
-    Value teens_str = make_string("ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen ");
-    GC_PROTECT(teens_str);
+    teens_str = make_string("ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen ");
     teens = string_split(teens_str, space);
-    GC_PROTECT(teens);
+    GC_PROTECT(&teens);   // Protect global variable
     
     // tys = "  twenty thirty forty fifty sixty seventy eighty ninety".split
-    Value tys_str = make_string("  twenty thirty forty fifty sixty seventy eighty ninety");
-    GC_PROTECT(tys_str);
+    tys_str = make_string("  twenty thirty forty fifty sixty seventy eighty ninety");
     tys = string_split(tys_str, space);
-    GC_PROTECT(tys);
+    GC_PROTECT(&tys);     // Protect global variable
     
     // ions = "thousand million billion".split
-    Value ions_str = make_string("thousand million billion");
-    GC_PROTECT(ions_str);
+    ions_str = make_string("thousand million billion");
     ions = string_split(ions_str, space);
-    GC_PROTECT(ions);
+    GC_PROTECT(&ions);    // Protect global variable
     
-    // Clean up temporary strings but KEEP the global arrays protected for the entire program
-    GC_UNPROTECT(); // ions_str
-    GC_UNPROTECT(); // tys_str
-    GC_UNPROTECT(); // teens_str
-    GC_UNPROTECT(); // space
-    GC_UNPROTECT(); // singles_str
-    // NOTE: singles, teens, tys, ions remain protected and should not be unprotected
+    GC_POP_SCOPE();
+    // NOTE: Global variables singles, teens, tys, ions remain protected for the entire program
 }
 
 Value numberToText(long n) {
@@ -54,7 +61,8 @@ Value numberToText(long n) {
     if (n == 0) {
         Value result = make_string("zero");
         gc_enable();   // Exit critical section
-        GC_POP_SCOPE_AND_RETURN(result);
+        GC_POP_SCOPE();
+        return result;
     }
     
     long a = labs(n);
@@ -134,7 +142,8 @@ Value numberToText(long n) {
         result = make_string("");
     }
     gc_enable();   // Exit critical section
-    GC_POP_SCOPE_AND_RETURN(result);
+    GC_POP_SCOPE();
+    return result;
 }
 
 long textToNumber(Value s) {
@@ -238,13 +247,12 @@ void runBenchmark(long n) {
     
     for (long i = 0; i < n; i++) {
         Value s = numberToText(i);
-        // s is already protected by numberToText scope system
         long i2 = textToNumber(s);
         if (i2 != i) {
             printf("Oops! Failed on %ld:\n", i);
             printf("'%s' --> %ld\n", as_cstring(s), i2);
         }
-        GC_UNPROTECT(); // s from numberToText
+        // No GC protection needed - s is only used in this scope
     }
     
     double t1 = get_time();
@@ -262,17 +270,15 @@ void runCorrectnessTests() {
     for (int i = 0; i < numTests; i++) {
         long n = testNumbers[i];
         Value words = numberToText(n);
-        // words is already protected by numberToText scope system
         long backToNum = textToNumber(words);
         
         printf("%ld: %s -> %ld", n, as_cstring(words), backToNum);
         if (backToNum != n) {
             printf(" ERROR --^");
-            GC_UNPROTECT(); // words from numberToText
             return;
         }
         printf("\n");
-        GC_UNPROTECT(); // words from numberToText
+        // No GC protection needed - words is only used in this scope
     }
 }
 

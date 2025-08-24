@@ -3,46 +3,52 @@
 #include "../nanbox_gc.h"
 
 Value rfib(Value n_val) {
-    // Protect local variables from GC
-    GC_PROTECT(n_val);
+    GC_PUSH_SCOPE();
+    
+    // Declare and protect all local Values
     Value result = make_nil();
-    GC_PROTECT(result);
+    Value n_minus_1 = make_nil();
+    Value n_minus_2 = make_nil();
+    Value fib1 = make_nil();
+    Value fib2 = make_nil();
+    
+    GC_PROTECT(&result);
+    GC_PROTECT(&n_minus_1);
+    GC_PROTECT(&n_minus_2);
+    GC_PROTECT(&fib1);
+    GC_PROTECT(&fib2);
     
     if (!is_int(n_val)) {
         result = make_nil();
-        goto cleanup;
+        GC_POP_SCOPE();
+        return result;
     }
     
     int32_t n = as_int(n_val);
     
     if (n <= 0) {
         result = make_int(0);
-        goto cleanup;
+        GC_POP_SCOPE();
+        return result;
     }
     if (n <= 2) {
         result = make_int(1);
-        goto cleanup;
+        GC_POP_SCOPE();
+        return result;
     }
     
-    Value n_minus_1 = make_int(n - 1);
-    Value n_minus_2 = make_int(n - 2);
-    GC_PROTECT(n_minus_1);
-    GC_PROTECT(n_minus_2);
+    n_minus_1 = make_int(n - 1);
+    n_minus_2 = make_int(n - 2);
     
-    Value fib1 = rfib(n_minus_1);
-    Value fib2 = rfib(n_minus_2);
-    GC_PROTECT(fib1);
-    GC_PROTECT(fib2);
+    fib1 = rfib(n_minus_1);
+    fib2 = rfib(n_minus_2);
     
     if (!is_int(fib1) || !is_int(fib2)) {
         printf("ERROR: Non-integer result in rfib(%d): fib1=%llx is_int=%d, fib2=%llx is_int=%d\n", 
                n, fib1, is_int(fib1), fib2, is_int(fib2));
         result = make_nil();
-        GC_UNPROTECT(); // fib2
-        GC_UNPROTECT(); // fib1
-        GC_UNPROTECT(); // n_minus_2
-        GC_UNPROTECT(); // n_minus_1
-        goto cleanup;
+        GC_POP_SCOPE();
+        return result;
     }
     
     int32_t val1 = as_int(fib1);
@@ -50,15 +56,7 @@ Value rfib(Value n_val) {
     int32_t result_val = val1 + val2;
     result = make_int(result_val);
     
-    // Clean up protected values
-    GC_UNPROTECT(); // fib2
-    GC_UNPROTECT(); // fib1
-    GC_UNPROTECT(); // n_minus_2
-    GC_UNPROTECT(); // n_minus_1
-
-cleanup:
-    GC_UNPROTECT(); // result
-    GC_UNPROTECT(); // n_val
+    GC_POP_SCOPE();
     return result;
 }
 
@@ -69,10 +67,13 @@ double get_time() {
 }
 
 void run_benchmark(int n) {
+    GC_PUSH_SCOPE();
+    
     Value n_val = make_int(n);
     Value result = make_nil();
-    GC_PROTECT(n_val);
-    GC_PROTECT(result);
+    
+    GC_PROTECT(&n_val);
+    GC_PROTECT(&result);
     
     printf("Testing with n=%d, n_val=0x%llx, as_int=%d\n", 
            n, n_val, as_int(n_val));
@@ -83,9 +84,8 @@ void run_benchmark(int n) {
     
     printf("rfib(%d) = %d, time: %.3f seconds\n", 
            n, as_int(result), t1 - t0);
-           
-    GC_UNPROTECT(); // result
-    GC_UNPROTECT(); // n_val
+    
+    GC_POP_SCOPE();
 }
 
 int main() {
@@ -97,16 +97,18 @@ int main() {
     
     printf("Testing small cases:\n");
     for (int i = 0; i <= 5; i++) {
+        GC_PUSH_SCOPE();
+        
         Value n_val = make_int(i);
         Value result = make_nil();
-        GC_PROTECT(n_val);
-        GC_PROTECT(result);
+        
+        GC_PROTECT(&n_val);
+        GC_PROTECT(&result);
         
         result = rfib(n_val);
         printf("rfib(%d) = %d\n", i, as_int(result));
         
-        GC_UNPROTECT(); // result
-        GC_UNPROTECT(); // n_val
+        GC_POP_SCOPE();
     }
     
     printf("\nBenchmark results:\n");

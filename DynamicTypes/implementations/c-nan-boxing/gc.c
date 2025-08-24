@@ -11,7 +11,7 @@ GC gc = {0};
 
 void gc_init(void) {
     gc.all_objects = NULL;
-    gc.root_set.roots = malloc(sizeof(Value) * 64);  // Array of Values, not Value*
+    gc.root_set.roots = malloc(sizeof(Value*) * 64);  // Array of Value* (shadow stack)
     gc.root_set.count = 0;
     gc.root_set.capacity = 64;
     gc.scope_count = 0;
@@ -37,16 +37,16 @@ void gc_shutdown(void) {
     memset(&gc, 0, sizeof(gc));
 }
 
-void gc_push_value(Value val) {
+void gc_protect_value(Value* val_ptr) {
     if (gc.root_set.count >= gc.root_set.capacity) {
         gc.root_set.capacity *= 2;
         gc.root_set.roots = realloc(gc.root_set.roots, 
-                                   sizeof(Value) * gc.root_set.capacity);
+                                   sizeof(Value*) * gc.root_set.capacity);
     }
-    gc.root_set.roots[gc.root_set.count++] = val;
+    gc.root_set.roots[gc.root_set.count++] = val_ptr;
 }
 
-void gc_pop_value(void) {
+void gc_unprotect_value(void) {
     assert(gc.root_set.count > 0);
     gc.root_set.count--;
 }
@@ -76,6 +76,19 @@ void gc_enable(void) {
 }
 
 void* gc_allocate(size_t size) {
+    // Trigger collection BEFORE allocation
+#ifdef GC_AGGRESSIVE
+    // Aggressive mode: collect on every allocation (for testing)
+    if (gc.disable_count == 0) {
+        gc_collect();
+    }
+#else
+    // Normal mode: collect when threshold exceeded
+    if (gc.disable_count == 0 && gc.bytes_allocated > gc.gc_threshold) {
+        gc_collect();
+    }
+#endif
+    
     // Add space for GC header
     size_t total_size = sizeof(GCObject) + size;
     GCObject* obj = malloc(total_size);
@@ -97,11 +110,6 @@ void* gc_allocate(size_t size) {
     gc.all_objects = obj;
     
     gc.bytes_allocated += total_size;
-    
-    // Trigger collection if threshold exceeded
-    if (gc.disable_count == 0 && gc.bytes_allocated > gc.gc_threshold) {
-        gc_collect();
-    }
     
     // Return pointer to data area (after header)
     return (char*)obj + sizeof(GCObject);
@@ -147,10 +155,13 @@ void gc_mark_list(List* list) {
 }
 
 static void gc_mark_phase(void) {
-    // Mark all objects reachable from roots
+    // Mark all objects reachable from roots (shadow stack)
     for (int i = 0; i < gc.root_set.count; i++) {
-        Value root = gc.root_set.roots[i];
-        gc_mark_value(root);
+        Value* root_ptr = gc.root_set.roots[i];
+        if (root_ptr) {
+            Value root = *root_ptr;
+            gc_mark_value(root);
+        }
     }
 }
 
@@ -168,6 +179,11 @@ static void gc_sweep_phase(void) {
             // Object is garbage, remove from list and free
             *obj_ptr = obj->next;
             gc.bytes_allocated -= obj->size;
+            
+#ifdef GC_DEBUG
+            // Overwrite the object with garbage to catch stale pointer usage
+            memset(obj, 0xDEADBEEF, obj->size);
+#endif
             free(obj);
         }
     }
