@@ -24,6 +24,14 @@ DynamicTypes/
     │   ├── tests/           # GC and tiny string test suites
     │   ├── nanbox.h         # Enhanced with tiny string support
     │   └── nanbox_gc.h      # Shadow stack garbage collector
+    ├── c-nan-boxing-3/      # NaN boxing + tiny strings + string interning
+    │   ├── fib-recursive/   # Completed
+    │   ├── levenshtein/     # Completed  
+    │   ├── numberWords/     # Completed
+    │   ├── tests/           # GC, tiny string, and interning test suites
+    │   ├── nanbox.h         # Enhanced with string interning support
+    │   ├── nanbox_gc.h      # Shadow stack garbage collector
+    │   └── nanbox_strings.c # String interning implementation
     └── cpp-classic/         # MiniScript 1.x C++ type system
         ├── fib-recursive/   # Completed
         ├── levenshtein/     # Completed
@@ -47,6 +55,11 @@ DynamicTypes/
   - Same performance as c-nan-boxing for integer-only workload
   - Shadow stack garbage collection with zero memory leaks
   - Files: `fib.c`, `nanbox.h`, `nanbox_gc.h`, `gc.c`, `Makefile`
+
+- ✅ **C NaN Boxing + GC + Tiny Strings + String Interning** (`c-nan-boxing-3/fib-recursive/`)
+  - Same performance as c-nan-boxing-2 for integer-only workload (~0.028 seconds for n=30)
+  - String interning for strings under 128 bytes with strong (immortal) interning policy
+  - Files: `fib.c`, `nanbox.h`, `nanbox_gc.h`, `gc.c`, `nanbox_strings.c`, `Makefile`
   
 - ✅ **C++ Classic** (`cpp-classic/fib-recursive/`)
   - Uses authentic MiniScript::Value type system
@@ -70,6 +83,12 @@ DynamicTypes/
   - ~0.016 seconds for full test suite with zero memory leaks
   - Perfect accuracy on all test cases
   - Files: `levenshtein.c`, `nanbox.h`, `nanbox_gc.h`, `gc.c`, `Makefile`
+
+- ✅ **C NaN Boxing + GC + Tiny Strings + String Interning** (`c-nan-boxing-3/levenshtein/`)
+  - Similar performance to c-nan-boxing-2 (~0.018 seconds for full test suite)
+  - String interning provides fast O(1) equality comparisons for duplicate strings
+  - Zero memory leaks with strong interning policy
+  - Files: `levenshtein.c`, `nanbox.h`, `nanbox_gc.h`, `gc.c`, `nanbox_strings.c`, `Makefile`
 
 - ✅ **C++ Classic** (`cpp-classic/levenshtein/`)
   - Uses MiniScript String, ValueList types
@@ -95,6 +114,12 @@ DynamicTypes/
   - Perfect accuracy including hyphenated compound numbers
   - Files: `numberWords.c`, `nanbox.h`, `nanbox_gc.h`, `gc.c`, `Makefile`
 
+- ✅ **C NaN Boxing + GC + Tiny Strings + String Interning** (`c-nan-boxing-3/numberWords/`)
+  - Similar performance to c-nan-boxing-2 (~0.026 seconds for 10,000 round-trip conversions)
+  - String interning reduces memory usage for duplicate number words (e.g., "thousand", "hundred")
+  - Strong interning policy ensures common words persist throughout execution
+  - Files: `numberWords.c`, `nanbox.h`, `nanbox_gc.h`, `gc.c`, `nanbox_strings.c`, `Makefile`
+
 - ✅ **C++ Classic** (`cpp-classic/numberWords/`)
   - Uses MiniScript String, StringList with Split/Replace functions
   - ~0.046 seconds for 10,000 round-trip conversions
@@ -118,6 +143,16 @@ DynamicTypes/
 - **Zero Memory Leaks**: Complete garbage collection eliminates all memory leaks
 - **Performance Impact**: 17-72% reduction in memory allocations depending on workload
 - **Backward Compatibility**: Existing code works unchanged with new optimizations
+
+### NaN Boxing + GC + Tiny Strings + String Interning (`c-nan-boxing-3`)
+- **Complete Type System**: All features of c-nan-boxing-2 plus string interning optimization
+- **String Interning**: Strings <128 bytes are automatically interned for memory efficiency and fast equality
+- **Strong Interning Policy**: Interned strings are immortal (never released) for maximum performance
+- **Hash-based Lookups**: FNV-1a hash values pre-computed and cached for interned strings
+- **O(1) String Equality**: Identical strings use pointer comparison for ultra-fast equality checks
+- **GC Integration**: Interned strings marked as live during garbage collection to prevent premature release
+- **Memory Benefits**: Duplicate strings share storage, reducing memory footprint for string-heavy workloads
+- **Performance**: Comparable to c-nan-boxing-2 with additional benefits for string operations
 
 ### MiniScript Classic Approach (`cpp-classic`)
 - **Source**: Authentic MiniScript 1.x C++ codebase (modified for standalone compilation)
@@ -177,13 +212,23 @@ Of course these results are preliminary, on limited benchmarks, and not really f
 - 72% memory allocation reduction in string-heavy workloads
 - Transparent to user code - automatic selection via `make_string()`
 
-**Future enhancements** for c-nan-boxing-v3:
-1. Add interning for (non-tiny) strings to reduce memory usage
-2. Optimize string concatenation with rope data structures
+✅ **COMPLETED**: String interning implemented in `c-nan-boxing-3`
+- Automatic interning for strings under 128 bytes
+- **Strong (immortal) interning policy**: Interned strings never released from memory
+- O(1) string equality comparisons via pointer comparison
+- FNV-1a hash function with cached hash values
+- Seamless integration with existing GC system
+
+**Future enhancements** for c-nan-boxing-v4:
+1. Optimize string concatenation with rope data structures
+2. Consider **weak interning** or **intern pool management**:
+   - Add hooks for dumping/clearing the intern pool
+   - Implement aging policies to allow unused interned strings to be released
+   - Provide manual control over intern pool lifecycle
 
 ### Extending functionality
 
-- **Add Unicode support** to our string code (based on UnicodeUtil in the C++ code)
+- ✅ **Add Unicode support** to our string code (based on UnicodeUtil in the C++ code)
 - **Add more benchmarks** from the MiniScript benchmark suite
 - **Create additional type system implementations** (e.g. maps.)
 
@@ -210,5 +255,5 @@ The world of GC is complex, and we've barely scratched the surface.  At some poi
 5. **Build complexity** can be managed with careful dependency stubbing
 
 ---
-*Last updated*: After completing tiny string optimization in c-nan-boxing-2
-*Status*: 3/3 benchmarks implemented across 3 type systems (c-nan-boxing, c-nan-boxing-2, cpp-classic)
+*Last updated*: After completing string interning in c-nan-boxing-3
+*Status*: 3/3 benchmarks implemented across 4 type systems (c-nan-boxing, c-nan-boxing-2, c-nan-boxing-3, cpp-classic)
