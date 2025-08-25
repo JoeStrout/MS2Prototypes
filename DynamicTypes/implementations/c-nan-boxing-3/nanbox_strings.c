@@ -90,6 +90,7 @@ static void intern_string(Value string_value) {
 }
 
 // Interning-aware string creation
+// Interned strings use malloc() directly (not gc_allocate) since they're immortal
 Value make_string_interned(const char* str) {
     if (str == NULL) return make_nil();
     int lenB = strlen(str);
@@ -110,8 +111,8 @@ Value make_string_interned(const char* str) {
             return existing;
         }
         
-        // Create new string with hash pre-computed
-        String* s = (String*)gc_allocate(sizeof(String) + lenB + 1);
+        // Create new interned string with malloc (not GC'd - immortal by design)
+        String* s = (String*)malloc(sizeof(String) + lenB + 1);
         s->lenB = lenB;
         s->hash = hash;  // Store computed hash
         strcpy(s->data, str);
@@ -131,22 +132,6 @@ Value make_string_interned(const char* str) {
     }
 }
 
-// GC support: mark all interned strings to prevent collection
-void gc_mark_interned_strings(void) {
-    if (!intern_table_initialized) return;
-    
-    for (int i = 0; i < INTERN_TABLE_SIZE; i++) {
-        InternEntry* entry = intern_table[i];
-        while (entry != NULL) {
-            if (is_heap_string(entry->string_value)) {
-                // Forward declare the mark function (it's in gc.c)
-                extern void gc_mark_value(Value v);
-                gc_mark_value(entry->string_value);
-            }
-            entry = entry->next;
-        }
-    }
-}
 
 Value string_concat(Value a, Value b) {
     GC_PUSH_SCOPE();

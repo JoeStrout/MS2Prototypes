@@ -156,9 +156,6 @@ void gc_mark_list(List* list) {
     }
 }
 
-// Forward declaration for interned string marking
-void gc_mark_interned_strings(void);
-
 static void gc_mark_phase(void) {
     // Mark all objects reachable from roots (shadow stack)
     for (int i = 0; i < gc.root_set.count; i++) {
@@ -169,8 +166,8 @@ static void gc_mark_phase(void) {
         }
     }
     
-    // Mark all interned strings (they should never be collected)
-    gc_mark_interned_strings();
+    // Note: Interned strings are allocated with malloc() and are immortal,
+    // so they don't need to be marked during GC
 }
 
 static void gc_sweep_phase(void) {
