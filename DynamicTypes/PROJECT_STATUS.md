@@ -17,6 +17,13 @@ DynamicTypes/
     │   ├── numberWords/     # Completed  
     │   ├── tests/           # Comprehensive unit tests
     │   └── nanbox.h         # Shared NaN boxing implementation
+    ├── c-nan-boxing-2/      # NaN boxing with tiny string optimization  
+    │   ├── fib-recursive/   # Completed
+    │   ├── levenshtein/     # Completed
+    │   ├── numberWords/     # Completed
+    │   ├── tests/           # GC and tiny string test suites
+    │   ├── nanbox.h         # Enhanced with tiny string support
+    │   └── nanbox_gc.h      # Shadow stack garbage collector
     └── cpp-classic/         # MiniScript 1.x C++ type system
         ├── fib-recursive/   # Completed
         ├── levenshtein/     # Completed
@@ -35,6 +42,11 @@ DynamicTypes/
   - Uses article-accurate NaN boxing with NANISH_MASK, INTEGER_MASK
   - 32-bit integers, ~0.006 seconds for n=30
   - Files: `fib.c`, `nanbox.h`, `Makefile`
+
+- ✅ **C NaN Boxing + GC + Tiny Strings** (`c-nan-boxing-2/fib-recursive/`)
+  - Same performance as c-nan-boxing for integer-only workload
+  - Shadow stack garbage collection with zero memory leaks
+  - Files: `fib.c`, `nanbox.h`, `nanbox_gc.h`, `gc.c`, `Makefile`
   
 - ✅ **C++ Classic** (`cpp-classic/fib-recursive/`)
   - Uses authentic MiniScript::Value type system
@@ -52,6 +64,12 @@ DynamicTypes/
   - ~0.013 seconds for full test suite (1.85x faster than C++)
   - Perfect accuracy on all test cases
   - Files: `levenshtein.c`, `Makefile`
+
+- ✅ **C NaN Boxing + GC + Tiny Strings** (`c-nan-boxing-2/levenshtein/`)
+  - **72% reduction in memory allocations** vs c-nan-boxing (52,952 vs 189,898 bytes)
+  - ~0.016 seconds for full test suite with zero memory leaks
+  - Perfect accuracy on all test cases
+  - Files: `levenshtein.c`, `nanbox.h`, `nanbox_gc.h`, `gc.c`, `Makefile`
 
 - ✅ **C++ Classic** (`cpp-classic/levenshtein/`)
   - Uses MiniScript String, ValueList types
@@ -71,6 +89,12 @@ DynamicTypes/
   - Perfect accuracy including hyphenated compound numbers
   - Files: `numberWords.c`, `Makefile`
 
+- ✅ **C NaN Boxing + GC + Tiny Strings** (`c-nan-boxing-2/numberWords/`)
+  - **17% reduction in memory allocations** vs c-nan-boxing (16,897,199 vs 20,431,272 bytes)
+  - ~0.022 seconds for 10,000 round-trip conversions with zero memory leaks
+  - Perfect accuracy including hyphenated compound numbers
+  - Files: `numberWords.c`, `nanbox.h`, `nanbox_gc.h`, `gc.c`, `Makefile`
+
 - ✅ **C++ Classic** (`cpp-classic/numberWords/`)
   - Uses MiniScript String, StringList with Split/Replace functions
   - ~0.046 seconds for 10,000 round-trip conversions
@@ -86,6 +110,14 @@ DynamicTypes/
 - **String features**: No UTF-8 support yet; split/replace operations correctly preserve empty tokens
 - **List features**: Dynamic arrays with capacity management, mixed-type support
 - **Performance**: Excellent across all workloads due to unified Value representation
+
+### NaN Boxing + GC + Tiny Strings (`c-nan-boxing-2`)
+- **Enhanced NaN Boxing**: All features of c-nan-boxing plus garbage collection and tiny string optimization
+- **Tiny String Optimization**: Strings ≤5 characters stored directly in NaN-boxed values (zero heap allocation)
+- **Shadow Stack GC**: Automatic memory management with scope-based root protection
+- **Zero Memory Leaks**: Complete garbage collection eliminates all memory leaks
+- **Performance Impact**: 17-72% reduction in memory allocations depending on workload
+- **Backward Compatibility**: Existing code works unchanged with new optimizations
 
 ### MiniScript Classic Approach (`cpp-classic`)
 - **Source**: Authentic MiniScript 1.x C++ codebase (modified for standalone compilation)
@@ -140,10 +172,14 @@ Of course these results are preliminary, on limited benchmarks, and not really f
 
 ### Performance enhancements
 
-Once the existing code is solid, we'll want to make a c-nan-boxing-v2 and c-nan-boxing-v3 that add some likely performance enhancements:
+✅ **COMPLETED**: Tiny string optimization implemented in `c-nan-boxing-2`
+- Strings ≤5 characters stored directly in NaN-boxed values
+- 72% memory allocation reduction in string-heavy workloads
+- Transparent to user code - automatic selection via `make_string()`
 
-1. Add a "tiny string" type, for strings whose content is small enough (in bytes) to fit within the NaN box.  These should dramatically decrease GC thrashing on string code.  But we need to make the String vs. TinyString difference transparent to user code.
-2. Add interning for (non-tiny) strings.
+**Future enhancements** for c-nan-boxing-v3:
+1. Add interning for (non-tiny) strings to reduce memory usage
+2. Optimize string concatenation with rope data structures
 
 ### Extending functionality
 
@@ -174,5 +210,5 @@ The world of GC is complex, and we've barely scratched the surface.  At some poi
 5. **Build complexity** can be managed with careful dependency stubbing
 
 ---
-*Last updated*: During implementation of numberWords benchmark  
-*Status*: 3/3 benchmarks implemented across 2 type systems, ready for expansion
+*Last updated*: After completing tiny string optimization in c-nan-boxing-2
+*Status*: 3/3 benchmarks implemented across 3 type systems (c-nan-boxing, c-nan-boxing-2, cpp-classic)
