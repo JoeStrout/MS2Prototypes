@@ -6,6 +6,7 @@ bin
 *.so
 *.dylib
 *.dll
+*.dSYM
 
 # Executables
 *.exe
