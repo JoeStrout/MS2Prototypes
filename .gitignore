@@ -15,6 +15,7 @@ bin
 *_classic
 example_shadow_stack
 ms2vm
+ms2asm
 
 # Claude Code settings
 .claude/

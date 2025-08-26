@@ -31,13 +31,35 @@
 
 	#define VM_DISPATCH_BEGIN()                                                     \
 		static void* const vm_labels[op__COUNT] = { VM_OPCODES(VM_LABEL_LIST) };      \
-		ins = *pc++; goto *vm_labels[OP(ins)];
+		vm_dispatch_next: \
+		cycle_count++; \
+		if (max_cycles > 0 && cycle_count > max_cycles) { \
+			fprintf(stderr, "VM: Hit cycle limit of %u\n", max_cycles); \
+			return make_nil(); \
+		} \
+		ins = *pc++; \
+		if (debug) { \
+			printf("PC: %ld, Cycle: %u, Ins: 0x%08x, Op: %u\n", \
+				   (long)(pc - entry->code - 1), cycle_count, ins, OP(ins)); \
+		} \
+		goto *vm_labels[OP(ins)];
 
 	#define VM_CASE(OP)     L_##OP:
-	#define VM_NEXT()       do { ins = *pc++; goto *vm_labels[OP(ins)]; } while (0)
+	#define VM_NEXT()       goto vm_dispatch_next
 	#define VM_DISPATCH_END() /* nothing */
 #else
-	#define VM_DISPATCH_BEGIN() for (;;) { ins = *pc++; switch (OP(ins)) {
+	#define VM_DISPATCH_BEGIN() for (;;) { \
+		cycle_count++; \
+		if (max_cycles > 0 && cycle_count > max_cycles) { \
+			fprintf(stderr, "VM: Hit cycle limit of %u\n", max_cycles); \
+			return make_nil(); \
+		} \
+		ins = *pc++; \
+		if (debug) { \
+			printf("PC: %ld, Cycle: %u, Ins: 0x%08x, Op: %u\n", \
+				   (long)(pc - entry->code - 1), cycle_count, ins, OP(ins)); \
+		} \
+		switch (OP(ins)) {
 	#define VM_CASE(OP)        case op_##OP:
 	#define VM_NEXT()          continue;
 	#define VM_DISPATCH_END()  default: fprintf(stderr, "bad opcode %u\n", OP(ins)); exit(2); } }
@@ -72,7 +94,7 @@ static void ensure_frame(VM *vm, Value *base, uint16_t need) {
 	(void)vm; (void)base; (void)need; // stack is pre-allocated large enough in this demo
 }
 
-Value vm_exec(VM *vm, Proto *entry) {
+Value vm_exec(VM *vm, Proto *entry, unsigned int max_cycles) {
 	// Current frame state (kept in locals for speed)
 	Value    *base = vm->stack;                   // entry executes at stack base
 	uint32_t *pc   = entry->code;                 // start at entry code
@@ -83,6 +105,8 @@ Value vm_exec(VM *vm, Proto *entry) {
 	ensure_frame(vm, base, entry->max_regs);
 
 	uint32_t ins;
+	unsigned int cycle_count = 0;
+	bool debug = false; // Set to true for debug output
 
 	VM_DISPATCH_BEGIN();
 

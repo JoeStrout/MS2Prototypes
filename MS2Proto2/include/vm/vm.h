@@ -57,7 +57,7 @@ typedef struct {
 // Public VM API
 void vm_init(VM *vm, size_t stack_slots, size_t call_slots);
 void vm_free(VM *vm);
-Value vm_exec(VM *vm, Proto *entry);
+Value vm_exec(VM *vm, Proto *entry, unsigned int max_cycles);
 bool vm_uses_goto(void);
 
 #endif // VM_H

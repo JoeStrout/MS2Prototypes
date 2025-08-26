@@ -94,7 +94,7 @@ int main(void) {
 
 	vm.funcs[0] = fib; // CALLF C=0 targets fib
 
-	Value result = vm_exec(&vm, mainp);
+	Value result = vm_exec(&vm, mainp, 0); // 0 = no cycle limit
 	
 	if (is_int(result)) {
 		printf("fib(%d) = %d\n", n, as_int(result));
