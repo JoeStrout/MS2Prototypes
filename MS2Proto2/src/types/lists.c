@@ -45,7 +45,7 @@ Value list_get(Value list_val, int index) {
     if (list && index >= 0 && index < list->count) {
         return list->items[index];
     }
-    return make_nil();
+    return make_null();
 }
 
 void list_set(Value list_val, int index, Value item) {
@@ -70,7 +70,7 @@ void list_push(Value list_val, Value item) {
 
 Value list_pop(Value list_val) {
     List* list = as_list(list_val);
-    if (!list || list->count <= 0) return make_nil();
+    if (!list || list->count <= 0) return make_null();
     
     return list->items[--list->count];
 }
@@ -103,27 +103,6 @@ void list_remove(Value list_val, int index) {
     list->count--;
 }
 
-// Value equality helper
-static bool values_equal(Value a, Value b) {
-    // Check specific types first, then fall back to number comparison
-    if (is_int(a) && is_int(b)) {
-        return as_int(a) == as_int(b);
-    }
-    if (is_double(a) && is_double(b)) {
-        return as_double(a) == as_double(b);
-    }
-    if (is_string(a) && is_string(b)) {
-        return string_equals(a, b);
-    }
-    // Mixed int/double comparison
-    if (is_number(a) && is_number(b)) {
-        double da = is_int(a) ? (double)as_int(a) : as_double(a);
-        double db = is_int(b) ? (double)as_int(b) : as_double(b);
-        return da == db;
-    }
-    return a == b;
-}
-
 // List searching
 int list_indexOf(Value list_val, Value item, int start_pos) {
     List* list = as_list(list_val);
@@ -132,7 +111,7 @@ int list_indexOf(Value list_val, Value item, int start_pos) {
     if (start_pos < 0) start_pos = 0;
     
     for (int i = start_pos; i < list->count; i++) {
-        if (values_equal(list->items[i], item)) {
+        if (value_equal(list->items[i], item)) {
             return i;
         }
     }
@@ -153,7 +132,7 @@ void list_clear(Value list_val) {
 
 Value list_copy(Value list_val) {
     List* src = as_list(list_val);
-    if (!src) return make_nil();
+    if (!src) return make_null();
     
     Value new_list = make_list(src->capacity);
     List* dst = as_list(new_list);
@@ -176,7 +155,7 @@ bool list_needs_expansion(Value list_val) {
 // Create a new list with expanded capacity, copying all elements
 Value list_with_expanded_capacity(Value list_val) {
     List* old_list = as_list(list_val);
-    if (!old_list) return make_nil();
+    if (!old_list) return make_null();
     
     // Double the capacity (minimum of 2)
     int new_capacity = old_list->capacity * 2;

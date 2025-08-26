@@ -30,8 +30,8 @@ The garbage collector uses a "shadow stack" approach where local variables are a
 void my_function() {
     GC_PUSH_SCOPE();           // Start scope
     
-    Value str = make_nil();    // Declare local variables
-    Value list = make_nil();
+    Value str = make_null();    // Declare local variables
+    Value list = make_null();
     
     GC_PROTECT(&str);          // Protect from GC (pass pointer!)
     GC_PROTECT(&list);

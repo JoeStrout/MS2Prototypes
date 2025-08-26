@@ -31,7 +31,7 @@ static inline bool is_number(Value v) {
     return (v & NANISH) != NANISH;
 }
 
-static inline bool is_nil(Value v) {
+static inline bool is_null(Value v) {
     return v == NULL_VALUE;
 }
 
@@ -72,7 +72,7 @@ static inline double as_number(Value v) {
     return u.d;
 }
 
-static inline Value make_nil() {
+static inline Value make_null() {
     return NULL_VALUE;
 }
 
@@ -139,7 +139,7 @@ static inline Value make_tiny_string(const char* str, int len) {
 }
 
 static inline Value make_string(const char* str) {
-    if (str == NULL) return make_nil();
+    if (str == NULL) return make_null();
     int len = strlen(str);
     
     // Use tiny string for short strings
@@ -268,7 +268,7 @@ static inline Value string_concat(Value a, Value b) {
     const char* sa = get_string_data_zerocopy(&a, &actual_len_a);
     const char* sb = get_string_data_zerocopy(&b, &actual_len_b);
     
-    if (!sa || !sb) return make_nil();
+    if (!sa || !sb) return make_null();
     
     // Use tiny string if result is small enough
     if (total_len <= TINY_STRING_MAX_LEN) {
@@ -319,7 +319,7 @@ static inline Value string_replace(Value str, Value from, Value to) {
     const char* f = get_string_data_nullterm(&from, tiny_buffer_f);
     const char* t = get_string_data_nullterm(&to, tiny_buffer_t);
     
-    if (!s || !f || !t) return make_nil();
+    if (!s || !f || !t) return make_null();
     
     // Count occurrences to calculate final length
     int count = 0;
@@ -413,7 +413,7 @@ static inline Value list_get(Value list_val, int index) {
     if (list && index >= 0 && index < list->count) {
         return list->items[index];
     }
-    return make_nil();
+    return make_null();
 }
 
 static inline void list_set(Value list_val, int index, Value item) {
@@ -429,13 +429,13 @@ static inline int list_count(Value list_val) {
 }
 
 static inline bool is_truthy(Value v) {
-    if (is_nil(v)) return false;
+    if (is_null(v)) return false;
     if (is_number(v)) return as_number(v) != 0.0;
     if (is_int(v)) return as_int(v) != 0;
     return true;
 }
 
-static inline bool values_equal(Value a, Value b) {
+static inline bool value_equal(Value a, Value b) {
     if (is_number(a) && is_number(b)) {
         return as_number(a) == as_number(b);
     }
@@ -452,7 +452,7 @@ static inline int list_indexOf(Value list_val, Value item) {
     for (int i = 0; i < list->count; i++) {
         if (is_string(list->items[i]) && is_string(item)) {
             if (string_equals(list->items[i], item)) return i;
-        } else if (values_equal(list->items[i], item)) {
+        } else if (value_equal(list->items[i], item)) {
             return i;
         }
     }
@@ -468,12 +468,12 @@ static inline Value string_split(Value str, Value delimiter) {
     char tiny_buffer_delim[TINY_STRING_MAX_LEN + 1];
     
     const char* s = get_string_data_nullterm(&str, tiny_buffer_s);
-    if (!s) return make_nil();
+    if (!s) return make_null();
     
     const char* delim = NULL;
     if (delim_len > 0) {
         delim = get_string_data_nullterm(&delimiter, tiny_buffer_delim);
-        if (!delim) return make_nil();
+        if (!delim) return make_null();
     }
     
     // Handle empty delimiter (split into characters)

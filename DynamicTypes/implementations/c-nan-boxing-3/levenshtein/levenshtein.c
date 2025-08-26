@@ -8,10 +8,10 @@ Value editDistance(Value s1_val, Value s2_val) {
     GC_PUSH_SCOPE();
     
     // Declare and protect all local Values
-    Value empty_delim = make_nil();
-    Value s1chars = make_nil();
-    Value s2chars = make_nil();
-    Value d_list = make_nil();
+    Value empty_delim = make_null();
+    Value s1chars = make_null();
+    Value s2chars = make_null();
+    Value d_list = make_null();
     
     GC_PROTECT(&empty_delim);
     GC_PROTECT(&s1chars);
@@ -20,7 +20,7 @@ Value editDistance(Value s1_val, Value s2_val) {
     
     if (!is_string(s1_val) || !is_string(s2_val)) {
         GC_POP_SCOPE();
-        return make_nil();
+        return make_null();
     }
     
     int n = string_length(s1_val);
@@ -108,17 +108,17 @@ void runTest() {
     GC_PUSH_SCOPE();
     
     // Declare and protect all local Values
-    Value s1 = make_nil();
-    Value s2 = make_nil();
-    Value s3 = make_nil();
-    Value s4 = make_nil();
-    Value ga1 = make_nil();
-    Value ga2 = make_nil();
-    Value banana = make_nil();
-    Value result1 = make_nil();
-    Value result2 = make_nil();
-    Value result3 = make_nil();
-    Value result4 = make_nil();
+    Value s1 = make_null();
+    Value s2 = make_null();
+    Value s3 = make_null();
+    Value s4 = make_null();
+    Value ga1 = make_null();
+    Value ga2 = make_null();
+    Value banana = make_null();
+    Value result1 = make_null();
+    Value result2 = make_null();
+    Value result3 = make_null();
+    Value result4 = make_null();
     
     GC_PROTECT(&s1);
     GC_PROTECT(&s2);

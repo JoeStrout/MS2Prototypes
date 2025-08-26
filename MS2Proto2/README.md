@@ -39,7 +39,7 @@ The codebase is organized into clean, layered modules:
 - **Value type**: `typedef uint64_t Value`
 - **NaN-boxing masks**: Type tagging constants
 - **Type checking**: `is_int()`, `is_string()`, `is_list()`, etc.
-- **Value creation**: `make_int()`, `make_double()`, `make_nil()`
+- **Value creation**: `make_int()`, `make_double()`, `make_null()`
 - **Value extraction**: `as_int()`, `as_double()`, `as_pointer()`
 
 ### Unicode Layer (`unicode.h` + `unicode.c`) 

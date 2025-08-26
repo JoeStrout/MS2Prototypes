@@ -132,8 +132,8 @@ void gc_mark_list(List* list);
 // Example usage:
 //   void my_function() {
 //       GC_PUSH_SCOPE();
-//       Value str = make_nil();
-//       Value list = make_nil();
+//       Value str = make_null();
+//       Value list = make_null();
 //       GC_PROTECT(&str);    // Protect pointer to str
 //       GC_PROTECT(&list);   // Protect pointer to list
 //       

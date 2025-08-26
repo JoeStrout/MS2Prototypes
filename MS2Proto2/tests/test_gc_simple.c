@@ -118,7 +118,7 @@ int test_gc_locals_macro() {
     
     Value v1 = make_int(100);
     Value v2 = make_double(2.718);
-    Value v3 = make_nil();
+    Value v3 = make_null();
     
     GC_PUSH_SCOPE();
     GC_LOCALS(&v1, &v2, &v3);
@@ -126,7 +126,7 @@ int test_gc_locals_macro() {
     // Values should remain accessible
     TEST_ASSERT(is_int(v1) && as_int(v1) == 100, "First local protected");
     TEST_ASSERT(is_double(v2), "Second local protected");
-    TEST_ASSERT(is_nil(v3), "Third local protected");
+    TEST_ASSERT(is_null(v3), "Third local protected");
     
     GC_POP_SCOPE();
     

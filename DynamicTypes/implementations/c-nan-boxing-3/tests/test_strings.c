@@ -20,7 +20,7 @@ void test_string_creation() {
     assert(strcmp(as_cstring(empty), "") == 0);
     
     null_str = make_string(NULL);
-    assert(is_nil(null_str));
+    assert(is_null(null_str));
     
     printf("✓ String creation tests passed\n");
     GC_POP_SCOPE();
@@ -37,8 +37,8 @@ void test_string_equality() {
     
     assert(string_equals(s1, s2));
     assert(!string_equals(s1, s3));
-    assert(values_equal(s1, s2));
-    assert(!values_equal(s1, s3));
+    assert(value_equal(s1, s2));
+    assert(!value_equal(s1, s3));
     
     printf("✓ String equality tests passed\n");
     GC_POP_SCOPE();

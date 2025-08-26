@@ -7,11 +7,11 @@ Value rfib(Value n_val) {
     GC_PUSH_SCOPE();
     
     // Declare and protect all local Values
-    Value result = make_nil();
-    Value n_minus_1 = make_nil();
-    Value n_minus_2 = make_nil();
-    Value fib1 = make_nil();
-    Value fib2 = make_nil();
+    Value result = make_null();
+    Value n_minus_1 = make_null();
+    Value n_minus_2 = make_null();
+    Value fib1 = make_null();
+    Value fib2 = make_null();
     
     GC_PROTECT(&result);
     GC_PROTECT(&n_minus_1);
@@ -20,7 +20,7 @@ Value rfib(Value n_val) {
     GC_PROTECT(&fib2);
     
     if (!is_int(n_val)) {
-        result = make_nil();
+        result = make_null();
         GC_POP_SCOPE();
         return result;
     }
@@ -47,7 +47,7 @@ Value rfib(Value n_val) {
     if (!is_int(fib1) || !is_int(fib2)) {
         printf("ERROR: Non-integer result in rfib(%d): fib1=%llx is_int=%d, fib2=%llx is_int=%d\n", 
                n, fib1, is_int(fib1), fib2, is_int(fib2));
-        result = make_nil();
+        result = make_null();
         GC_POP_SCOPE();
         return result;
     }
@@ -71,7 +71,7 @@ void run_benchmark(int n) {
     GC_PUSH_SCOPE();
     
     Value n_val = make_int(n);
-    Value result = make_nil();
+    Value result = make_null();
     
     GC_PROTECT(&n_val);
     GC_PROTECT(&result);
@@ -101,7 +101,7 @@ int main() {
         GC_PUSH_SCOPE();
         
         Value n_val = make_int(i);
-        Value result = make_nil();
+        Value result = make_null();
         
         GC_PROTECT(&n_val);
         GC_PROTECT(&result);

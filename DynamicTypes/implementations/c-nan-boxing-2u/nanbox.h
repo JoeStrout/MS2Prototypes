@@ -32,7 +32,7 @@ static inline bool is_number(Value v) {
     return (v & NANISH) != NANISH;
 }
 
-static inline bool is_nil(Value v) {
+static inline bool is_null(Value v) {
     return v == NULL_VALUE;
 }
 
@@ -73,7 +73,7 @@ static inline double as_number(Value v) {
     return u.d;
 }
 
-static inline Value make_nil() {
+static inline Value make_null() {
     return NULL_VALUE;
 }
 
@@ -141,7 +141,7 @@ static inline Value make_tiny_string(const char* str, int len) {
 }
 
 static inline Value make_string(const char* str) {
-    if (str == NULL) return make_nil();
+    if (str == NULL) return make_null();
     int lenB = strlen(str);  // Byte length
     
     // Use tiny string for short strings (in bytes)
@@ -349,7 +349,7 @@ static inline Value list_get(Value list_val, int index) {
     if (list && index >= 0 && index < list->count) {
         return list->items[index];
     }
-    return make_nil();
+    return make_null();
 }
 
 static inline void list_set(Value list_val, int index, Value item) {
@@ -365,13 +365,13 @@ static inline int list_count(Value list_val) {
 }
 
 static inline bool is_truthy(Value v) {
-    if (is_nil(v)) return false;
+    if (is_null(v)) return false;
     if (is_number(v)) return as_number(v) != 0.0;
     if (is_int(v)) return as_int(v) != 0;
     return true;
 }
 
-static inline bool values_equal(Value a, Value b) {
+static inline bool value_equal(Value a, Value b) {
     if (is_number(a) && is_number(b)) {
         return as_number(a) == as_number(b);
     }
@@ -388,7 +388,7 @@ static inline int list_indexOf(Value list_val, Value item) {
     for (int i = 0; i < list->count; i++) {
         if (is_string(list->items[i]) && is_string(item)) {
             if (string_equals(list->items[i], item)) return i;
-        } else if (values_equal(list->items[i], item)) {
+        } else if (value_equal(list->items[i], item)) {
             return i;
         }
     }

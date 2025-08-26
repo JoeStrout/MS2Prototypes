@@ -36,7 +36,7 @@ typedef uint64_t Value;
 #define NULL_VALUE         0x7ffe000000000000ULL
 
 // Core type checking functions
-static inline bool is_nil(Value v) {
+static inline bool is_null(Value v) {
     return v == NULL_VALUE;
 }
 
@@ -67,7 +67,7 @@ static inline bool is_map(Value v) {
 static inline bool is_double(Value v) {
     // A value is a double if it doesn't have any of our NaN-boxing type masks
     // This means it's a normal IEEE 754 double value
-    return !is_nil(v) && !is_int(v) && !is_tiny_string(v) && !is_heap_string(v) && !is_list(v) && !is_map(v);
+    return !is_null(v) && !is_int(v) && !is_tiny_string(v) && !is_heap_string(v) && !is_list(v) && !is_map(v);
 }
 
 static inline bool is_number(Value v) {
@@ -75,7 +75,7 @@ static inline bool is_number(Value v) {
 }
 
 // Core value creation functions
-static inline Value make_nil(void) {
+static inline Value make_null(void) {
     return NULL_VALUE;
 }
 
@@ -122,7 +122,7 @@ Value value_sub(Value a, Value b);
 bool value_lt(Value a, Value b);
 
 // Value comparison (implemented in nanbox.c)
-bool values_equal(Value a, Value b);
+bool value_equal(Value a, Value b);
 
 // Debug utility functions (implemented in nanbox.c)
 void debug_print_value(Value v);

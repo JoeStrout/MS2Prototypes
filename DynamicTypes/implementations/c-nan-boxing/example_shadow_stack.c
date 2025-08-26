@@ -8,9 +8,9 @@ Value string_processing_example(const char* input) {
     GC_PUSH_SCOPE();
     
     // Declare all local Values and protect them
-    Value str = make_nil();
-    Value words = make_nil();
-    Value result = make_nil();
+    Value str = make_null();
+    Value words = make_null();
+    Value result = make_null();
     
     GC_PROTECT(&str);
     GC_PROTECT(&words);

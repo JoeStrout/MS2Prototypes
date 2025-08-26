@@ -35,7 +35,7 @@
 		cycle_count++; \
 		if (max_cycles > 0 && cycle_count > max_cycles) { \
 			fprintf(stderr, "VM: Hit cycle limit of %u\n", max_cycles); \
-			return make_nil(); \
+			return make_null(); \
 		} \
 		ins = *pc++; \
 		if (debug) { \
@@ -52,7 +52,7 @@
 		cycle_count++; \
 		if (max_cycles > 0 && cycle_count > max_cycles) { \
 			fprintf(stderr, "VM: Hit cycle limit of %u\n", max_cycles); \
-			return make_nil(); \
+			return make_null(); \
 		} \
 		ins = *pc++; \
 		if (debug) { \
@@ -74,7 +74,7 @@ void vm_init(VM *vm, size_t stack_slots, size_t call_slots) {
 	
 	// Initialize all stack values to nil
 	for (size_t i = 0; i < stack_slots; i++) {
-		vm->stack[i] = make_nil();
+		vm->stack[i] = make_null();
 	}
 }
 
@@ -120,15 +120,13 @@ Value vm_exec(VM *vm, Proto *entry, unsigned int max_cycles) {
 
 	VM_CASE(LOADK) {
 		// BC is signed 16-bit immediate
-		// (a more complete VM would probably have a separate table of constants,
-		// probably per function, and BC would be an index into that.)
 		base[A(ins)] = make_int(BC(ins));
 		VM_NEXT();
 	}
 
 	VM_CASE(LOADN) {
 		// Load from constants table: R[A] = constants[B]
-		uint8_t const_idx = B(ins);
+		uint16_t const_idx = BC(ins);
 		if (const_idx >= entry->const_len) {
 			fprintf(stderr, "LOADN: invalid constant index %u\n", const_idx);
 			exit(2);
@@ -202,5 +200,5 @@ Value vm_exec(VM *vm, Proto *entry, unsigned int max_cycles) {
 	VM_DISPATCH_END();
 
 	// Unreachable
-	return make_nil();
+	return make_null();
 }

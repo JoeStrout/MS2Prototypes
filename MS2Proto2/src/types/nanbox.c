@@ -11,8 +11,8 @@
 
 // Debug utilities for Value inspection
 void debug_print_value(Value v) {
-    if (is_nil(v)) {
-        printf("nil");
+    if (is_null(v)) {
+        printf("null");
     } else if (is_int(v)) {
         printf("int(%d)", as_int(v));
     } else if (is_double(v)) {
@@ -46,7 +46,7 @@ void debug_print_value(Value v) {
 
 // Value type name for debugging
 const char* value_type_name(Value v) {
-    if (is_nil(v)) return "nil";
+    if (is_null(v)) return "nil";
     if (is_int(v)) return "int";
     if (is_double(v)) return "double";
     if (is_tiny_string(v)) return "tiny_string";
@@ -79,7 +79,7 @@ Value value_add(Value a, Value b) {
     
     // TODO: Handle string concatenation, etc.
     // For now, return nil for unsupported operations
-    return make_nil();
+    return make_null();
 }
 
 Value value_sub(Value a, Value b) {
@@ -103,7 +103,7 @@ Value value_sub(Value a, Value b) {
     }
     
     // Return nil for unsupported operations
-    return make_nil();
+    return make_null();
 }
 
 bool value_lt(Value a, Value b) {
@@ -119,15 +119,16 @@ bool value_lt(Value a, Value b) {
     return false;
 }
 
-bool values_equal(Value a, Value b) {
-    // Check specific types first, then fall back to number comparison
-    if (is_int(a) && is_int(b)) {
+bool value_equal(Value a, Value b) {
+	bool sameType = ((a & NANISH_MASK) == (b & NANISH_MASK));
+	
+    if (is_int(a) && sameType) {
         return as_int(a) == as_int(b);
     }
-    if (is_double(a) && is_double(b)) {
+    if (is_double(a) && sameType) {
         return as_double(a) == as_double(b);
     }
-    if (is_string(a) && is_string(b)) {
+    if (is_string(a) && sameType) {
         return string_equals(a, b);
     }
     // Mixed int/double comparison
@@ -135,6 +136,10 @@ bool values_equal(Value a, Value b) {
         double da = is_int(a) ? (double)as_int(a) : as_double(a);
         double db = is_int(b) ? (double)as_int(b) : as_double(b);
         return da == db;
+    }
+    // Nulls
+    if (is_null(a) && sameType) {
+    	return true;
     }
     // Different types or unsupported types
     return false;

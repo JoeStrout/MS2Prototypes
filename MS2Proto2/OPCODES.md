@@ -4,7 +4,7 @@
 | --- | --- | --- | --- | --- |
 | MOVE | R_dest | R_src | - | R[A] := R[B] |
 | LOADK | R_dest | int16 | ← | R[A] := BC (16-bit signed value) |
-| LOADN | R_dest | const_idx | - | R[A] := constants[B] (load from constants table) |
+| LOADN | R_dest | const_idx | ← | R[A] := constants[BC] (load from constants table) |
 | ADD | R_dest | R_op1 | R_op2 | R[A] := R[B] + R[C] |
 | SUB | R_dest | R_op1 | R_op2 | R[A] := R[B] - R[C] |
 | JUMP | - | offset | ←| PC += BC (16-bit signed value) |

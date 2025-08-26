@@ -9,8 +9,8 @@ void test_shadow_stack_basic() {
     
     GC_PUSH_SCOPE();
     
-    Value str1 = make_nil();
-    Value str2 = make_nil();
+    Value str1 = make_null();
+    Value str2 = make_null();
     
     GC_PROTECT(&str1);
     GC_PROTECT(&str2);
@@ -39,7 +39,7 @@ void test_shadow_stack_collection() {
     
     GC_PUSH_SCOPE();
     
-    Value list = make_nil();
+    Value list = make_null();
     GC_PROTECT(&list);
     
     list = make_list(10);
@@ -79,14 +79,14 @@ void test_nested_scopes() {
     
     GC_PUSH_SCOPE();
     
-    Value outer_str = make_nil();
+    Value outer_str = make_null();
     GC_PROTECT(&outer_str);
     outer_str = make_string("outer");
     
     {
         GC_PUSH_SCOPE();
         
-        Value inner_str = make_nil();
+        Value inner_str = make_null();
         GC_PROTECT(&inner_str);
         inner_str = make_string("inner");
         

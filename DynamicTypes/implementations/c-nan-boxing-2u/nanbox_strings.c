@@ -12,7 +12,7 @@
 Value string_concat(Value a, Value b) {
     GC_PUSH_SCOPE();
     
-    Value result = make_nil();
+    Value result = make_null();
     GC_PROTECT(&a);
     GC_PROTECT(&b);
     GC_PROTECT(&result);
@@ -24,7 +24,7 @@ Value string_concat(Value a, Value b) {
     
     if (!sa || !sb) {
         GC_POP_SCOPE();
-        return make_nil();
+        return make_null();
     }
     
     int total_lenB = lenB_a + lenB_b;
@@ -53,7 +53,7 @@ Value string_concat(Value a, Value b) {
 Value string_replace(Value str, Value from, Value to) {
     GC_PUSH_SCOPE();
     
-    Value result = make_nil();
+    Value result = make_null();
     GC_PROTECT(&str);
     GC_PROTECT(&from);
     GC_PROTECT(&to);
@@ -79,7 +79,7 @@ Value string_replace(Value str, Value from, Value to) {
     
     if (!s || !f || !t) {
         GC_POP_SCOPE();
-        return make_nil();
+        return make_null();
     }
     
     // Count occurrences to calculate final length
@@ -147,7 +147,7 @@ Value string_replace(Value str, Value from, Value to) {
 Value string_split(Value str, Value delimiter) {
     GC_PUSH_SCOPE();
     
-    Value result = make_nil();
+    Value result = make_null();
     GC_PROTECT(&str);
     GC_PROTECT(&delimiter);
     GC_PROTECT(&result);
@@ -166,7 +166,7 @@ Value string_split(Value str, Value delimiter) {
     const char* s = get_string_data_nullterm(&str, tiny_buffer_s);
     if (!s) {
         GC_POP_SCOPE();
-        return make_nil();
+        return make_null();
     }
     
     bool has_delimiter = (delim_lenB > 0);
@@ -177,7 +177,7 @@ Value string_split(Value str, Value delimiter) {
         delim = get_string_data_nullterm(&delimiter, tiny_buffer_delim);
         if (!delim) {
             GC_POP_SCOPE();
-            return make_nil();
+            return make_null();
         }
     }
     
@@ -264,13 +264,13 @@ Value string_split(Value str, Value delimiter) {
 Value string_substring(Value str, int startIndex, int len) {
     GC_PUSH_SCOPE();
     
-    Value result = make_nil();
+    Value result = make_null();
     GC_PROTECT(&str);
     GC_PROTECT(&result);
     
     if (!is_string(str) || startIndex < 0 || len < 0) {
         GC_POP_SCOPE();
-        return make_nil();
+        return make_null();
     }
     
     int strLenB = string_lengthB(str);
@@ -285,7 +285,7 @@ Value string_substring(Value str, int startIndex, int len) {
     const char* data = get_string_data_nullterm(&str, tiny_buffer);
     if (!data) {
         GC_POP_SCOPE();
-        return make_nil();
+        return make_null();
     }
     
     // Convert character indexes to byte indexes

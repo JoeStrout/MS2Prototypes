@@ -142,11 +142,11 @@ int test_expansion_with_mixed_types() {
     
     // Add more mixed types
     list_push(list, str2);
-    list_push(list, make_nil());
+    list_push(list, make_null());
     
     TEST_ASSERT(list_count(list) == 5, "More items added after expansion");
     TEST_ASSERT(is_string(list_get(list, 3)), "New string added");
-    TEST_ASSERT(is_nil(list_get(list, 4)), "Nil added");
+    TEST_ASSERT(is_null(list_get(list, 4)), "Nil added");
     
     GC_POP_SCOPE();
     gc_shutdown();
@@ -171,14 +171,14 @@ int test_expansion_edge_cases() {
     TEST_ASSERT(list_count(expanded_empty) == 0, "Expanded empty list still has count 0");
     
     // Test expansion of non-list
-    Value expanded_nil = list_with_expanded_capacity(make_nil());
-    TEST_ASSERT(is_nil(expanded_nil), "Expanding nil returns nil");
+    Value expanded_nil = list_with_expanded_capacity(make_null());
+    TEST_ASSERT(is_null(expanded_nil), "Expanding nil returns nil");
     
     Value expanded_int = list_with_expanded_capacity(make_int(42));
-    TEST_ASSERT(is_nil(expanded_int), "Expanding non-list returns nil");
+    TEST_ASSERT(is_null(expanded_int), "Expanding non-list returns nil");
     
     // Test needs_expansion on non-list
-    TEST_ASSERT(!list_needs_expansion(make_nil()), "Nil doesn't need expansion");
+    TEST_ASSERT(!list_needs_expansion(make_null()), "Nil doesn't need expansion");
     TEST_ASSERT(!list_needs_expansion(make_int(42)), "Non-list doesn't need expansion");
     
     GC_POP_SCOPE();

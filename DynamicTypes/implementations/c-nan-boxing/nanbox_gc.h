@@ -115,8 +115,8 @@ void gc_mark_list(List* list);
 // Example usage:
 //   void my_function() {
 //       GC_PUSH_SCOPE();
-//       Value str = make_nil();
-//       Value list = make_nil();
+//       Value str = make_null();
+//       Value list = make_null();
 //       GC_PROTECT(&str);    // Protect pointer to str
 //       GC_PROTECT(&list);   // Protect pointer to list
 //       
@@ -131,7 +131,7 @@ static inline bool is_number(Value v) {
     return (v & NANISH) != NANISH;
 }
 
-static inline bool is_nil(Value v) {
+static inline bool is_null(Value v) {
     return v == NULL_VALUE;
 }
 
@@ -164,7 +164,7 @@ static inline double as_number(Value v) {
     return u.d;
 }
 
-static inline Value make_nil() {
+static inline Value make_null() {
     return NULL_VALUE;
 }
 
@@ -185,7 +185,7 @@ static inline void* as_pointer(Value v) {
 }
 
 static inline Value make_string(const char* str) {
-    if (str == NULL) return make_nil();
+    if (str == NULL) return make_null();
     int len = strlen(str);
     String* s = (String*)gc_allocate(sizeof(String) + len + 1);
     s->len = len;
@@ -234,7 +234,7 @@ static inline Value list_get(Value list_val, int index) {
     if (list && index >= 0 && index < list->count) {
         return list->items[index];
     }
-    return make_nil();
+    return make_null();
 }
 
 static inline void list_set(Value list_val, int index, Value item) {
@@ -250,13 +250,13 @@ static inline int list_count(Value list_val) {
 }
 
 static inline bool is_truthy(Value v) {
-    if (is_nil(v)) return false;
+    if (is_null(v)) return false;
     if (is_number(v)) return as_number(v) != 0.0;
     if (is_int(v)) return as_int(v) != 0;
     return true;
 }
 
-static inline bool values_equal(Value a, Value b) {
+static inline bool value_equal(Value a, Value b) {
     if (is_number(a) && is_number(b)) {
         return as_number(a) == as_number(b);
     }
@@ -284,7 +284,7 @@ static inline int list_indexOf(Value list_val, Value item) {
     for (int i = 0; i < list->count; i++) {
         if (is_string(list->items[i]) && is_string(item)) {
             if (string_equals(list->items[i], item)) return i;
-        } else if (values_equal(list->items[i], item)) {
+        } else if (value_equal(list->items[i], item)) {
             return i;
         }
     }
@@ -294,7 +294,7 @@ static inline int list_indexOf(Value list_val, Value item) {
 static inline Value string_concat(Value a, Value b) {
     const char* sa = as_cstring(a);
     const char* sb = as_cstring(b);
-    if (!sa || !sb) return make_nil();
+    if (!sa || !sb) return make_null();
     
     int len_a = string_length(a);
     int len_b = string_length(b);
@@ -312,7 +312,7 @@ static inline Value string_replace(Value str, Value from, Value to) {
     const char* s = as_cstring(str);
     const char* f = as_cstring(from);
     const char* t = as_cstring(to);
-    if (!s || !f || !t) return make_nil();
+    if (!s || !f || !t) return make_null();
     
     int from_len = string_length(from);
     int to_len = string_length(to);
@@ -367,7 +367,7 @@ static inline Value string_replace(Value str, Value from, Value to) {
 static inline Value string_split(Value str, Value delimiter) {
     const char* s = as_cstring(str);
     const char* delim = as_cstring(delimiter);
-    if (!s) return make_nil();
+    if (!s) return make_null();
     
     int str_len = string_length(str);
     

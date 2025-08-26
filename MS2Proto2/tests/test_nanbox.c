@@ -31,9 +31,9 @@
 
 // Test nil value creation and checking
 int test_nil_operations() {
-    Value nil_val = make_nil();
+    Value nil_val = make_null();
     
-    TEST_ASSERT(is_nil(nil_val), "make_nil() creates nil value");
+    TEST_ASSERT(is_null(nil_val), "make_null() creates nil value");
     TEST_ASSERT(!is_int(nil_val), "nil is not int");
     TEST_ASSERT(!is_double(nil_val), "nil is not double");
     TEST_ASSERT(!is_string(nil_val), "nil is not string");
@@ -58,7 +58,7 @@ int test_int_operations() {
     TEST_ASSERT(is_int(zero_val), "make_int(0) creates int value");
     
     TEST_ASSERT(is_number(int_val), "int is number");
-    TEST_ASSERT(!is_nil(int_val), "int is not nil");
+    TEST_ASSERT(!is_null(int_val), "int is not nil");
     TEST_ASSERT(!is_double(int_val), "int is not double");
     TEST_ASSERT(!is_string(int_val), "int is not string");
     TEST_ASSERT(!is_list(int_val), "int is not list");
@@ -93,7 +93,7 @@ int test_double_operations() {
     TEST_ASSERT(is_double(negative_double), "make_double(-2.71828) creates double value");
     
     TEST_ASSERT(is_number(double_val), "double is number");
-    TEST_ASSERT(!is_nil(double_val), "double is not nil");
+    TEST_ASSERT(!is_null(double_val), "double is not nil");
     TEST_ASSERT(!is_int(double_val), "double is not int");
     TEST_ASSERT(!is_string(double_val), "double is not string");
     TEST_ASSERT(!is_list(double_val), "double is not list");
@@ -133,7 +133,7 @@ int test_map_type_checking() {
     Value map_val = MAP_MASK | 0xCAFEBABE;  // Some fake pointer value
     
     TEST_ASSERT(is_map(map_val), "Map mask creates map value");
-    TEST_ASSERT(!is_nil(map_val), "Map is not nil");
+    TEST_ASSERT(!is_null(map_val), "Map is not nil");
     TEST_ASSERT(!is_int(map_val), "Map is not int");
     TEST_ASSERT(!is_double(map_val), "Map is not double");
     TEST_ASSERT(!is_string(map_val), "Map is not string");
@@ -154,7 +154,7 @@ int test_tiny_string_type_checking() {
     TEST_ASSERT(is_tiny_string(tiny_val), "Tiny string mask creates tiny string value");
     TEST_ASSERT(is_string(tiny_val), "Tiny string is considered a string");
     TEST_ASSERT(!is_heap_string(tiny_val), "Tiny string is not heap string");
-    TEST_ASSERT(!is_nil(tiny_val), "Tiny string is not nil");
+    TEST_ASSERT(!is_null(tiny_val), "Tiny string is not nil");
     TEST_ASSERT(!is_int(tiny_val), "Tiny string is not int");
     TEST_ASSERT(!is_double(tiny_val), "Tiny string is not double");
     TEST_ASSERT(!is_list(tiny_val), "Tiny string is not list");
@@ -175,7 +175,7 @@ int test_heap_string_type_checking() {
     TEST_ASSERT(is_heap_string(heap_val), "String mask creates heap string value");
     TEST_ASSERT(is_string(heap_val), "Heap string is considered a string");
     TEST_ASSERT(!is_tiny_string(heap_val), "Heap string is not tiny string");
-    TEST_ASSERT(!is_nil(heap_val), "Heap string is not nil");
+    TEST_ASSERT(!is_null(heap_val), "Heap string is not nil");
     TEST_ASSERT(!is_int(heap_val), "Heap string is not int");
     TEST_ASSERT(!is_double(heap_val), "Heap string is not double");
     TEST_ASSERT(!is_list(heap_val), "Heap string is not list");
@@ -194,7 +194,7 @@ int test_list_type_checking() {
     Value list_val = LIST_MASK | 0xDEADBEEF;  // Some fake pointer value
     
     TEST_ASSERT(is_list(list_val), "List mask creates list value");
-    TEST_ASSERT(!is_nil(list_val), "List is not nil");
+    TEST_ASSERT(!is_null(list_val), "List is not nil");
     TEST_ASSERT(!is_int(list_val), "List is not int");
     TEST_ASSERT(!is_double(list_val), "List is not double");
     TEST_ASSERT(!is_string(list_val), "List is not string");
@@ -206,7 +206,7 @@ int test_list_type_checking() {
 
 // Test value type name debugging function
 int test_value_type_names() {
-    Value nil_val = make_nil();
+    Value nil_val = make_null();
     Value int_val = make_int(42);
     Value double_val = make_double(3.14);
     
@@ -230,7 +230,7 @@ int test_value_type_names() {
 
 // Test that different types have distinct values
 int test_type_distinctness() {
-    Value nil_val = make_nil();
+    Value nil_val = make_null();
     Value int_val = make_int(0);
     Value double_val = make_double(0.0);
     

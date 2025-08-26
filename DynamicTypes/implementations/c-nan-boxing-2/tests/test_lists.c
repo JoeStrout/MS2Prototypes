@@ -41,10 +41,10 @@ void test_list_add_get() {
     
     // Test out of bounds
     Value invalid = list_get(list, 10);
-    assert(is_nil(invalid));
+    assert(is_null(invalid));
     
     Value negative = list_get(list, -1);
-    assert(is_nil(negative));
+    assert(is_null(negative));
     
     printf("✓ List add and get tests passed\n");
 }
@@ -82,7 +82,7 @@ void test_list_mixed_types() {
     list_add(list, make_int(42));
     list_add(list, make_string("hello"));
     list_add(list, make_number(3.14));
-    list_add(list, make_nil());
+    list_add(list, make_null());
     
     assert(list_count(list) == 4);
     
@@ -90,7 +90,7 @@ void test_list_mixed_types() {
     assert(is_int(list_get(list, 0)));
     assert(is_string(list_get(list, 1)));
     assert(is_number(list_get(list, 2)));
-    assert(is_nil(list_get(list, 3)));
+    assert(is_null(list_get(list, 3)));
     
     // Verify values
     assert(as_int(list_get(list, 0)) == 42);

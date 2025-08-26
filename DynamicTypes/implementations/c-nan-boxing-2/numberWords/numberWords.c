@@ -15,11 +15,11 @@ void initializeWordArrays() {
     GC_PUSH_SCOPE();
     
     // Declare and protect local variables
-    Value singles_str = make_nil();
-    Value space = make_nil();
-    Value teens_str = make_nil();
-    Value tys_str = make_nil();
-    Value ions_str = make_nil();
+    Value singles_str = make_null();
+    Value space = make_null();
+    Value teens_str = make_null();
+    Value tys_str = make_null();
+    Value ions_str = make_null();
     
     GC_PROTECT(&singles_str);
     GC_PROTECT(&space);

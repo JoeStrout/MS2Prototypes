@@ -83,7 +83,7 @@ int test_list_push_get() {
     list_push(list, make_int(42));
     list_push(list, make_double(3.14));
     list_push(list, make_string("hello"));
-    list_push(list, make_nil());
+    list_push(list, make_null());
     
     TEST_ASSERT(list_count(list) == 4, "List count correct after pushes");
     
@@ -96,14 +96,14 @@ int test_list_push_get() {
     TEST_ASSERT(is_int(v0) && as_int(v0) == 42, "First element correct");
     TEST_ASSERT(is_double(v1) && as_double(v1) == 3.14, "Second element correct");
     TEST_ASSERT(is_string(v2) && strcmp(as_cstring(v2), "hello") == 0, "Third element correct");
-    TEST_ASSERT(is_nil(v3), "Fourth element correct");
+    TEST_ASSERT(is_null(v3), "Fourth element correct");
     
     // Test out-of-bounds access
     Value invalid = list_get(list, 10);
-    TEST_ASSERT(is_nil(invalid), "Out-of-bounds get returns nil");
+    TEST_ASSERT(is_null(invalid), "Out-of-bounds get returns nil");
     
     Value negative = list_get(list, -1);
-    TEST_ASSERT(is_nil(negative), "Negative index get returns nil");
+    TEST_ASSERT(is_null(negative), "Negative index get returns nil");
     
     GC_POP_SCOPE();
     gc_shutdown();
@@ -173,7 +173,7 @@ int test_list_pop() {
     
     // Pop from empty list
     Value empty_pop = list_pop(list);
-    TEST_ASSERT(is_nil(empty_pop), "Pop from empty list returns nil");
+    TEST_ASSERT(is_null(empty_pop), "Pop from empty list returns nil");
     
     GC_POP_SCOPE();
     gc_shutdown();
@@ -315,7 +315,7 @@ int test_list_search() {
     list_push(list, str1);
     list_push(list, make_double(3.14));
     list_push(list, str2);
-    list_push(list, make_nil());
+    list_push(list, make_null());
     list_push(list, str3); // Duplicate string
     
     // Test indexOf
@@ -323,7 +323,7 @@ int test_list_search() {
     TEST_ASSERT(list_indexOf(list, str1, 0) == 1, "Find first string");
     TEST_ASSERT(list_indexOf(list, make_double(3.14), 0) == 2, "Find double");
     TEST_ASSERT(list_indexOf(list, str2, 0) == 3, "Find second string");
-    TEST_ASSERT(list_indexOf(list, make_nil(), 0) == 4, "Find nil");
+    TEST_ASSERT(list_indexOf(list, make_null(), 0) == 4, "Find nil");
     
     // Test indexOf with start position
     TEST_ASSERT(list_indexOf(list, str3, 2) == 5, "Find duplicate string with start pos");
@@ -399,8 +399,8 @@ int test_list_utilities() {
     TEST_ASSERT(list_count(empty_copy) == 0, "Empty list copy has count 0");
     
     // Test copy of nil (should return nil)
-    Value nil_copy = list_copy(make_nil());
-    TEST_ASSERT(is_nil(nil_copy), "Copy of non-list returns nil");
+    Value nil_copy = list_copy(make_null());
+    TEST_ASSERT(is_null(nil_copy), "Copy of non-list returns nil");
     
     GC_POP_SCOPE();
     gc_shutdown();
@@ -419,7 +419,7 @@ int test_mixed_types_edge_cases() {
     list_push(list, make_int(42));
     list_push(list, make_double(-3.14159));
     list_push(list, make_string("hello world"));
-    list_push(list, make_nil());
+    list_push(list, make_null());
     list_push(list, make_string("")); // Empty string
     
     Value nested_list = make_list(3);
@@ -435,15 +435,15 @@ int test_mixed_types_edge_cases() {
     TEST_ASSERT(is_int(list_get(list, 0)), "Int type preserved");
     TEST_ASSERT(is_double(list_get(list, 1)), "Double type preserved");
     TEST_ASSERT(is_string(list_get(list, 2)), "String type preserved");
-    TEST_ASSERT(is_nil(list_get(list, 3)), "Nil type preserved");
+    TEST_ASSERT(is_null(list_get(list, 3)), "Nil type preserved");
     TEST_ASSERT(is_string(list_get(list, 4)), "Empty string type preserved");
     TEST_ASSERT(is_list(list_get(list, 5)), "List type preserved");
     
     // Test operations on invalid list values
-    list_push(make_nil(), make_int(1)); // Should be ignored
+    list_push(make_null(), make_int(1)); // Should be ignored
     list_set(make_int(42), 0, make_int(1)); // Should be ignored
     Value invalid_get = list_get(make_string("not a list"), 0);
-    TEST_ASSERT(is_nil(invalid_get), "Operations on non-lists handle gracefully");
+    TEST_ASSERT(is_null(invalid_get), "Operations on non-lists handle gracefully");
     
     GC_POP_SCOPE();
     gc_shutdown();

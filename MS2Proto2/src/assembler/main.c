@@ -6,9 +6,9 @@
 #include <string.h>
 
 static void print_usage(const char *prog_name) {
-    printf("Usage: %s <input.asm> [output.bin]\n", prog_name);
+    printf("Usage: %s [input.asm]\n", prog_name);
     printf("  Assembles VM assembly code into binary format\n");
-    printf("  If output file is not specified, executes the code directly\n");
+    printf("  If no input file is specified, reads from stdin.\n");
 }
 
 static bool process_line(Assembler *asm, char *line) {
@@ -78,13 +78,7 @@ static bool process_line(Assembler *asm, char *line) {
     return asm_instruction(asm, start);
 }
 
-static bool assemble_file(const char *filename, Assembler *asm) {
-    FILE *file = fopen(filename, "r");
-    if (!file) {
-        fprintf(stderr, "Error: Cannot open file '%s'\n", filename);
-        return false;
-    }
-    
+static bool assemble_file(FILE *file, Assembler *asm) {
     char line[256];
     int line_num = 0;
     bool success = true;
@@ -115,30 +109,6 @@ static bool assemble_file(const char *filename, Assembler *asm) {
     }
     
     return success;
-}
-
-static void write_binary(const char *filename, Assembler *asm) {
-    Function *main_func = asm_get_main_function(asm);
-    if (!main_func) {
-        fprintf(stderr, "Error: No main function for binary output\n");
-        return;
-    }
-    
-    FILE *file = fopen(filename, "wb");
-    if (!file) {
-        fprintf(stderr, "Error: Cannot create output file '%s'\n", filename);
-        return;
-    }
-    
-    // Write header: magic number, version, code length
-    uint32_t header[3] = { 0x4D53564D, 1, (uint32_t)main_func->code_len }; // "MSVM"
-    fwrite(header, sizeof(uint32_t), 3, file);
-    
-    // Write main function code
-    fwrite(main_func->code, sizeof(uint32_t), main_func->code_len, file);
-    
-    fclose(file);
-    printf("Binary written to '%s' (%zu instructions)\n", filename, main_func->code_len);
 }
 
 static Proto *create_proto_from_function(Function *func) {
@@ -224,27 +194,29 @@ static void execute_code(Assembler *asm) {
 }
 
 int main(int argc, char **argv) {
-    if (argc < 2 || argc > 3) {
+    if (argc > 2 || (argc == 2 && argv[1][0] == '-')) {
         print_usage(argv[0]);
         return 1;
     }
     
-    const char *input_file = argv[1];
-    const char *output_file = argc >= 3 ? argv[2] : NULL;
+    FILE *input_stream = stdin;
+    if (argc == 2) {
+	    input_stream = fopen(argv[1], "r");
+        if (!input_stream) {
+			fprintf(stderr, "Error: Cannot open file '%s'\n", argv[1]);
+            return 1;
+        }
+	}
     
     Assembler asm;
     asm_init(&asm);
     
-    if (!assemble_file(input_file, &asm)) {
+    if (!assemble_file(input_stream, &asm)) {
         asm_free(&asm);
         return 1;
     }
     
-    if (output_file) {
-        write_binary(output_file, &asm);
-    } else {
-        execute_code(&asm);
-    }
+	execute_code(&asm);
     
     asm_free(&asm);
     return 0;

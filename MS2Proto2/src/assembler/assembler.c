@@ -67,11 +67,14 @@ static void ensure_capacity(Function *func) {
     }
 }
 
+static bool ensure_function(Assembler *asm) {
+    if (asm->current_function) return true;
+	fprintf(stderr, "Error: No current function for instruction\n");
+	return false;
+}
+
 static void emit_instruction(Assembler *asm, uint32_t ins) {
-    if (!asm->current_function) {
-        fprintf(stderr, "Error: No current function for instruction\n");
-        return;
-    }
+	if (!ensure_function(asm)) return;
     Function *func = asm->current_function;
     ensure_capacity(func);
     func->code[func->code_len++] = ins;
@@ -96,6 +99,11 @@ static bool is_immediate(const char *str, int32_t *imm) {
 }
 
 static bool parse_constant(const char *str, Value *value) {
+	// Check for null keyword
+	if (strcmp(str, "null") == 0) {
+		*value = make_null();
+		return true;
+	}
     // Check for string literal (enclosed in double quotes)
     if (str[0] == '"') {
         int len = strlen(str);
@@ -186,6 +194,7 @@ bool asm_instruction(Assembler *asm, const char *line) {
         if (!is_register(tokens[1], &a)) {
             return false;
         }
+    	if (!ensure_function(asm)) return false;
         
         // Try to parse as immediate integer first
         int32_t imm;
@@ -198,27 +207,31 @@ bool asm_instruction(Assembler *asm, const char *line) {
             Value const_value;
             if (parse_constant(tokens[2], &const_value)) {
                 int const_idx = asm_add_constant(asm->current_function, const_value);
-                if (const_idx >= 0 && const_idx <= 255) {
-                    emit_instruction(asm, INS_ABC(LOADN, a, (uint8_t)const_idx, 0));
+                if (const_idx >= 0 && const_idx <= 65535) {
+                    emit_instruction(asm, INS_AB(LOADN, a, (uint16_t)const_idx));
                     return true;
                 } else {
-                    fprintf(stderr, "Error: Too many constants (max 256)\n");
+                    fprintf(stderr, "Error: Too many constants (max 65536)\n");
                     return false;
                 }
             }
         }
     }
     else if (strcmp(opcode, "LOADN") == 0 && token_count == 3) {
+    	// ToDo: eliminate code duplication.  Perhaps each opcode should
+    	// have its own little assembler function, and then pseudo-ops
+    	// like LOAD can just call the appropriate function.
+    	if (!ensure_function(asm)) return false;
         uint8_t a;
         Value const_value;
         if (is_register(tokens[1], &a) && parse_constant(tokens[2], &const_value)) {
             // Add constant to table and get index
             int const_idx = asm_add_constant(asm->current_function, const_value);
-            if (const_idx >= 0 && const_idx <= 255) {
-                emit_instruction(asm, INS_ABC(LOADN, a, (uint8_t)const_idx, 0));
+            if (const_idx >= 0 && const_idx <= 65535) {
+                emit_instruction(asm, INS_AB(LOADN, a, (uint16_t)const_idx));
                 return true;
             } else {
-                fprintf(stderr, "Error: Too many constants (max 256)\n");
+                fprintf(stderr, "Error: Too many constants (max 65535)\n");
                 return false;
             }
         }
@@ -238,8 +251,9 @@ bool asm_instruction(Assembler *asm, const char *line) {
         }
     }
     else if (strcmp(opcode, "IFLT") == 0 && token_count == 4) {
-        uint8_t a, b;
-        
+    	if (!ensure_function(asm)) return false;
+
+        uint8_t a, b;        
         if (is_register(tokens[1], &a) && is_register(tokens[2], &b)) {
             // Third argument could be immediate or label
             int32_t imm;
@@ -257,6 +271,7 @@ bool asm_instruction(Assembler *asm, const char *line) {
         }
     }
     else if (strcmp(opcode, "JMP") == 0 && token_count == 2) {
+    	if (!ensure_function(asm)) return false;
         int32_t imm;
         if (is_immediate(tokens[1], &imm)) {
             if (imm >= -32768 && imm <= 32767) {
@@ -432,7 +447,7 @@ int asm_add_constant(Function *func, Value value) {
 
 int asm_find_constant(Function *func, Value value) {
     for (size_t i = 0; i < func->const_len; i++) {
-        if (values_equal(func->constants[i], value)) {
+        if (value_equal(func->constants[i], value)) {
             return (int)i;
         }
     }
