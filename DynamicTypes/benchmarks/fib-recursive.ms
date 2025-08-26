@@ -7,7 +7,7 @@ rfib = function(n)
     return rfib(n-1) + rfib(n-2)
 end function
 
-runBenchmark = function(n=30)
+runBenchmark = function(n=40)
 	t0 = time
 	x = rfib(n)
 	t1 = time
