@@ -40,4 +40,8 @@ void list_clear(Value list_val);
 Value list_copy(Value list_val);
 void list_resize(Value list_val, int new_capacity);
 
+// Capacity management utilities
+bool list_needs_expansion(Value list_val);
+Value list_with_expanded_capacity(Value list_val);
+
 #endif // LISTS_H

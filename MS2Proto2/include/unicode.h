@@ -45,6 +45,11 @@ int UTF8Encode(unsigned long uniChar, unsigned char *outBuf);
 // Returns the code point
 unsigned long UTF8Decode(unsigned char *inBuf);
 
+// UTF8DecodeAndAdvance
+// Decode the first character of the given UTF-8 string back into its
+// Unicode code point, and advance the given pointer to the next character.
+unsigned long UTF8DecodeAndAdvance(unsigned char **inBuf);
+
 // UTF8CharacterCount
 // Count the number of Unicode characters in a UTF-8 string
 int UTF8CharacterCount(const unsigned char* utf8, int byteLen);

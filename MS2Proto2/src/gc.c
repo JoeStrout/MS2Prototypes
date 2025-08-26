@@ -38,6 +38,7 @@ typedef struct GC {
     size_t bytes_allocated;   // Total allocated memory
     size_t gc_threshold;      // Trigger collection when exceeded
     int disable_count;        // Counter for nested disable/enable calls
+    int collections_count;    // Number of collections performed
 } GC;
 
 // Global GC instance
@@ -56,6 +57,7 @@ void gc_init(void) {
     gc.bytes_allocated = 0;
     gc.gc_threshold = 1024 * 1024;  // 1MB initial threshold
     gc.disable_count = 0;
+    gc.collections_count = 0;
 }
 
 void gc_shutdown(void) {
@@ -238,6 +240,7 @@ void gc_collect(void) {
 #endif
     if (gc.disable_count > 0) return;
     
+    gc.collections_count++;
     size_t before = gc.bytes_allocated;
     
     // Mark & Sweep
@@ -262,7 +265,7 @@ GCStats gc_get_stats(void) {
     GCStats stats = {
         .bytes_allocated = gc.bytes_allocated,
         .gc_threshold = gc.gc_threshold,
-        .collections_count = 0,  // TODO: add collection counter
+        .collections_count = gc.collections_count,
         .is_enabled = (gc.disable_count == 0)
     };
     return stats;

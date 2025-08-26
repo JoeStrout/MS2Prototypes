@@ -59,10 +59,13 @@ void list_push(Value list_val, Value item) {
     List* list = as_list(list_val);
     if (!list) return;
     
-    // TODO: Implement capacity expansion if needed
+    // Add item if there's space
     if (list->count < list->capacity) {
         list->items[list->count++] = item;
     }
+    // NOTE: Capacity expansion requires the caller to manage the Value reference
+    // since we cannot modify the passed Value. Use list_needs_expansion() and
+    // list_with_expanded_capacity() for manual capacity management.
 }
 
 Value list_pop(Value list_val) {
@@ -76,7 +79,7 @@ void list_insert(Value list_val, int index, Value item) {
     List* list = as_list(list_val);
     if (!list || index < 0 || index > list->count) return;
     
-    // TODO: Implement capacity expansion if needed
+    // Insert item if there's space
     if (list->count >= list->capacity) return;
     
     // Shift elements to the right
@@ -102,14 +105,21 @@ void list_remove(Value list_val, int index) {
 
 // Value equality helper
 static bool values_equal(Value a, Value b) {
-    if (is_number(a) && is_number(b)) {
-        return as_double(a) == as_double(b);
-    }
+    // Check specific types first, then fall back to number comparison
     if (is_int(a) && is_int(b)) {
         return as_int(a) == as_int(b);
     }
+    if (is_double(a) && is_double(b)) {
+        return as_double(a) == as_double(b);
+    }
     if (is_string(a) && is_string(b)) {
         return string_equals(a, b);
+    }
+    // Mixed int/double comparison
+    if (is_number(a) && is_number(b)) {
+        double da = is_int(a) ? (double)as_int(a) : as_double(a);
+        double db = is_int(b) ? (double)as_int(b) : as_double(b);
+        return da == db;
     }
     return a == b;
 }
@@ -156,10 +166,38 @@ Value list_copy(Value list_val) {
     return new_list;
 }
 
+
+// Check if list needs capacity expansion
+bool list_needs_expansion(Value list_val) {
+    List* list = as_list(list_val);
+    return list && (list->count >= list->capacity);
+}
+
+// Create a new list with expanded capacity, copying all elements
+Value list_with_expanded_capacity(Value list_val) {
+    List* old_list = as_list(list_val);
+    if (!old_list) return make_nil();
+    
+    // Double the capacity (minimum of 2)
+    int new_capacity = old_list->capacity * 2;
+    if (new_capacity < 2) new_capacity = 2;
+    
+    // Allocate new list directly to avoid make_list's minimum capacity constraint
+    List* new_list = (List*)gc_allocate(sizeof(List) + new_capacity * sizeof(Value));
+    new_list->count = old_list->count;
+    new_list->capacity = new_capacity;
+    
+    // Copy all existing elements
+    for (int i = 0; i < old_list->count; i++) {
+        new_list->items[i] = old_list->items[i];
+    }
+    
+    return LIST_MASK | ((uintptr_t)new_list & 0xFFFFFFFFFFFFULL);
+}
+
 void list_resize(Value list_val, int new_capacity) {
-    // TODO: Implement list resizing
-    // This would require creating a new list and copying elements
-    // For now, this is a stub
+    // Note: This function cannot modify the original Value since it's passed by value
+    // Use list_with_expanded_capacity() for capacity expansion instead
     (void)list_val;
     (void)new_capacity;
 }

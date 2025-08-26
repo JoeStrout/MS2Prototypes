@@ -34,6 +34,9 @@ Value string_split(Value str, Value delimiter);
 // Zero-copy string data access (for performance-critical operations)
 const char* get_string_data_zerocopy(const Value* v_ptr, int* out_len);
 
+// Null-terminated string data access (for C string operations)
+const char* get_string_data_nullterm(const Value* v_ptr, char* tiny_buffer);
+
 // String interning system
 #define INTERN_THRESHOLD 128  // Strings under 128 bytes are automatically interned
 

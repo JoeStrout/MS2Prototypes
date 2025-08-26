@@ -7,6 +7,7 @@
 #include "../include/nanbox.h"
 #include "../include/gc.h"
 #include "../include/unicode.h"
+#include "../include/lists.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -138,6 +139,31 @@ const char* get_string_data_zerocopy(const Value* v_ptr, int* out_len) {
         return s->data;
     }
     *out_len = 0;
+    return NULL;
+}
+
+const char* get_string_data_nullterm(const Value* v_ptr, char* tiny_buffer) {
+    Value v = *v_ptr;
+    if (is_tiny_string(v)) {
+        const char* data = GET_VALUE_DATA_PTR_CONST(v_ptr);
+        int len = (int)(unsigned char)data[0];
+        
+        // Optimization: if len < TINY_STRING_MAX_LEN, the data is already null-terminated
+        // due to our invariant that unused bytes are zero
+        if (len < TINY_STRING_MAX_LEN) {
+            return data + 1;  // Return pointer directly into Value - already null-terminated!
+        }
+        
+        // Only copy if string uses all 5 characters (no guaranteed null terminator)
+        for (int i = 0; i < len; i++) {
+            tiny_buffer[i] = data[1 + i];
+        }
+        tiny_buffer[len] = '\0';
+        return tiny_buffer;
+    } else if (is_heap_string(v)) {
+        String* s = (String*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
+        return s->data;
+    }
     return NULL;
 }
 
@@ -446,7 +472,7 @@ Value string_split(Value str, Value delimiter) {
             charBuffer[charLenB] = '\0';
             
             Value char_val = make_string(charBuffer);
-            list_add(result, char_val);
+            list_push(result, char_val);
         }
     }
     // Handle space delimiter as special case - manual split to preserve empty tokens
@@ -463,13 +489,13 @@ Value string_split(Value str, Value delimiter) {
                     strncpy(token_buffer, s + start, token_len);
                     token_buffer[token_len] = '\0';
                     Value token_val = make_string(token_buffer);
-                    list_add(result, token_val);
+                    list_push(result, token_val);
                 } else {
                     char* token = malloc(token_len + 1);
                     strncpy(token, s + start, token_len);
                     token[token_len] = '\0';
                     Value token_val = make_string(token);
-                    list_add(result, token_val);
+                    list_push(result, token_val);
                     free(token);
                 }
                 start = i + 1;
@@ -494,7 +520,7 @@ Value string_split(Value str, Value delimiter) {
         char* token = strtok(s_copy, delim);
         while (token != NULL) {
             Value token_val = make_string(token);
-            list_add(result, token_val);
+            list_push(result, token_val);
             token = strtok(NULL, delim);
         }
         
