@@ -21,26 +21,39 @@ static Proto *make_fib_proto(void) {
 	p->code_len = 13;              // filled below
 	p->code = (uint32_t*)calloc(p->code_len, sizeof(uint32_t));
 
-	int k = 0;
-	p->code[k++] = INS_ABC(LOADK, 1, 2, 0);            // r1 = 2
-	int iflt_at = k;                                    // if (r0 < r1) goto base_case
-	p->code[k++] = INS_ABC(IFLT, 0, 1, 0);              // patch later
+	int k = 0;  // (current code position)
+	p->code[k++] = INS_AB(LOADK, 1, 2);                // r1 = 2
+	int iflt_at = k;                                   // if (r0 < r1) goto base_case
+	p->code[k++] = INS_ABC(IFLT,  0, 1, 0);            // patch C (offset) later
 
-	p->code[k++] = INS_ABC(MOVE, 1, 0, 0);              // r1 = n
-	p->code[k++] = INS_ABC(LOADK, 2, 1, 0);             // r2 = 1
-	p->code[k++] = INS_ABC(SUB,  1, 1, 2);              // r1 = r1 - r2
-	p->code[k++] = INS_ABC(CALLF,1, 1, 0);              // r1 = fib(r1)
+	// Hand-optimized version:
+	p->code[k++] = INS_AB( LOADK, 1, 1);               // r1 = 1
+	p->code[k++] = INS_ABC(SUB,   1, 0, 1);            // r1 = n - r1
+	p->code[k++] = INS_ABC(CALLF, 1, 1, 0);            // r1 = fib(r1)
 
-	p->code[k++] = INS_ABC(MOVE, 3, 0, 0);              // r3 = n
-	p->code[k++] = INS_ABC(LOADK, 4, 2, 0);             // r4 = 2
-	p->code[k++] = INS_ABC(SUB,  3, 3, 4);              // r3 = r3 - r4
-	p->code[k++] = INS_ABC(CALLF,3, 1, 0);              // r3 = fib(r3)
+	p->code[k++] = INS_AB( LOADK, 2, 2);               // r2 = 2
+	p->code[k++] = INS_ABC(SUB,   2, 0, 2);            // r2 = n - r2
+	p->code[k++] = INS_ABC(CALLF, 2, 1, 0);            // r2 = fib(r2)
 
-	p->code[k++] = INS_ABC(ADD,  0, 1, 3);              // r0 = r1 + r3
-	p->code[k++] = INS_ABC(RETURN,0, 1, 0);             // return r0
+	p->code[k++] = INS_ABC(ADD,   0, 1, 2);            // r0 = r1 + r2
+	p->code[k++] = INS(RETURN);                        // return r0
 
-	int base_case_pc = k;                                // label target
-	p->code[k++] = INS_ABC(RETURN,0, 1, 0);             // return n
+	// Less optimized version:
+// 	p->code[k++] = INS_ABC(MOVE,  1, 0, 0);            // r1 = n
+// 	p->code[k++] = INS_AB( LOADK, 2, 1);               // r2 = 1
+// 	p->code[k++] = INS_ABC(SUB,   1, 1, 2);            // r1 = r1 - r2
+// 	p->code[k++] = INS_ABC(CALLF, 1, 1, 0);            // r1 = fib(r1)
+// 
+// 	p->code[k++] = INS_ABC(MOVE,  3, 0, 0);            // r3 = n
+// 	p->code[k++] = INS_AB( LOADK, 4, 2);               // r4 = 2
+// 	p->code[k++] = INS_ABC(SUB,   3, 3, 4);            // r3 = r3 - r4
+// 	p->code[k++] = INS_ABC(CALLF, 3, 1, 0);            // r3 = fib(r3)
+// 
+// 	p->code[k++] = INS_ABC(ADD,   0, 1, 3);            // r0 = r1 + r3
+// 	p->code[k++] = INS_ABC(RETURN,0, 1, 0);            // return r0
+
+	int base_case_pc = k;                              // label target
+	p->code[k++] = INS(RETURN);                        // return n
 
 	// Patch IFLT offset: from NEXT pc (iflt_at+1) to base_case_pc
 	int8_t off = (int8_t)(base_case_pc - (iflt_at + 1));
@@ -56,8 +69,8 @@ static Proto *make_main_proto(int nval) {
 	p->code = (uint32_t*)calloc(p->code_len, sizeof(uint32_t));
 
 	int k = 0;
-	p->code[k++] = INS_ABC(LOADK, 0, (uint8_t)nval, 0); // r0 = n
-	p->code[k++] = INS_ABC(CALLF, 0, 1, 0);             // r0 = fib(r0)
+	p->code[k++] = INS_AB(LOADK, 0, nval);               // r0 = n
+	p->code[k++] = INS_ABC(CALLF, 0, 1, 0);              // r0 = fib(r0)
 	p->code[k++] = INS_ABC(RETURN,0, 1, 0);             // return r0
 
 	return p;
@@ -75,7 +88,7 @@ int main(void) {
 
 	VM vm; vm_init(&vm, /*stack_slots*/ 4096, /*call_slots*/ 1024);
 
-	int n = 40;	// Fibonacci number to compute
+	int n = 30;	// Fibonacci number to compute
 	Proto *fib  = make_fib_proto();
 	Proto *mainp = make_main_proto(n);
 

@@ -95,10 +95,10 @@ Value vm_exec(VM *vm, Proto *entry) {
 	}
 
 	VM_CASE(LOADK) {
-		// B is signed 8-bit immediate
+		// BC is signed 16-bit immediate
 		// (a more complete VM would probably have a separate table of constants,
-		// probably per function, and B would be an index into that.)
-		base[A(ins)] = make_int((int8_t)B(ins));
+		// probably per function, and BC would be an index into that.)
+		base[A(ins)] = make_int(BC(ins));
 		VM_NEXT();
 	}
 
@@ -114,13 +114,14 @@ Value vm_exec(VM *vm, Proto *entry) {
 
 	VM_CASE(IFLT) {
 		// if base[A] < base[B], jump by signed 8-bit C from NEXT pc
+		// (IFLT keeps 8-bit offset since it needs both A and B for comparison)
 		int8_t off = (int8_t)C(ins);
 		if (value_lt(base[A(ins)], base[B(ins)])) pc += off;
 		VM_NEXT();
 	}
 
 	VM_CASE(JMP) {
-		int8_t off = (int8_t)C(ins);
+		int16_t off = BC(ins);
 		pc += off;
 		VM_NEXT();
 	}
@@ -151,7 +152,7 @@ Value vm_exec(VM *vm, Proto *entry) {
 		// Return value convention: value is in base[A]
 		// Since callee base points into caller's frame (at arg window),
 		// the result is already in-place for the caller. We just pop.
-		(void)ins; // A/B unused here in minimal runner
+		(void)ins; // A/B/C unused here in minimal runner
 		if (vm->ci == vm->cstack) {
 			// Returning from entry: produce the final result from base[0]
 			return base[0];
