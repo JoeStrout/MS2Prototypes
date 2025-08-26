@@ -47,7 +47,7 @@ mono test.exe
 All benchmarks use the complete NaN boxing Value system with dynamic string/list operations:
 
 | Benchmark | Test Case | Time | Mini Micro Time | Notes |
-|-----------|-----------|------|-------|
+|-----------|-----------|------|-------|-------|
 | **Fibonacci** | `fib(30)` | **0.045s** | 6.831s | Pure integer computation |
 | **Levenshtein** | Full test suite | **0.284s** | 26.907s | String splitting, list operations, character comparison |
 | **NumberWords** | 10,000 conversions | **0.141s** | 1.361s | String concatenation, splitting, replace operations |
