@@ -1,6 +1,3 @@
-obj
-bin
-
 # C/C++ build products
 *.o
 *.so
@@ -19,3 +16,47 @@ ms2asm
 
 # Claude Code settings
 .claude/
+
+# C# / .NET / Mono Build Products
+*.exe
+*.dll
+*.pdb
+*.xml
+
+# .NET Project Build Directories
+bin/
+obj/
+out/
+
+# .NET Test Projects
+NanBoxTests/
+TestProject*/
+
+# Visual Studio / Visual Studio Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.cache
+
+# Mono Compiler Outputs
+*.exe.mdb
+*.dll.mdb
+
+# Debug Symbols
+*.dSYM/
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# macOS
+.DS_Store
+
+# Temporary Files
+*.tmp
+*.temp
+*~
+
+# Log Files
+*.log
