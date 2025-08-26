@@ -7,7 +7,7 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
-#include "../include/nanbox.h"
+#include "../include/types/nanbox.h"
 
 // Test helper macros
 #define TEST_ASSERT(condition, message) \

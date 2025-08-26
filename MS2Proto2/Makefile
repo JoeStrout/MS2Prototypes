@@ -12,8 +12,16 @@ BENCHDIR = benchmarks
 EXAMPLEDIR = examples
 
 # Core library sources
-CORE_SOURCES = $(SRCDIR)/unicode.c $(SRCDIR)/nanbox.c $(SRCDIR)/gc.c $(SRCDIR)/strings.c $(SRCDIR)/lists.c
+CORE_SOURCES = $(SRCDIR)/types/unicode.c $(SRCDIR)/types/nanbox.c $(SRCDIR)/types/gc.c $(SRCDIR)/types/strings.c $(SRCDIR)/types/lists.c
 CORE_OBJECTS = $(CORE_SOURCES:.c=.o)
+
+# VM sources
+VM_SOURCES = $(SRCDIR)/vm/vm.c
+VM_OBJECTS = $(VM_SOURCES:.c=.o)
+
+# All library sources
+ALL_SOURCES = $(CORE_SOURCES) $(VM_SOURCES)
+ALL_OBJECTS = $(CORE_OBJECTS) $(VM_OBJECTS)
 
 # Library target
 LIBNAME = libms2proto2.a
@@ -27,14 +35,21 @@ BENCH_SOURCES = $(wildcard $(BENCHDIR)/*.c)
 BENCH_TARGETS = $(BENCH_SOURCES:$(BENCHDIR)/%.c=$(BENCHDIR)/%)
 
 # Default target
-all: $(LIBNAME)
+all: $(LIBNAME) ms2vm
 
 # Core library
-$(LIBNAME): $(CORE_OBJECTS)
+$(LIBNAME): $(ALL_OBJECTS)
 	ar rcs $@ $^
 
+# Main VM executable
+ms2vm: $(SRCDIR)/main.c $(LIBNAME)
+	$(CC) $(CFLAGS) -I$(INCDIR) -o $@ $< -L. -lms2proto2
+
 # Object files
-$(SRCDIR)/%.o: $(SRCDIR)/%.c
+$(SRCDIR)/types/%.o: $(SRCDIR)/types/%.c
+	$(CC) $(CFLAGS) -I$(INCDIR) -c $< -o $@
+
+$(SRCDIR)/vm/%.o: $(SRCDIR)/vm/%.c
 	$(CC) $(CFLAGS) -I$(INCDIR) -c $< -o $@
 
 # Tests
@@ -57,11 +72,13 @@ $(EXAMPLEDIR)/%: $(EXAMPLEDIR)/%.c $(LIBNAME)
 
 # Clean
 clean:
-	rm -f $(CORE_OBJECTS) $(LIBNAME) $(TEST_TARGETS) $(BENCH_TARGETS)
+	rm -f $(ALL_OBJECTS) $(LIBNAME) $(TEST_TARGETS) $(BENCH_TARGETS) ms2vm
 
 # Install headers (for external projects)
 install-headers:
-	mkdir -p /usr/local/include/ms2proto2
-	cp $(INCDIR)/*.h /usr/local/include/ms2proto2/
+	mkdir -p /usr/local/include/ms2proto2/types
+	mkdir -p /usr/local/include/ms2proto2/vm
+	cp $(INCDIR)/types/*.h /usr/local/include/ms2proto2/types/
+	cp $(INCDIR)/vm/*.h /usr/local/include/ms2proto2/vm/ 2>/dev/null || true
 
 .PHONY: all tests benchmarks examples clean install-headers

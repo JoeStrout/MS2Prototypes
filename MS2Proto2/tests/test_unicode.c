@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include "../include/unicode.h"
+#include "../include/types/unicode.h"
 
 // Test helper macros
 #define TEST_ASSERT(condition, message) \

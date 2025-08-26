@@ -6,23 +6,29 @@ This is a clean, modular reorganization of the c-nan-boxing-3 implementation, st
 
 ```
 MS2Proto2/
-├── include/           # Public API headers
-│   ├── nanbox.h      # Core NaN-boxing Value type and operations
-│   ├── gc.h          # Garbage collector API  
-│   ├── strings.h     # String implementation with interning
-│   ├── lists.h       # List/array implementation
-│   └── unicode.h     # Unicode/UTF-8 utilities
-├── src/              # Implementation files
-│   ├── nanbox.c      # Core NaN-boxing utilities
-│   ├── gc.c          # Garbage collector implementation
-│   ├── strings.c     # String operations and interning
-│   ├── lists.c       # List operations
-│   └── unicode.c     # Unicode/UTF-8 functions
-├── tests/            # Unit tests
-├── benchmarks/       # Performance benchmarks  
-├── examples/         # Example programs
-├── Makefile          # Build system
-└── README.md         # This file
+├── include/            # Public API headers
+│   ├── types/         # Core Value type, including GC system
+│   │    ├── nanbox.h  # Core NaN-boxing Value type and operations
+│   │    ├── gc.h      # Garbage collector API  
+│   │    ├── strings.h # String implementation with interning
+│   │    ├── lists.h   # List/array implementation
+│   │    └── unicode.h # Unicode/UTF-8 utilities
+│   └── vm/            # Virtual machine
+|         └── vm.h     # VM interfaces
+├── src/               # Implementation files
+│   │    ├── nanbox.c  # Core NaN-boxing utilities
+│   │    ├── gc.c      # Garbage collector implementation
+│   │    ├── strings.c # String operations and interning
+│   │    ├── lists.c   # List operations
+│   │    └── unicode.c # Unicode/UTF-8 functions
+│   └── vm/            # Virtual machine
+│         └── vm.c     # VM implementation
+├── main.c             # main program
+├── tests/             # Unit tests
+├── benchmarks/        # Performance benchmarks  
+├── examples/          # Example programs
+├── Makefile           # Build system
+└── README.md          # This file
 ```
 
 ## Module Organization
@@ -56,6 +62,12 @@ The codebase is organized into clean, layered modules:
 - **Operations**: Creation, access, modification, searching
 - **Dependencies**: Core, GC, Strings (for equality)
 
+### VM (`vm.h` + `vm.c`)
+- **Register VM**: Each function uses a contiguous slice of a single `Value*` stack; arguments/results live in the stack too
+- **Fixed 4-byte Opcodes**: generally following an INSTRUCTION, A, B, C format (with A specifying results an B, C specifying operands, all as register numbers)
+- **Fast Dispatch**: where compiler support is available, instructions are dispatched using computed `goto`, falling back to standard `switch` otherwise
+- **Efficient Calls**: VM structure is designed to make pushing/popping calls very efficient
+
 ## Key Features
 
 ✅ **Modular Design**: Clear separation of concerns with minimal dependencies  
@@ -77,59 +89,14 @@ make benchmarks   # Build benchmark programs
 make clean        # Clean all build artifacts
 ```
 
-## Usage Example
-
-```c
-#include "nanbox.h"
-#include "gc.h"
-#include "strings.h"
-
-int main() {
-    gc_init();
-    
-    GC_PUSH_SCOPE();
-    GC_LOCALS(str1, str2, result);
-    
-    str1 = make_string("Hello");
-    str2 = make_string("World");
-    result = string_concat(str1, str2);
-    
-    printf("Result: %s\n", as_cstring(result));
-    
-    GC_POP_SCOPE();
-    gc_shutdown();
-    return 0;
-}
-```
-
 ## Development Status
 
-🔄 **IN PROGRESS**: Core structure complete, working on build system integration
+🔄 **IN PROGRESS**: Core structure complete, including a minimal but functional VM.  Program code must be loaded directly, opcode by opcode.  Only a handful of value operations (e.g. addition/subtraction) are implemented, and even those are not yet implemented for all types.
 
-### Completed
-- ✅ Folder structure and header design
-- ✅ Core NaN-boxing module  
-- ✅ Unicode utilities module
-- ✅ Garbage collector module
-- ✅ Basic strings module structure
-- ✅ Basic lists module structure
-- ✅ Build system framework
+Currently the interval VM supports 32-bit integers as a type, even though this does not correspond directly to any MiniScript type.  We might keep this as an optimization, or throw it out for simplicity.  Time will tell.
 
 ### TODO
-- 🔲 Complete strings module implementation (fix missing functions)
-- 🔲 Port and test benchmarks (fibonacci, levenshtein, numberWords) 
-- 🔲 Create comprehensive test suite
-- 🔲 Performance validation vs c-nan-boxing-3
-- 🔲 Documentation and examples
+- 🔲 Implement missing Value functionality (adding strings, etc.)
+- 🔲 Implement a simple assembly language (serialization of VM instructions)
+- 🔲 Implement current 3 benchmarks as assembly scripts
 
-## Design Philosophy
-
-This reorganization prioritizes:
-
-1. **Clear Separation**: Each module has a single responsibility
-2. **Minimal Dependencies**: Modules depend only on what they need  
-3. **Public APIs**: Clean header files define the interface contracts
-4. **Testability**: Modular structure enables focused unit testing
-5. **Maintainability**: Well-organized code for long-term development
-
-The goal is to create a clean foundation for the MiniScript 2.0 dynamic type system that can be easily understood, tested, and extended.

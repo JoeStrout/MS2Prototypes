@@ -14,6 +14,7 @@ bin
 *_nanbox
 *_classic
 example_shadow_stack
+ms2vm
 
 # Claude Code settings
 .claude/

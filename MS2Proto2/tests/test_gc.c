@@ -6,10 +6,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include "../include/gc.h"
-#include "../include/nanbox.h"
-#include "../include/strings.h"
-#include "../include/lists.h"
+#include "../include/types/gc.h"
+#include "../include/types/nanbox.h"
+#include "../include/types/strings.h"
+#include "../include/types/lists.h"
 
 // Test helper macros
 #define TEST_ASSERT(condition, message) \

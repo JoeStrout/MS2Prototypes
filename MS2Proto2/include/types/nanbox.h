@@ -116,6 +116,11 @@ static inline double as_double(Value v) {
     #define GET_VALUE_DATA_PTR_CONST(v_ptr) (((const char*)(v_ptr)) + 2)
 #endif
 
+// Arithmetic operations (implemented in nanbox.c)
+Value value_add(Value a, Value b);
+Value value_sub(Value a, Value b);
+bool value_lt(Value a, Value b);
+
 // Debug utility functions (implemented in nanbox.c)
 void debug_print_value(Value v);
 const char* value_type_name(Value v);
