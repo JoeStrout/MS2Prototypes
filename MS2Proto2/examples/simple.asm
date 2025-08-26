@@ -1,7 +1,8 @@
 # Simple assembly program that computes 5 + 3
 # Register r0 will contain the result
 
-LOADK r0, 5      # Load constant 5 into r0  
-LOADK r1, 3      # Load constant 3 into r1
-ADD r0, r0, r1   # r0 = r0 + r1 (5 + 3)
-RETURN           # Return r0 (result = 8)
+@main:
+	LOADK r0, 5      # Load constant 5 into r0  
+	LOADK r1, 3      # Load constant 3 into r1
+	ADD r0, r0, r1   # r0 = r0 + r1 (5 + 3)
+	RETURN           # Return r0 (result = 8)

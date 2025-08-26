@@ -147,6 +147,16 @@ static Proto *create_proto_from_function(Function *func) {
     memcpy(proto->code, func->code, func->code_len * sizeof(uint32_t));
     proto->code_len = (int)func->code_len;
     proto->max_regs = func->max_regs;
+    
+    // Copy constants table
+    proto->const_len = (int)func->const_len;
+    if (func->const_len > 0) {
+        proto->constants = (Value*)malloc(func->const_len * sizeof(Value));
+        memcpy(proto->constants, func->constants, func->const_len * sizeof(Value));
+    } else {
+        proto->constants = NULL;
+    }
+    
     return proto;
 }
 
@@ -202,10 +212,12 @@ static void execute_code(Assembler *asm) {
     for (int i = 0; i < func_index; i++) {
         if (protos[i]) {
             free(protos[i]->code);
+            free(protos[i]->constants);
             free(protos[i]);
         }
     }
     free(main_proto->code);
+    free(main_proto->constants);
     free(main_proto);
     vm_free(&vm);
     gc_shutdown();

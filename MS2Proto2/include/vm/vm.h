@@ -10,6 +10,7 @@
 #define VM_OPCODES(X) \
 	X(MOVE)             \
 	X(LOADK)            \
+	X(LOADN)            \
 	X(ADD)              \
 	X(SUB)              \
 	X(IFLT)             \
@@ -39,6 +40,8 @@ typedef struct {
 	uint32_t *code;              // instruction stream
 	int       code_len;
 	uint16_t  max_regs;          // frame reservation size
+	Value    *constants;         // constants table
+	int       const_len;         // number of constants
 } Proto;
 
 // Call stack frame (return info)

@@ -126,6 +126,17 @@ Value vm_exec(VM *vm, Proto *entry, unsigned int max_cycles) {
 		VM_NEXT();
 	}
 
+	VM_CASE(LOADN) {
+		// Load from constants table: R[A] = constants[B]
+		uint8_t const_idx = B(ins);
+		if (const_idx >= entry->const_len) {
+			fprintf(stderr, "LOADN: invalid constant index %u\n", const_idx);
+			exit(2);
+		}
+		base[A(ins)] = entry->constants[const_idx];
+		VM_NEXT();
+	}
+
 	VM_CASE(ADD) {
 		base[A(ins)] = value_add(base[B(ins)], base[C(ins)]);
 		VM_NEXT();

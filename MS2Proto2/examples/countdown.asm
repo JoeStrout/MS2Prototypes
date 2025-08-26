@@ -1,7 +1,8 @@
 # Countdown loop from 5 to 0
 # Demonstrates labels and conditional jumps
 
-LOADK r0, 5      # Start with 5
+@main:
+	LOADK r0, 5      # Start with 5
 
 loop:            # Loop label
     LOADK r1, 0      # Load 0 for comparison

@@ -121,6 +121,9 @@ Value value_add(Value a, Value b);
 Value value_sub(Value a, Value b);
 bool value_lt(Value a, Value b);
 
+// Value comparison (implemented in nanbox.c)
+bool values_equal(Value a, Value b);
+
 // Debug utility functions (implemented in nanbox.c)
 void debug_print_value(Value v);
 const char* value_type_name(Value v);

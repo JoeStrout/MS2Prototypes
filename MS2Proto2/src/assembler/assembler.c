@@ -1,4 +1,5 @@
 #include "../../include/assembler/assembler.h"
+#include "../../include/types/strings.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,9 @@ static void init_function(Function *func) {
     func->code_len = 0;
     func->label_count = 0;
     func->ref_count = 0;
+    func->const_capacity = 64;
+    func->constants = (Value*)calloc(func->const_capacity, sizeof(Value));
+    func->const_len = 0;
     func->max_regs = 16;  // Default
     func->is_main = false;
     memset(func->labels, 0, sizeof(func->labels));
@@ -26,6 +30,7 @@ void asm_init(Assembler *asm) {
 void asm_free(Assembler *asm) {
     for (size_t i = 0; i < asm->function_count; i++) {
         free(asm->functions[i].code);
+        free(asm->functions[i].constants);
     }
     asm->function_count = 0;
     asm->current_function = NULL;
@@ -90,6 +95,43 @@ static bool is_immediate(const char *str, int32_t *imm) {
     return *endptr == '\0';
 }
 
+static bool parse_constant(const char *str, Value *value) {
+    // Check for string literal (enclosed in double quotes)
+    if (str[0] == '"') {
+        int len = strlen(str);
+        if (len >= 2 && str[len-1] == '"') {
+            // Remove quotes and create string
+            char *content = malloc(len - 1);
+            memcpy(content, str + 1, len - 2);
+            content[len - 2] = '\0';
+            *value = make_string(content);
+            free(content);
+            return true;
+        }
+        return false;
+    }
+    
+    // Check for double (contains decimal point)
+    if (strchr(str, '.') != NULL) {
+        char *endptr;
+        double d = strtod(str, &endptr);
+        if (*endptr == '\0') {
+            *value = make_double(d);
+            return true;
+        }
+        return false;
+    }
+    
+    // Check for integer
+    int32_t imm;
+    if (is_immediate(str, &imm)) {
+        *value = make_int(imm);
+        return true;
+    }
+    
+    return false;
+}
+
 static char *trim(char *str) {
     while (isspace(*str)) str++;
     char *end = str + strlen(str) - 1;
@@ -136,6 +178,48 @@ bool asm_instruction(Assembler *asm, const char *line) {
             if (imm >= -32768 && imm <= 32767) {
                 emit_instruction(asm, INS_AB(LOADK, a, (int16_t)imm));
                 return true;
+            }
+        }
+    }
+    else if (strcmp(opcode, "LOAD") == 0 && token_count == 3) {
+        uint8_t a;
+        if (!is_register(tokens[1], &a)) {
+            return false;
+        }
+        
+        // Try to parse as immediate integer first
+        int32_t imm;
+        if (is_immediate(tokens[2], &imm) && imm >= -32768 && imm <= 32767) {
+            // Use LOADK for 16-bit signed integers
+            emit_instruction(asm, INS_AB(LOADK, a, (int16_t)imm));
+            return true;
+        } else {
+            // Use LOADN for everything else (large integers, doubles, strings)
+            Value const_value;
+            if (parse_constant(tokens[2], &const_value)) {
+                int const_idx = asm_add_constant(asm->current_function, const_value);
+                if (const_idx >= 0 && const_idx <= 255) {
+                    emit_instruction(asm, INS_ABC(LOADN, a, (uint8_t)const_idx, 0));
+                    return true;
+                } else {
+                    fprintf(stderr, "Error: Too many constants (max 256)\n");
+                    return false;
+                }
+            }
+        }
+    }
+    else if (strcmp(opcode, "LOADN") == 0 && token_count == 3) {
+        uint8_t a;
+        Value const_value;
+        if (is_register(tokens[1], &a) && parse_constant(tokens[2], &const_value)) {
+            // Add constant to table and get index
+            int const_idx = asm_add_constant(asm->current_function, const_value);
+            if (const_idx >= 0 && const_idx <= 255) {
+                emit_instruction(asm, INS_ABC(LOADN, a, (uint8_t)const_idx, 0));
+                return true;
+            } else {
+                fprintf(stderr, "Error: Too many constants (max 256)\n");
+                return false;
             }
         }
     }
@@ -326,5 +410,32 @@ Function *asm_get_main_function(Assembler *asm) {
         }
     }
     return NULL;
+}
+
+static void ensure_const_capacity(Function *func) {
+    if (func->const_len >= func->const_capacity) {
+        func->const_capacity *= 2;
+        func->constants = (Value*)realloc(func->constants, func->const_capacity * sizeof(Value));
+    }
+}
+
+int asm_add_constant(Function *func, Value value) {
+    // Check if constant already exists
+    int index = asm_find_constant(func, value);
+    if (index >= 0) return index;
+    
+    // Add new constant
+    ensure_const_capacity(func);
+    func->constants[func->const_len] = value;
+    return (int)(func->const_len++);
+}
+
+int asm_find_constant(Function *func, Value value) {
+    for (size_t i = 0; i < func->const_len; i++) {
+        if (values_equal(func->constants[i], value)) {
+            return (int)i;
+        }
+    }
+    return -1;
 }
 

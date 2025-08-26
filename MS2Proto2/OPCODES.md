@@ -4,12 +4,23 @@
 | --- | --- | --- | --- | --- |
 | MOVE | R_dest | R_src | - | R[A] := R[B] |
 | LOADK | R_dest | int16 | ← | R[A] := BC (16-bit signed value) |
+| LOADN | R_dest | const_idx | - | R[A] := constants[B] (load from constants table) |
 | ADD | R_dest | R_op1 | R_op2 | R[A] := R[B] + R[C] |
 | SUB | R_dest | R_op1 | R_op2 | R[A] := R[B] - R[C] |
 | JUMP | - | offset | ←| PC += BC (16-bit signed value) |
 | IFLT | R_a | R_b | offset | if R[A] < R[B] then PC += offset (8-bit signed) |
 | CALLF | argWinStart | numArgs | funcIdx | call funcs[funcIdx] |
 | RETURN | - | - | - | return with result in R[0]
+
+### Pseudo-opcodes
+
+| Mnemonic | A | B | C | Notes |
+| --- | --- | --- | --- | --- |
+| LOAD | R_dest | constant | - | Auto-selects LOADK or LOADN based on constant type/size |
+
+The `LOAD` pseudo-opcode automatically chooses the most efficient loading instruction:
+- If the constant is a 16-bit signed integer (-32768 to 32767), compiles as `LOADK`
+- Otherwise (large integers, doubles, strings), compiles as `LOADN`
 
 ### Notes on CALLF
 

@@ -4,6 +4,7 @@
 // Most functionality is in nanbox.h as inline functions
 
 #include "../../include/types/nanbox.h"
+#include "../../include/types/strings.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <limits.h>
@@ -115,5 +116,26 @@ bool value_lt(Value a, Value b) {
     
     // TODO: Handle string comparisons, etc.
     // For now, return false for unsupported comparisons
+    return false;
+}
+
+bool values_equal(Value a, Value b) {
+    // Check specific types first, then fall back to number comparison
+    if (is_int(a) && is_int(b)) {
+        return as_int(a) == as_int(b);
+    }
+    if (is_double(a) && is_double(b)) {
+        return as_double(a) == as_double(b);
+    }
+    if (is_string(a) && is_string(b)) {
+        return string_equals(a, b);
+    }
+    // Mixed int/double comparison
+    if (is_number(a) && is_number(b)) {
+        double da = is_int(a) ? (double)as_int(a) : as_double(a);
+        double db = is_int(b) ? (double)as_int(b) : as_double(b);
+        return da == db;
+    }
+    // Different types or unsupported types
     return false;
 }

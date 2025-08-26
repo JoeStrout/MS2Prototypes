@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include "../vm/vm.h"
+#include "../types/nanbox.h"
 
 // Maximum number of labels, references, and functions supported
 #define MAX_LABELS 256
@@ -35,6 +36,9 @@ typedef struct {
     size_t label_count;
     Reference refs[MAX_REFS];
     size_t ref_count;
+    Value *constants;
+    size_t const_len;
+    size_t const_capacity;
     uint16_t max_regs;
     bool is_main;
 } Function;
@@ -68,5 +72,9 @@ Function *asm_get_main_function(Assembler *asm);
 int32_t asm_find_label(Function *func, const char *name);
 bool asm_add_label(Function *func, const char *name, int32_t address);
 bool asm_add_reference(Function *func, const char *label_name, int32_t addr, bool is_jump);
+
+// Constants table management
+int asm_add_constant(Function *func, Value value);
+int asm_find_constant(Function *func, Value value);
 
 #endif // ASSEMBLER_H
