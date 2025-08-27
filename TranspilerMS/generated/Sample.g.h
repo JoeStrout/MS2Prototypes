@@ -5,6 +5,7 @@ namespace "MiniDemo" {
   // Bytecode: a test class for testing the C# --> C++ transpiler.
   class Bytecode {
     public: int meaning = 42;
+    public: String foo;
     public: Mini.List<Value> Consts = new Mini.List<Value>();
     private: int secret = 007;  // Bond.  James Bond.
 

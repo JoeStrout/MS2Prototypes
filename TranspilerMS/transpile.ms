@@ -16,10 +16,12 @@ Converter.codeBlockDepth = 0  // code blocks *within* a method
 Converter.hLines = null
 Converter.cppLines = null
 Converter.addCurly = false
+Converter.className = ""
 
 Converter.match = function(inp, hOut, cppOut)
 	self.m = self.line.match(inp)
 	if not self.m then return false
+	self.m.className = self.className
 	curly = " {" * self.addCurly
 	if cppOut then
 		self.cppLines.push self.indentation + cppOut.fill(self.m) + curly + self.comment
@@ -93,10 +95,10 @@ Converter.processLine = function(line)
 	end if
 
 	// class declaration
-	if self.match("{qualifiers} class {name}",
-	  "class {name}", "class {name}") then
+	if self.match("{qualifiers} class {name}", "class {name}", "") then
 		self.context = Context.CLASS
 		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		self.className = self.m.name
 		return
 	end if
 	
@@ -118,7 +120,7 @@ Converter.processLine = function(line)
 	// method declaration
 	if self.match("{scope} {rtype} {name}({params})",
 	  "{scope}: {rtype} {name}({params});",
-	  "{rtype} {name}({params})") then
+	  "{rtype} {className}::{name}({params})") then
 		self.context = Context.METHOD
 		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
@@ -145,6 +147,7 @@ Converter.processLine = function(line)
 		else if self.context == Context.METHOD then
 			self.context = Context.CLASS
 		else if self.context == Context.CLASS then
+			self.cppLines.pop // no class curlies in cpp file!
 			self.context = Context.NAMESPACE
 		else
 			self.context = Context.START
