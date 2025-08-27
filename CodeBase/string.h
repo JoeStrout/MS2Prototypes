@@ -17,7 +17,7 @@ private:
     // Helper to create string from StringStorage (takes ownership)
     static string fromStorage(StringStorage* storage, uint8_t pool = 0) {
         if (!storage) return string();
-        uint16_t idx = StringPool::internString(pool, storage->getCString(), StringStorage::allocator);
+        uint16_t idx = StringPool::internString(pool, storage->getCString());
         StringStorage::destroy(storage);  // Clean up temporary storage
         return string(pool, idx);
     }
@@ -35,7 +35,7 @@ public:
             index = 0;
             return;
         }
-        index = StringPool::internString(pool, cstr, StringStorage::allocator);
+        index = StringPool::internString(pool, cstr);
     }
     
     // Copy constructor and assignment (defaulted for trivial copyability)
@@ -50,7 +50,7 @@ public:
             return *this;
         }
         // Use current pool and static allocator
-        index = StringPool::internString(poolNum, cstr, StringStorage::allocator);
+        index = StringPool::internString(poolNum, cstr);
         return *this;
     }
     

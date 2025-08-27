@@ -13,6 +13,7 @@ struct __attribute__((packed)) MemRef {
     bool isNull() const { return index == 0; }
     
     // Comparison operators for containers
+    // ToDo: replace this with `= default`?
     bool operator==(const MemRef& other) const {
         return poolNum == other.poolNum && index == other.index;
     }

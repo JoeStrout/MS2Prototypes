@@ -2,13 +2,15 @@
 #include <cstring>
 
 // MemPool implementation
-MemPool::MemPool() : blocks(nullptr), blockCount(0), capacity(0) {
+MemPool::MemPool() : blocks(nullptr), blockCount(1), capacity(0) {
     // Start with initial capacity
     capacity = 256;
     blocks = (Block*)malloc(capacity * sizeof(Block));
     if (blocks) {
         memset(blocks, 0, capacity * sizeof(Block));
     }
+    // And note that blockCount is initialized to 1, because
+    // slot 0 is reserved to represent nullptr.
 }
 
 MemPool::~MemPool() {

@@ -1,8 +1,9 @@
 CXX = g++
 CXXFLAGS = -std=c++11 -Wall -Wextra -g -O2
+#CXXFLAGS = -std=c++11 -Wall -Wextra -g -O0
 
 # Object files
-OBJS = string.o StringStorage.o StringPool.o unicodeUtil.o MemPool.o
+OBJS = StringStorage.o StringPool.o unicodeUtil.o MemPool.o
 
 # Test programs
 TEST_PROGS = test_string test_list test_memcpy
@@ -17,9 +18,6 @@ test_list: test_list.cpp $(OBJS)
 
 test_memcpy: test_memcpy.cpp $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
-
-string.o: string.cpp string.h StringStorage.h StringPool.h
-	$(CXX) $(CXXFLAGS) -c string.cpp
 
 StringStorage.o: StringStorage.cpp StringStorage.h unicodeUtil.h
 	$(CXX) $(CXXFLAGS) -c StringStorage.cpp

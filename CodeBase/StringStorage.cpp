@@ -5,7 +5,7 @@
 #include <cctype>
 
 // Static member definition
-StringStorageAllocator StringStorage::allocator = defaultStringAllocator;
+StringStorageAllocator StringStorage::allocator = StringPool::defaultStringAllocator;
 
 // FNV-1a hash function
 static uint32_t fnv1a_hash(const char* data, int len) {
