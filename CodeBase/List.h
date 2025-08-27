@@ -1,40 +1,84 @@
 #pragma once
-#include <cstdlib>
-#include <cstring>
-#include <new>
+#include "MemPool.h"
 #include <type_traits>
-#include "string.h"
+#include <new>
+#include <cstring>
 
+// Forward declaration
+template<typename T> class List;
+
+// ListStorage - the actual storage for list data
+template<typename T>
+struct ListStorage {
+    int count;
+    int capacity;
+    // Data follows immediately after this struct
+    // T data[capacity] would be here, but we can't use flexible array member in C++
+    
+    // Helper to get the data array
+    T* getData() {
+        return reinterpret_cast<T*>(reinterpret_cast<char*>(this) + sizeof(ListStorage<T>));
+    }
+    
+    const T* getData() const {
+        return reinterpret_cast<const T*>(reinterpret_cast<const char*>(this) + sizeof(ListStorage<T>));
+    }
+    
+    // Calculate total size needed for ListStorage + capacity T items
+    static size_t calculateSize(int capacity) {
+        return sizeof(ListStorage<T>) + capacity * sizeof(T);
+    }
+    
+    // Initialize a new ListStorage
+    static void initialize(ListStorage<T>* storage, int initialCapacity) {
+        storage->count = 0;
+        storage->capacity = initialCapacity;
+        // Don't need to initialize T items yet - they'll be constructed as needed
+    }
+};
+
+// List - trivially copyable list using MemPool
 template<typename T>
 class List {
 private:
-    T* data;
-    int count;
-    int capacity;
+    MemRef storage;  // Reference to ListStorage<T>
     
-    void ensureCapacity(int minCapacity) {
-        if (minCapacity <= capacity) return;
-        
-        int newCapacity = capacity > 0 ? capacity * 2 : 4;
-        if (newCapacity < minCapacity) newCapacity = minCapacity;
-        
-        T* newData = (T*)malloc(newCapacity * sizeof(T));
-        if (!newData) return; // Handle allocation failure gracefully
-        
-        // Copy existing elements efficiently
-        copyElements(newData, data, count);
-        
-        // Destroy old elements (only needed for non-trivially copyable types)
-        for (int i = 0; i < count; i++) {
-            data[i].~T();
-        }
-        
-        free(data);
-        data = newData;
-        capacity = newCapacity;
+    ListStorage<T>* getStorage() const {
+        return static_cast<ListStorage<T>*>(MemPoolManager::getPtr(storage));
     }
     
-    // Helper methods for efficient copying
+    void ensureCapacity(int minCapacity) {
+        ListStorage<T>* s = getStorage();
+        if (!s) {
+            // No storage yet - create it
+            createStorage(minCapacity > 4 ? minCapacity : 4);
+            return;
+        }
+        
+        if (minCapacity <= s->capacity) return;
+        
+        int newCapacity = s->capacity > 0 ? s->capacity * 2 : 4;
+        if (newCapacity < minCapacity) newCapacity = minCapacity;
+        
+        // Allocate new storage
+        MemRef newRef = MemPoolManager::realloc(storage, ListStorage<T>::calculateSize(newCapacity));
+        if (newRef.isNull()) return; // Allocation failed
+        
+        storage = newRef;
+        ListStorage<T>* newStorage = getStorage();
+        newStorage->capacity = newCapacity;
+        
+        // Note: realloc preserves existing data, so count and existing T items are fine
+    }
+    
+    void createStorage(int initialCapacity) {
+        storage = MemPoolManager::alloc(ListStorage<T>::calculateSize(initialCapacity), storage.poolNum);
+        if (!storage.isNull()) {
+            ListStorage<T>::initialize(getStorage(), initialCapacity);
+        }
+    }
+    
+    // Helper methods for efficient copying (same as before)
     void copyElements(T* dest, const T* src, int elementCount) {
         copyElementsImpl(dest, src, elementCount, typename std::is_trivially_copyable<T>::type{});
     }
@@ -52,438 +96,133 @@ private:
     }
     
 public:
-    // Constructors
-    List() : data(nullptr), count(0), capacity(0) {}
+    // Constructors - all trivial!
+    List(uint8_t poolNum = 0) : storage(poolNum, 0) {}
     
-    explicit List(int initialCapacity) : data(nullptr), count(0), capacity(0) {
-        if (initialCapacity > 0) {
-            ensureCapacity(initialCapacity);
+    // Copy constructor and assignment (trivially copyable!)
+    List(const List<T>& other) = default;
+    List<T>& operator=(const List<T>& other) = default;
+    
+    // Destructor - trivial! Memory is managed by pool lifecycle
+    ~List() = default;
+    
+    // Constructor that adopts an array (like before)
+    List(T* adoptedArray, int arrayCount, uint8_t poolNum = 0) : storage(poolNum, 0) {
+        storage = MemPoolManager::alloc(ListStorage<T>::calculateSize(arrayCount), poolNum);
+        if (!storage.isNull()) {
+            ListStorage<T>* s = getStorage();
+            ListStorage<T>::initialize(s, arrayCount);
+            s->count = arrayCount;
+            
+            // Copy the adopted data
+            copyElements(s->getData(), adoptedArray, arrayCount);
+            
+            // Free the original array
+            free(adoptedArray);
         }
     }
     
-    // Constructor that adopts a T* array (takes ownership)
-    // Perfect for use with string.Split() result
-    List(T* adoptedArray, int arrayCount) : data(adoptedArray), count(arrayCount), capacity(arrayCount) {
-        // Takes ownership of the provided array - caller should not free it
+    // Properties
+    int Count() const { 
+        ListStorage<T>* s = getStorage();
+        return s ? s->count : 0;
     }
     
-    // Copy constructor
-    List(const List<T>& other) : data(nullptr), count(0), capacity(0) {
-        if (other.count > 0) {
-            ensureCapacity(other.count);
-            copyElements(data, other.data, other.count);
-            count = other.count;
-        }
+    int Capacity() const { 
+        ListStorage<T>* s = getStorage();
+        return s ? s->capacity : 0;
     }
     
-    // Assignment operator
-    List<T>& operator=(const List<T>& other) {
-        if (this != &other) {
-            Clear();
-            if (other.count > 0) {
-                ensureCapacity(other.count);
-                copyElements(data, other.data, other.count);
-                count = other.count;
-            }
-        }
-        return *this;
-    }
+    bool Empty() const { return Count() == 0; }
     
-    // Destructor
-    ~List() {
-        Clear();
-        free(data);
-    }
-    
-    // C# List<T> API - Properties
-    int Count() const { return count; }
-    int Capacity() const { return capacity; }
-    
-    void SetCapacity(int newCapacity) {
-        if (newCapacity < count) return; // Can't shrink below current count
-        
-        if (newCapacity == capacity) return;
-        
-        if (newCapacity == 0) {
-            Clear();
-            free(data);
-            data = nullptr;
-            capacity = 0;
-            return;
-        }
-        
-        T* newData = (T*)malloc(newCapacity * sizeof(T));
-        if (!newData) return;
-        
-        for (int i = 0; i < count; i++) {
-            new(&newData[i]) T(data[i]);
-            data[i].~T();
-        }
-        
-        free(data);
-        data = newData;
-        capacity = newCapacity;
-    }
-    
-    // C# List<T> API - Element access
+    // Element access
     T& operator[](int index) {
-        return data[index]; // No bounds checking for performance (like C# in release mode)
+        ListStorage<T>* s = getStorage();
+        return s->getData()[index];
     }
     
     const T& operator[](int index) const {
-        return data[index];
+        ListStorage<T>* s = getStorage();
+        return s->getData()[index];
     }
     
     T& At(int index) {
-        if (index < 0 || index >= count) {
-            static T defaultValue = T();
-            return defaultValue; // Return reference to default value on bounds error
-        }
-        return data[index];
-    }
-    
-    const T& At(int index) const {
-        if (index < 0 || index >= count) {
+        ListStorage<T>* s = getStorage();
+        if (!s || index < 0 || index >= s->count) {
             static T defaultValue = T();
             return defaultValue;
         }
-        return data[index];
+        return s->getData()[index];
     }
     
-    // C# List<T> API - Adding elements
+    const T& At(int index) const {
+        ListStorage<T>* s = getStorage();
+        if (!s || index < 0 || index >= s->count) {
+            static T defaultValue = T();
+            return defaultValue;
+        }
+        return s->getData()[index];
+    }
+    
+    // Adding elements
     void Add(const T& item) {
-        ensureCapacity(count + 1);
-        new(&data[count]) T(item);
-        count++;
+        ensureCapacity(Count() + 1);
+        ListStorage<T>* s = getStorage();
+        if (s) {
+            new(&s->getData()[s->count]) T(item);
+            s->count++;
+        }
     }
     
     void AddRange(const List<T>& collection) {
-        if (collection.count == 0) return;
+        if (collection.Empty()) return;
         
-        ensureCapacity(count + collection.count);
-        copyElements(data + count, collection.data, collection.count);
-        count += collection.count;
+        ensureCapacity(Count() + collection.Count());
+        ListStorage<T>* s = getStorage();
+        ListStorage<T>* other = collection.getStorage();
+        
+        if (s && other) {
+            copyElements(s->getData() + s->count, other->getData(), other->count);
+            s->count += other->count;
+        }
     }
     
-    void Insert(int index, const T& item) {
-        if (index < 0 || index > count) return; // Bounds check
-        
-        ensureCapacity(count + 1);
-        
-        // Shift elements to the right
-        for (int i = count; i > index; i--) {
-            new(&data[i]) T(data[i - 1]);
-            data[i - 1].~T();
-        }
-        
-        new(&data[index]) T(item);
-        count++;
-    }
-    
-    void InsertRange(int index, const List<T>& collection) {
-        if (index < 0 || index > count || collection.count == 0) return;
-        
-        ensureCapacity(count + collection.count);
-        
-        // Shift existing elements to the right
-        for (int i = count - 1; i >= index; i--) {
-            new(&data[i + collection.count]) T(data[i]);
-            data[i].~T();
-        }
-        
-        // Insert new elements
-        copyElements(data + index, collection.data, collection.count);
-        
-        count += collection.count;
-    }
-    
-    // C# List<T> API - Removing elements
-    bool Remove(const T& item) {
-        int index = IndexOf(item);
-        if (index >= 0) {
-            RemoveAt(index);
-            return true;
-        }
-        return false;
-    }
-    
-    void RemoveAt(int index) {
-        if (index < 0 || index >= count) return;
-        
-        data[index].~T();
-        
-        // Shift elements to the left
-        for (int i = index; i < count - 1; i++) {
-            new(&data[i]) T(data[i + 1]);
-            data[i + 1].~T();
-        }
-        
-        count--;
-    }
-    
-    void RemoveRange(int index, int removeCount) {
-        if (index < 0 || index >= count || removeCount <= 0) return;
-        
-        int actualRemoveCount = removeCount;
-        if (index + actualRemoveCount > count) {
-            actualRemoveCount = count - index;
-        }
-        
-        // Destroy elements being removed
-        for (int i = index; i < index + actualRemoveCount; i++) {
-            data[i].~T();
-        }
-        
-        // Shift remaining elements to the left
-        for (int i = index; i < count - actualRemoveCount; i++) {
-            new(&data[i]) T(data[i + actualRemoveCount]);
-            data[i + actualRemoveCount].~T();
-        }
-        
-        count -= actualRemoveCount;
-    }
-    
-    int RemoveAll(bool (*predicate)(const T&)) {
-        int writeIndex = 0;
-        int removedCount = 0;
-        
-        for (int readIndex = 0; readIndex < count; readIndex++) {
-            if (predicate(data[readIndex])) {
-                data[readIndex].~T();
-                removedCount++;
-            } else {
-                if (writeIndex != readIndex) {
-                    new(&data[writeIndex]) T(data[readIndex]);
-                    data[readIndex].~T();
-                }
-                writeIndex++;
-            }
-        }
-        
-        count = writeIndex;
-        return removedCount;
-    }
-    
+    // Clear - doesn't free memory, just resets count
     void Clear() {
-        for (int i = 0; i < count; i++) {
-            data[i].~T();
-        }
-        count = 0;
-    }
-    
-    // C# List<T> API - Searching
-    int IndexOf(const T& item) const {
-        for (int i = 0; i < count; i++) {
-            if (data[i] == item) {
-                return i;
+        ListStorage<T>* s = getStorage();
+        if (s) {
+            // Destroy existing elements
+            for (int i = 0; i < s->count; i++) {
+                s->getData()[i].~T();
             }
-        }
-        return -1;
-    }
-    
-    int IndexOf(const T& item, int startIndex) const {
-        if (startIndex < 0 || startIndex >= count) return -1;
-        
-        for (int i = startIndex; i < count; i++) {
-            if (data[i] == item) {
-                return i;
-            }
-        }
-        return -1;
-    }
-    
-    int IndexOf(const T& item, int startIndex, int searchCount) const {
-        if (startIndex < 0 || startIndex >= count || searchCount <= 0) return -1;
-        
-        int endIndex = startIndex + searchCount;
-        if (endIndex > count) endIndex = count;
-        
-        for (int i = startIndex; i < endIndex; i++) {
-            if (data[i] == item) {
-                return i;
-            }
-        }
-        return -1;
-    }
-    
-    int LastIndexOf(const T& item) const {
-        for (int i = count - 1; i >= 0; i--) {
-            if (data[i] == item) {
-                return i;
-            }
-        }
-        return -1;
-    }
-    
-    int LastIndexOf(const T& item, int startIndex) const {
-        if (startIndex < 0 || startIndex >= count) return -1;
-        
-        for (int i = startIndex; i >= 0; i--) {
-            if (data[i] == item) {
-                return i;
-            }
-        }
-        return -1;
-    }
-    
-    bool Contains(const T& item) const {
-        return IndexOf(item) >= 0;
-    }
-    
-    // C# List<T> API - Utility methods
-    void Reverse() {
-        if (count <= 1) return;
-        
-        for (int i = 0; i < count / 2; i++) {
-            T temp = data[i];
-            data[i] = data[count - 1 - i];
-            data[count - 1 - i] = temp;
+            s->count = 0;
         }
     }
     
-    void Reverse(int index, int length) {
-        if (index < 0 || length <= 0 || index + length > count) return;
-        
-        int start = index;
-        int end = index + length - 1;
-        
-        while (start < end) {
-            T temp = data[start];
-            data[start] = data[end];
-            data[end] = temp;
-            start++;
-            end--;
-        }
+    // Iterator support
+    T* begin() { 
+        ListStorage<T>* s = getStorage();
+        return s ? s->getData() : nullptr;
     }
     
-    void Sort() {
-        if (count <= 1) return;
-        quickSort(0, count - 1);
+    const T* begin() const { 
+        ListStorage<T>* s = getStorage();
+        return s ? s->getData() : nullptr;
     }
     
-    void Sort(int (*comparer)(const T&, const T&)) {
-        if (count <= 1) return;
-        quickSortWithComparer(0, count - 1, comparer);
+    T* end() { 
+        ListStorage<T>* s = getStorage();
+        return s ? s->getData() + s->count : nullptr;
     }
     
-    List<T> GetRange(int index, int length) const {
-        List<T> result;
-        if (index < 0 || length <= 0 || index + length > count) return result;
-        
-        result.ensureCapacity(length);
-        for (int i = 0; i < length; i++) {
-            result.Add(data[index + i]);
-        }
-        
-        return result;
+    const T* end() const { 
+        ListStorage<T>* s = getStorage();
+        return s ? s->getData() + s->count : nullptr;
     }
     
-    // C# List<T> API - Conversion
-    T* ToArray(int* arraySize) const {
-        if (count == 0) {
-            *arraySize = 0;
-            return nullptr;
-        }
-        
-        T* array = (T*)malloc(count * sizeof(T));
-        if (!array) {
-            *arraySize = 0;
-            return nullptr;
-        }
-        
-        // Use const_cast to call non-const method (safe for copying)
-        const_cast<List<T>*>(this)->copyElements(array, data, count);
-        
-        *arraySize = count;
-        return array;
-    }
+    // Pool management
+    uint8_t getPoolNum() const { return storage.poolNum; }
+    MemRef getMemRef() const { return storage; }
     
-    void TrimExcess() {
-        if (count < capacity * 0.9) { // Only trim if significantly over-allocated
-            SetCapacity(count);
-        }
-    }
-    
-    // Additional useful methods
-    bool Empty() const { return count == 0; }
-    
-    T& First() { return data[0]; }
-    const T& First() const { return data[0]; }
-    
-    T& Last() { return data[count - 1]; }
-    const T& Last() const { return data[count - 1]; }
-    
-    // Iterator support (basic)
-    T* begin() { return data; }
-    const T* begin() const { return data; }
-    
-    T* end() { return data + count; }
-    const T* end() const { return data + count; }
-
-private:
-    // QuickSort implementation for Sort()
-    void quickSort(int low, int high) {
-        if (low < high) {
-            int pivot = partition(low, high);
-            quickSort(low, pivot - 1);
-            quickSort(pivot + 1, high);
-        }
-    }
-    
-    int partition(int low, int high) {
-        T pivot = data[high];
-        int i = low - 1;
-        
-        for (int j = low; j < high; j++) {
-            if (data[j] < pivot) {
-                i++;
-                T temp = data[i];
-                data[i] = data[j];
-                data[j] = temp;
-            }
-        }
-        
-        T temp = data[i + 1];
-        data[i + 1] = data[high];
-        data[high] = temp;
-        
-        return i + 1;
-    }
-    
-    void quickSortWithComparer(int low, int high, int (*comparer)(const T&, const T&)) {
-        if (low < high) {
-            int pivot = partitionWithComparer(low, high, comparer);
-            quickSortWithComparer(low, pivot - 1, comparer);
-            quickSortWithComparer(pivot + 1, high, comparer);
-        }
-    }
-    
-    int partitionWithComparer(int low, int high, int (*comparer)(const T&, const T&)) {
-        T pivot = data[high];
-        int i = low - 1;
-        
-        for (int j = low; j < high; j++) {
-            if (comparer(data[j], pivot) < 0) {
-                i++;
-                T temp = data[i];
-                data[i] = data[j];
-                data[j] = temp;
-            }
-        }
-        
-        T temp = data[i + 1];
-        data[i + 1] = data[high];
-        data[high] = temp;
-        
-        return i + 1;
-    }
+    bool isValid() const { return !storage.isNull() && getStorage() != nullptr; }
 };
-
-// Helper function for string::Join with List<string>
-// This needs to be after the List class definition
-namespace ListStringJoin {
-    static string Join(const string& separator, const List<string>& values, uint8_t pool = 0) {
-        // Simply delegate to string::Join using public methods
-        return string::Join(separator, values.begin(), values.Count(), pool);
-    }
-}
