@@ -1,10 +1,10 @@
 // IOHelper
 //	This is a simple wrapper for console output on each platform.
 
-using System;
+#include "core_includes.h"
 
 class IOHelper {
 
-    public: void print(string message);
+    public: static void print(string message);
 
-}
+};

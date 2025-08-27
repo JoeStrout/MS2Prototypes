@@ -1,7 +1,7 @@
-using System;
+#include "core_includes.h"
 
 class Program {
 
-    static: void Main(string[] args);
+    public: static void Main(string *args);
     
-}
+};

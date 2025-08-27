@@ -1,5 +1,6 @@
 // This program transpiles (a limited subset of) C# code into C++.
 
+import "listUtil"
 import "stringUtil"
 import "fancyMatch"  // overrides standard string.match and string.fill
 
@@ -18,7 +19,15 @@ Converter.hLines = null
 Converter.cppLines = null
 Converter.addCurly = false
 Converter.className = ""
+Converter.classNames = null // all class names we know about
 Converter.didIncludes = false
+Converter.failed = false
+
+Converter.Make = function
+	noob = new self
+	noob.classNames = ["string", "List<string>"]
+	return noob
+end function
 
 Converter.match = function(inp, hOut, cppOut)
 	self.m = self.line.match(inp)
@@ -34,6 +43,12 @@ Converter.match = function(inp, hOut, cppOut)
 		self.hLines.push self.indentation + hOut.fill(self.m) + curly + self.comment
 	end if
 	return true
+end function
+
+Converter.fail = function(errMsg)
+	print "ERROR: " + errMsg
+	print "on line: " + self.line
+	self.failed = true
 end function
 
 Converter.processLine = function(line)
@@ -93,11 +108,17 @@ Converter.processLine = function(line)
 	self.comment = comment
 	self.indentation = indentation
 	
+	// Standard syntax transformations
+	self.line = self.tweakSyntax(line)
+	
 	// using: ignored, but our chance to output standard includes
-	if self.match("using {lib};", "", "") then
+	if self.match("using ≤lib≥;", "", "") then
 		if not self.didIncludes then
-			self.hLines.push "#include ""string.h"""
+			self.hLines.push "#include ""core_includes.h"""
 			self.cppLines.push "#include """ + (self.filename - ".cs" + ".g.h") + """"
+			if self.filename == "Program.cs" then  // ToDo: find better way to decide this
+				self.cppLines.push "#include ""IOHelper.g.h"""
+			end if
 			self.didIncludes = true
 		end if
 		return
@@ -118,6 +139,10 @@ Converter.processLine = function(line)
 		self.context = Context.CLASS
 		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		self.className = self.m.name
+		if not self.classNames.contains(self.className) then
+			self.classNames.push self.className
+		end if
+		print "Got class name: " + self.className + "; all classes: " + self.classNames
 		return
 	end if
 	
@@ -136,8 +161,8 @@ Converter.processLine = function(line)
 
 	// method declaration
 	if self.match("≤scope:w≥ static ≤rtype:w≥ ≤name:w≥(≤params≥)",
-	  "≤scope≥: ≤rtype≥ ≤name≥(≤params≥);",
-	  "static ≤rtype≥ ≤className≥::≤name≥(≤params≥)") then
+	  "≤scope≥: static ≤rtype≥ ≤name≥(≤params≥);",
+	  "≤rtype≥ ≤className≥::≤name≥(≤params≥)") then
 		self.context = Context.METHOD
 		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
@@ -146,6 +171,7 @@ Converter.processLine = function(line)
 	if self.match("≤scope:w≥ ≤rtype:w≥ ≤name:w≥(≤params≥)",
 	  "≤scope≥: ≤rtype≥ ≤name≥(≤params≥);",
 	  "≤rtype≥ ≤className≥::≤name≥(≤params≥)") then
+	  	if self.m.scope == "static" then return self.fail("scope qualifier required on static method")
 		self.context = Context.METHOD
 		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
@@ -161,17 +187,18 @@ Converter.processLine = function(line)
 	  
 	// Anything else: copy to header and/or CPP file according to context
 	curly = " {" * self.addCurly
-	fullLine = self.indentation + line + curly + self.comment
+	fullLine = self.indentation + self.line + curly + self.comment
 	self.cppLines.push fullLine
 	if self.context != Context.METHOD then self.hLines.push fullLine
 	
 	// Closing curly: close the open code block or scope
-	if line == "}" then
+	if self.line == "}" then
 		if self.context == Context.METHOD and self.codeBlockDepth > 0 then
 			self.codeBlockDepth -= 1
 		else if self.context == Context.METHOD then
 			self.context = Context.CLASS
 		else if self.context == Context.CLASS then
+			self.hLines[-1] = self.hLines[-1].replace("}", "};")	// add ; after class declaration
 			self.cppLines.pop // no class curlies in cpp file!
 			self.context = Context.NAMESPACE
 		else
@@ -181,22 +208,41 @@ Converter.processLine = function(line)
 	end if
 
 end function
+
+Converter.tweakSyntax = function(line)
+	// array syntax (especially as seen in parameters)
+	line = line.replace("[] ", " *")
 	
+	// static class methods (invoked on the class name itself)
+	for cls in self.classNames
+		line = line.replace(cls+".", cls+"::")
+	end for
+	
+	// Split to list
+	m = line.match("≤pre≥.Split(≤args≥).ToList()≤post≥")
+	if m then line = "≤pre≥.SplitToList(≤args≥)≤post≥".fill(m)
+	
+	return line
+end function
+
 Converter.convertClass = function(sourcePath)
 	self.hLines = []
 	self.cppLines = []
 	self.didIncludes = false
 	self.filename = file.name(sourcePath)
+	self.failed = false
+
 	for line in file.readLines(sourcePath)
 		//print line
 		self.processLine line
+		if self.failed then return
 	end for
 
 	if self.className == "Program" then
 		// main-program boilerplate goes with the program
 		self.cppLines.push ""
 		self.cppLines.push "int main() {"
-		self.cppLines.push TAB + "Program::Main();"
+		self.cppLines.push TAB + "Program::Main(nullptr);"
 		self.cppLines.push "}"
 	end if
 
@@ -218,7 +264,7 @@ Converter.convertClass = function(sourcePath)
 end function
 
 if locals == globals then
-	cvt = new Converter
+	cvt = Converter.Make
 	cvt.convertClass "tests/IOHelper.cs"
-	cvt.convertClass "tests/Program.cs"
+	if not cvt.failed then cvt.convertClass "tests/Program.cs"
 end if

@@ -4,6 +4,7 @@
 #include <cstdlib>  // For malloc/free
 #include "StringStorage.h"
 #include "StringPool.h"
+#include "List.h"
 
 // Forward declaration to avoid circular dependency
 template<typename T> class List;
@@ -312,6 +313,46 @@ public:
         return result;
     }
     
+    // List-based Split methods - return List<string> instead of string*
+    List<string> SplitToList(char separator, uint8_t listPool = 0) const {
+        const StringStorage* s = getStorage();
+        List<string> result(listPool);
+        if (!s) return result;
+        
+        int count = 0;
+        StringStorage** parts = s->split(separator, &count);
+        if (!parts) return result;
+        
+        // Add all parts to the list
+        for (int i = 0; i < count; i++) {
+            string part = fromStorage(parts[i], poolNum);
+            result.Add(part);
+        }
+        
+        free(parts);  // Free the array, but not the contents (transferred to List)
+        return result;
+    }
+    
+    List<string> SplitToList(const string& separator, uint8_t listPool = 0) const {
+        const StringStorage* s = getStorage();
+        const StringStorage* sep = separator.getStorage();
+        List<string> result(listPool);
+        if (!s || !sep) return result;
+        
+        int count = 0;
+        StringStorage** parts = s->split(sep, &count);
+        if (!parts) return result;
+        
+        // Add all parts to the list
+        for (int i = 0; i < count; i++) {
+            string part = fromStorage(parts[i], poolNum);
+            result.Add(part);
+        }
+        
+        free(parts);
+        return result;
+    }
+    
     // C# String API - Static methods (as regular methods)
     bool IsNullOrEmpty() const { return Length() == 0; }
     
@@ -350,6 +391,56 @@ public:
     // C# String API - Static methods (Join)
     static string Join(const string& separator, const string* values, int count, uint8_t pool = 0) {
         if (!values || count <= 0) return string();
+        if (count == 1) return values[0];
+        
+        // Calculate total length needed
+        int totalLength = 0;
+        const StringStorage* sepStorage = separator.getStorage();
+        int sepLength = sepStorage ? sepStorage->lengthB() : 0;
+        
+        for (int i = 0; i < count; i++) {
+            const StringStorage* valueStorage = values[i].getStorage();
+            if (valueStorage) {
+                totalLength += valueStorage->lengthB();
+            }
+        }
+        totalLength += sepLength * (count - 1); // separators between elements
+        
+        if (totalLength == 0) return string();
+        
+        // Build the result string
+        char* result = (char*)malloc(totalLength + 1);
+        if (!result) return string();
+        
+        int pos = 0;
+        const char* sepCStr = sepStorage ? sepStorage->getCString() : "";
+        
+        for (int i = 0; i < count; i++) {
+            if (i > 0 && sepLength > 0) {
+                strcpy(result + pos, sepCStr);
+                pos += sepLength;
+            }
+            
+            const StringStorage* valueStorage = values[i].getStorage();
+            if (valueStorage) {
+                const char* valueCStr = valueStorage->getCString();
+                int valueLength = valueStorage->lengthB();
+                strcpy(result + pos, valueCStr);
+                pos += valueLength;
+            }
+        }
+        result[totalLength] = '\0';
+        
+        // Create string from result and clean up
+        string joined(result, pool);
+        free(result);
+        return joined;
+    }
+    
+    // Join overload that takes List<string>
+    static string Join(const string& separator, const List<string>& values, uint8_t pool = 0) {
+        int count = values.Count();
+        if (count <= 0) return string();
         if (count == 1) return values[0];
         
         // Calculate total length needed

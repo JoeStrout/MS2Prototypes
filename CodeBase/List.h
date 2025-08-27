@@ -199,6 +199,173 @@ public:
         }
     }
     
+    // Reverse - reverse the order of elements
+    void Reverse() {
+        ListStorage<T>* s = getStorage();
+        if (!s || s->count <= 1) return;
+        
+        T* data = s->getData();
+        int left = 0;
+        int right = s->count - 1;
+        
+        while (left < right) {
+            // Swap elements
+            T temp = data[left];
+            data[left] = data[right];
+            data[right] = temp;
+            left++;
+            right--;
+        }
+    }
+    
+    // Contains - check if item exists in list
+    bool Contains(const T& item) const {
+        ListStorage<T>* s = getStorage();
+        if (!s) return false;
+        
+        T* data = s->getData();
+        for (int i = 0; i < s->count; i++) {
+            if (data[i] == item) return true;
+        }
+        return false;
+    }
+    
+    // IndexOf - find first occurrence of item
+    int IndexOf(const T& item) const {
+        ListStorage<T>* s = getStorage();
+        if (!s) return -1;
+        
+        T* data = s->getData();
+        for (int i = 0; i < s->count; i++) {
+            if (data[i] == item) return i;
+        }
+        return -1;
+    }
+    
+    // LastIndexOf - find last occurrence of item
+    int LastIndexOf(const T& item) const {
+        ListStorage<T>* s = getStorage();
+        if (!s) return -1;
+        
+        T* data = s->getData();
+        for (int i = s->count - 1; i >= 0; i--) {
+            if (data[i] == item) return i;
+        }
+        return -1;
+    }
+    
+    // Insert - insert item at specific index
+    void Insert(int index, const T& item) {
+        ListStorage<T>* s = getStorage();
+        int currentCount = s ? s->count : 0;
+        
+        if (index < 0 || index > currentCount) return;
+        
+        ensureCapacity(currentCount + 1);
+        s = getStorage(); // refresh after potential reallocation
+        if (!s) return;
+        
+        T* data = s->getData();
+        // Move elements to make room
+        for (int i = s->count; i > index; i--) {
+            new(&data[i]) T(data[i-1]);
+            data[i-1].~T();
+        }
+        
+        new(&data[index]) T(item);
+        s->count++;
+    }
+    
+    // Remove - remove first occurrence of item
+    bool Remove(const T& item) {
+        int index = IndexOf(item);
+        if (index == -1) return false;
+        RemoveAt(index);
+        return true;
+    }
+    
+    // RemoveAt - remove item at specific index
+    void RemoveAt(int index) {
+        ListStorage<T>* s = getStorage();
+        if (!s || index < 0 || index >= s->count) return;
+        
+        T* data = s->getData();
+        data[index].~T();
+        
+        // Shift remaining elements down
+        for (int i = index; i < s->count - 1; i++) {
+            new(&data[i]) T(data[i+1]);
+            data[i+1].~T();
+        }
+        
+        s->count--;
+    }
+    
+    // RemoveRange - remove range of items
+    void RemoveRange(int index, int count) {
+        ListStorage<T>* s = getStorage();
+        if (!s || index < 0 || count <= 0 || index >= s->count) return;
+        
+        int actualCount = count;
+        if (index + actualCount > s->count) {
+            actualCount = s->count - index;
+        }
+        
+        T* data = s->getData();
+        
+        // Destroy elements being removed
+        for (int i = index; i < index + actualCount; i++) {
+            data[i].~T();
+        }
+        
+        // Shift remaining elements down
+        for (int i = index; i < s->count - actualCount; i++) {
+            new(&data[i]) T(data[i + actualCount]);
+            data[i + actualCount].~T();
+        }
+        
+        s->count -= actualCount;
+    }
+    
+    // Sort - simple bubble sort for now (could be improved)
+    void Sort() {
+        ListStorage<T>* s = getStorage();
+        if (!s || s->count <= 1) return;
+        
+        T* data = s->getData();
+        for (int i = 0; i < s->count - 1; i++) {
+            for (int j = 0; j < s->count - 1 - i; j++) {
+                if (data[j] > data[j + 1]) {
+                    T temp = data[j];
+                    data[j] = data[j + 1];
+                    data[j + 1] = temp;
+                }
+            }
+        }
+    }
+    
+    // ToArrayCopy - return a copy of the data as a regular array
+    // (NOTE: This is the same as C#'s ToArray, but since in C land, this is
+    // an *unmanaged* array, it's unlikely that a direct translation from
+    // that to this will ever be correct code.  Thus the rename.)
+    T* ToArrayCopy() const {
+        ListStorage<T>* s = getStorage();
+        if (!s || s->count == 0) return nullptr;
+        
+        T* result = static_cast<T*>(malloc(s->count * sizeof(T)));
+        if (!result) return nullptr;
+        
+        copyElements(result, s->getData(), s->count);
+        return result;
+    }
+    
+    // AsArray: more often what you actually want, this just exposes the
+    // underlying array (same as begin()).
+    T* AsArray() {
+        ListStorage<T>* s = getStorage();
+        return s ? s->getData() : nullptr;
+    }
+    
     // Iterator support
     T* begin() { 
         ListStorage<T>* s = getStorage();

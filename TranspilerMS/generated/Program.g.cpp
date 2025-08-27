@@ -1,23 +1,24 @@
-using System;
+#include "Program.g.h"
+#include "IOHelper.g.h"
 
 
-    void Program::Main(string[] args) {
+    void Program::Main(string *args) {
         string text = "The quick brown fox jumps over the lazy dog";
         
-        IOHelper.print("Splitting...");
-        List<string> words = text.Split(' ').ToList();
+        IOHelper::print("Splitting...");
+        List<string> words = text.SplitToList(' ');
 
-        IOHelper.print("Reversing...");
+        IOHelper::print("Reversing...");
         words.Reverse();
         
-        IOHelper.print("Joining...");
-        string reversed = string.Join(" ", words);
+        IOHelper::print("Joining...");
+        string reversed = string::Join(" ", words);
         
-        IOHelper.print(reversed);
-        IOHelper.print("All done!");
+        IOHelper::print(reversed);
+        IOHelper::print("All done!");
     }
     
 
 int main() {
-	Program::Main();
+	Program::Main(nullptr);
 }
