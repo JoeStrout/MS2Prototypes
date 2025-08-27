@@ -54,7 +54,8 @@ dotnet run MyProgram.cs
 ## Output
 
 The transpiler generates:
-- `generated/[filename].g.cpp` - The transpiled C++ code
+- `generated/[filename].g.h` - C++ header file with class declarations
+- `generated/[filename].g.cpp` - C++ implementation file with method definitions
 
 You must provide:
 - `mini_runtime.hpp` - Runtime definitions for Mini types (`Mini::List<T>`, `Mini::Value`, etc.)

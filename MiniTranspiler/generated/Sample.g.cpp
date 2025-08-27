@@ -1,14 +1,6 @@
 // generated — DO NOT EDIT
-#include "mini_runtime.hpp"
-// Bytecode: a test class for testing the C# --> C++ transpiler.
-class Bytecode {
-public:
-int meaning = 42;
-private:
-int secret = 007;
-private:
-Mini.List<Value> __prop_Consts;
-public:
+#include "Sample.g.h"
+
 int Bytecode::AddConst(Value v) {
   // body
   {
@@ -21,6 +13,3 @@ int Bytecode::AddConst(Value v) {
         return __prop_Consts.Count();
       }
 }
-inline Mini.List<Value> get_Consts() const { return __prop_Consts; }
-};
-

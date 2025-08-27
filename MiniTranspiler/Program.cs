@@ -32,9 +32,12 @@ class Program {
         var rewriter2 = new CppRewriter(modelSingle);
         var rewritten2 = rewriter2.Visit(rootSingle);
 
-        var cpp2 = new CppEmitter(rewriter2.Symbols).EmitTranslationUnit(null, rewritten2);
-        var outputPath = "generated/Sample.g.cpp";
-        await File.WriteAllTextAsync(outputPath, cpp2);
-        Console.WriteLine($"Wrote {outputPath}");
+        var (header, impl) = new CppEmitter(rewriter2.Symbols).EmitTranslationUnit(null, rewritten2);
+        var headerPath = "generated/Sample.g.h";
+        var implPath = "generated/Sample.g.cpp";
+        await File.WriteAllTextAsync(headerPath, header);
+        await File.WriteAllTextAsync(implPath, impl);
+        Console.WriteLine($"Wrote {headerPath}");
+        Console.WriteLine($"Wrote {implPath}");
     }
 }
