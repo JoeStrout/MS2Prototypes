@@ -1,6 +1,7 @@
 // This program transpiles (a limited subset of) C# code into C++.
 
 import "stringUtil"
+import "fancyMatch"  // overrides standard string.match and string.fill
 
 TAB = char(9)
 
@@ -17,11 +18,13 @@ Converter.hLines = null
 Converter.cppLines = null
 Converter.addCurly = false
 Converter.className = ""
+Converter.didIncludes = false
 
 Converter.match = function(inp, hOut, cppOut)
 	self.m = self.line.match(inp)
 	if not self.m then return false
 	self.m.className = self.className
+	print "--> " + inp
 	curly = " {" * self.addCurly
 	if cppOut then
 		self.cppLines.push self.indentation + cppOut.fill(self.m) + curly + self.comment
@@ -50,13 +53,23 @@ Converter.processLine = function(line)
 		indentation += line[0]
 		line = line[1:]
 	end while
+
+	// If our comment starts with "// CPP:", then ignore the rest of the line
+	// and substitute what appears after that in the CPP code.
+	if comment.startsWith("// CPP:") then
+		line = comment[7:].trimLeft
+		self.cppLines.push indentation + line
+		return
+	end if
+
+	// If it's an empty line, or just a comment, then push and we're done
 	if not line then
 		if self.context != Context.METHOD then self.hLines.push indentation + comment
 		self.cppLines.push indentation + comment
 		return
 	end if
 	
-	// And trailing whitespace
+	// Trim trailing whitespace
 	while line and (line[-1] == " " or line[-1] == TAB)
 		comment = line[-1] + comment
 		line = line[:-1]
@@ -80,22 +93,28 @@ Converter.processLine = function(line)
 	self.comment = comment
 	self.indentation = indentation
 	
-	// using --> #include
-	if self.match("using {lib};", 
-	  "#include ""{lib}.h""", 
-	  "#include ""{lib}.h""") then return
+	// using: ignored, but our chance to output standard includes
+	if self.match("using {lib};", "", "") then
+		if not self.didIncludes then
+			self.hLines.push "#include ""string.h"""
+			self.cppLines.push "#include """ + (self.filename - ".cs" + ".g.h") + """"
+			self.didIncludes = true
+		end if
+		return
+	end if
 	  
 	// namespace line
-	if self.match("namespace {name}",
-	  "namespace ""{name}""",
-	  "namespace ""{name}""") then
+	if self.match("namespace ≤name≥",
+	  "namespace ""≤name≥""",
+	  "namespace ""≤name≥""") then
 		self.context = Context.NAMESPACE
 		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
 	end if
 
 	// class declaration
-	if self.match("{qualifiers} class {name}", "class {name}", "") then
+	if self.match("≤qualifiers≥ class ≤name:w≥", "class ≤name≥", "") or
+	  self.match("class ≤name≥", "class ≤name≥", "") then
 		self.context = Context.CLASS
 		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		self.className = self.m.name
@@ -103,34 +122,40 @@ Converter.processLine = function(line)
 	end if
 	
 	// class field, with and without default value
-	if self.context == Context.CLASS and self.match("{scope} {type} {name};",
-	  "{scope}: {type} {name};", "") then return
-	if self.context == Context.CLASS and self.match("{scope} {type} {name} = {value};",
-	  "{scope}: {type} {name} = {value};", "") then return
+	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥;",
+	  "≤scope≥: ≤type≥ ≤name≥;", "") then return
+	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ = ≤value≥;",
+	  "≤scope≥: ≤type≥ ≤name≥ = ≤value≥;", "") then return
 
 	// class property with expression body
-	if self.context == Context.CLASS and self.match("{scope} {type} {name} => {expr};",
-	  "{scope}: {type} {name}() ⟪ {expr} ⟫", "") then
-		// ToDo: note {name} in this class as something that will need () where used.
-		// Also, maybe we can make a more elegant solution for using curly braces than:
-		self.hLines[-1] = self.hLines[-1].replace("⟪", "{").replace("⟫", "}")
+	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ => ≤expr≥;",
+	  "≤scope≥: ≤type≥ ≤name≥() { return ≤expr≥; }", "") then
+		// ToDo: note ≤name≥ in this class as something that will need () where used.
 		return
 	end if
 
 	// method declaration
-	if self.match("{scope} {rtype} {name}({params})",
-	  "{scope}: {rtype} {name}({params});",
-	  "{rtype} {className}::{name}({params})") then
+	if self.match("≤scope:w≥ static ≤rtype:w≥ ≤name:w≥(≤params≥)",
+	  "≤scope≥: ≤rtype≥ ≤name≥(≤params≥);",
+	  "static ≤rtype≥ ≤className≥::≤name≥(≤params≥)") then
+		self.context = Context.METHOD
+		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		return
+	end if
+
+	if self.match("≤scope:w≥ ≤rtype:w≥ ≤name:w≥(≤params≥)",
+	  "≤scope≥: ≤rtype≥ ≤name≥(≤params≥);",
+	  "≤rtype≥ ≤className≥::≤name≥(≤params≥)") then
 		self.context = Context.METHOD
 		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
 	end if
 	
 	// foreach statement
-	if self.match("foreach ({type} {var} in {seq})", "",
-	  "for (int __{var}_idx=0, __{var}_qty={seq}.Count(); __{var}_idx < __{var}_qty; __{var}_idx++)") then
+	if self.match("foreach (≤type:w≥ ≤var:w≥ in ≤seq≥)", "",
+	  "for (int __≤var≥_idx=0, __≤var≥_qty=≤seq≥.Count(); __≤var≥_idx < __≤var≥_qty; __≤var≥_idx++)") then
 		self.cppLines.push indentation + TAB + 
-		  "{type} {var} = {seq}[__{var}_idx];".fill(self.m)
+		  "≤type≥ ≤var≥ = ≤seq≥[__≤var≥_idx];".fill(self.m)
 		return
 	end if
 	  
@@ -160,25 +185,40 @@ end function
 Converter.convertClass = function(sourcePath)
 	self.hLines = []
 	self.cppLines = []
+	self.didIncludes = false
+	self.filename = file.name(sourcePath)
 	for line in file.readLines(sourcePath)
 		//print line
 		self.processLine line
 	end for
+
+	if self.className == "Program" then
+		// main-program boilerplate goes with the program
+		self.cppLines.push ""
+		self.cppLines.push "int main() {"
+		self.cppLines.push TAB + "Program::Main();"
+		self.cppLines.push "}"
+	end if
+
 	
 	fileNameBase = file.name(sourcePath) - ".cs"
 	outFolder = "generated/"
+	print "-----------------------------------"
 	print "HEADER:"
 	print self.hLines.join(char(10))
 	file.writeLines outFolder + fileNameBase + ".g.h", self.hLines
 	print
+	print "-----------------------------------"
 	print "CPP:"
 	print self.cppLines.join(char(10))
 	file.writeLines outFolder + fileNameBase + ".g.cpp", self.cppLines
 	print
 	
+	
 end function
 
 if locals == globals then
 	cvt = new Converter
-	cvt.convertClass "tests/Sample.cs"
+	cvt.convertClass "tests/IOHelper.cs"
+	cvt.convertClass "tests/Program.cs"
 end if
