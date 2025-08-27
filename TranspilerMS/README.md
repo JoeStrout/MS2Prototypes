@@ -1,15 +1,15 @@
-# MiniTranspiler
+# TranspilerMS
 
-A C# to C++ transpiler that converts a restricted subset of C# programs to lean, STL-free C++.
+A C# to C++ transpiler that converts a restricted subset of C# programs to lean, STL-free C++, written in MiniScript.
 
 ## What It Does
 
-MiniTranspiler takes C# source code and generates equivalent C++ code with the following transformations:
+The transpile.ms program in this directory takes C# source code and generates equivalent C++ code with the following transformations:
 
+- **using** → `#include`
+- **Field declarations** → proper C++ syntax with correct access modifiers
 - **Properties** → getter/setter methods with backing fields
 - **`foreach` loops** → traditional `for` loops with indexing  
-- **Field declarations** → proper C++ syntax with correct access modifiers
-- **Property references** → backing field access (`Consts` → `__prop_Consts`)
 - **Mini.List<T>** → C++ container classes (assumes runtime is available)
 
 The output is designed to be lean and avoid pulling in the STL, assuming certain types and container classes are already available in your target environment.
@@ -22,34 +22,18 @@ Core types, and anywhere we are doing deep C or C# magic for the sake of perform
 
 ## Requirements
 
-- .NET 6.0 or later
+- MiniScript
 - C# source code using only the supported subset
-
-## Building
-
-```bash
-dotnet build
-```
 
 ## Running
 
 ```bash
-dotnet run [input-file]
+miniscript transpiler.ms [input-file]
 ```
 
 - **Default:** Processes `tests/Sample.cs` 
-- **Custom:** Specify any `.cs` file path
+- **Custom:** Specify any `.cs` file path (not yet supported)
 - **Output:** Generates `generated/[filename].g.cpp`
-
-### Example
-
-```bash
-# Process the included sample
-dotnet run
-
-# Process a custom file  
-dotnet run MyProgram.cs
-```
 
 ## Output
 
@@ -69,50 +53,14 @@ You must provide:
 - Method calls and property access
 - Simple expressions and statements
 
-## Example
+## Not yet supported
 
-**Input C#:**
-```csharp
-public class Bytecode {
-    public int meaning = 42;
-    private int secret = 007;
-    public Mini.List<Value> Consts { get; } = new Mini.List<Value>();
-    
-    public int AddConst(Value v) {
-        foreach (var c in Consts) {
-            if (c.Equals(v)) return -1;
-        }
-        Consts.Add(v);
-        return Consts.Count;
-    }
-}
-```
-
-**Output C++:**
-```cpp
-class Bytecode {
-public:
-int meaning = 42;
-private:
-int secret = 007;
-private:
-Mini.List<Value> __prop_Consts;
-public:
-int Bytecode::AddConst(Value v) {
-    for (int __i0=0, __n1=__prop_Consts.Count(); __i0<__n1; ++__i0) {
-        Value c = __prop_Consts[__i0];
-        if (c.Equals(v)) return -1;
-    }
-    __prop_Consts.Add(v);
-    return __prop_Consts.Count();
-}
-inline Mini.List<Value> get_Consts() const { return __prop_Consts; }
-};
-```
+- Class references, in particular converting `.` to `->` or `::` as appropriate
+- Adding `()` where needed on computed properties
+- Probably a bunch of other stuff
 
 ## Architecture
 
-- **PortableSubsetChecker** - Validates that input uses only supported C# constructs
-- **CppRewriter** - Transforms C# syntax tree to C++-compatible forms
-- **CppEmitter** - Generates final C++ source code text
-- **Syntactic Approach** - Uses syntax-based transformations for reliable output
+Like TranspilerCS, this transpiler uses a syntactic approach, mostly using simple pattern matching and some state/context data.  The bulk of the logic is in Converter.processLine, which pulls the line apart into indentation, meat, and trailing whitespace/comment, then matches and transforms the meat of the line, pasting the indentation and trailing stuff back upon output.
+
+This is essentially the same thing TranspilerCS does, but the MiniScript code seems a lot more straightforward, making it easier to write and maintain.
