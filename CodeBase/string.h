@@ -5,6 +5,9 @@
 #include "StringStorage.h"
 #include "StringPool.h"
 
+// Forward declaration to avoid circular dependency
+template<typename T> class List;
+
 // Lightweight string class - thin wrapper around StringPool
 class string {
 private:
@@ -35,13 +38,9 @@ public:
         index = StringPool::internString(pool, cstr, StringStorage::allocator);
     }
     
-    // Copy constructor and assignment
-    string(const string& other) : poolNum(other.poolNum), index(other.index) {}
-    string& operator=(const string& other) {
-        poolNum = other.poolNum;
-        index = other.index;
-        return *this;
-    }
+    // Copy constructor and assignment (defaulted for trivial copyability)
+    string(const string& other) = default;
+    string& operator=(const string& other) = default;
     
     // Assignment from C string
     string& operator=(const char* cstr) {
@@ -346,6 +345,55 @@ public:
         if (!s1) return -1;
         if (!s2) return 1;
         return s1->compareIgnoreCase(s2);
+    }
+    
+    // C# String API - Static methods (Join)
+    static string Join(const string& separator, const string* values, int count, uint8_t pool = 0) {
+        if (!values || count <= 0) return string();
+        if (count == 1) return values[0];
+        
+        // Calculate total length needed
+        int totalLength = 0;
+        const StringStorage* sepStorage = separator.getStorage();
+        int sepLength = sepStorage ? sepStorage->lengthB() : 0;
+        
+        for (int i = 0; i < count; i++) {
+            const StringStorage* valueStorage = values[i].getStorage();
+            if (valueStorage) {
+                totalLength += valueStorage->lengthB();
+            }
+        }
+        totalLength += sepLength * (count - 1); // separators between elements
+        
+        if (totalLength == 0) return string();
+        
+        // Build the result string
+        char* result = (char*)malloc(totalLength + 1);
+        if (!result) return string();
+        
+        int pos = 0;
+        const char* sepCStr = sepStorage ? sepStorage->getCString() : "";
+        
+        for (int i = 0; i < count; i++) {
+            if (i > 0 && sepLength > 0) {
+                strcpy(result + pos, sepCStr);
+                pos += sepLength;
+            }
+            
+            const StringStorage* valueStorage = values[i].getStorage();
+            if (valueStorage) {
+                const char* valueCStr = valueStorage->getCString();
+                int valueLength = valueStorage->lengthB();
+                strcpy(result + pos, valueCStr);
+                pos += valueLength;
+            }
+        }
+        result[totalLength] = '\0';
+        
+        // Create string from result and clean up
+        string joined(result, pool);
+        free(result);
+        return joined;
     }
     
     // Access to pool info (for debugging/advanced use)
