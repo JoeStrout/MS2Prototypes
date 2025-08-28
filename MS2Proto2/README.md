@@ -1,6 +1,6 @@
 # MS2Proto2 - Modular NaN-Boxing Dynamic Type System
 
-This is a clean, modular reorganization of the c-nan-boxing-3 implementation, structured as a proper C library with clear API separation.
+This is a clean, modular reorganization of the c-nan-boxing-3 implementation, structured as a proper C library with clear API separation, plus a virtual machine (VM) and a simple assembler.
 
 ## Project Structure
 

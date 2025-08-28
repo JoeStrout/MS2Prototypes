@@ -121,6 +121,10 @@ if locals == globals then
 	
 	assertMatch "int bar = whoops()", "≤scope:w≥ ≤type:w≥ ≤name:w≥(≤args≥)", null
 
-
+	assertMatch "public static byte OP(uint instruction) => (byte)((instruction >> 24) & 0xFF);",
+	  "≤scope:w≥ static ≤rtype:w≥ ≤name:w≥(≤params≥) => ≤expr≥;",
+	  {"scope":"public", "rtype":"byte", "name":"OP", "params":"uint instruction",
+	   "expr":"(byte)((instruction >> 24) & 0xFF)"}
+	
 	print "All tests complete."
 end if

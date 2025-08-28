@@ -6,7 +6,7 @@ using System;
 
 public static class IOHelper {
 
-    public static void print(string message) {
+    public static void Print(string message) {
         Console.WriteLine(message);  // CPP: std::cout << message.c_str() << std::endl;
     }
 

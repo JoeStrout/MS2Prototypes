@@ -37,5 +37,4 @@ the code, or knows where in the machine instruction set the code lives.
 We should also start thinking about lists and maps — especially maps, and how we're going to index into them,
 and how this relates to locals which can be accessed via the `locals` map while still being stored in registers.
 
-Or, maybe the next prototype just improves the assembly format and gives us a mini-assembler we can work in
-interactively.
+Or, maybe the next prototype just improves the assembly format and gives us a mini-assembler we can work in interactively.

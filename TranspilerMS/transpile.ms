@@ -22,6 +22,10 @@ Converter.className = ""
 Converter.classNames = null // all class names we know about
 Converter.didIncludes = false
 Converter.failed = false
+Converter.lineNum = 0
+Converter.line = ""
+Converter.addCurly = false
+Converter.csOnly = false  // when true, skip conversion entirely
 
 Converter.Make = function
 	noob = new self
@@ -47,7 +51,7 @@ end function
 
 Converter.fail = function(errMsg)
 	print "ERROR: " + errMsg
-	print "on line: " + self.line
+	print "on line " + self.lineNum + ": " + self.line + " {" * self.addCurly
 	self.failed = true
 end function
 
@@ -76,6 +80,15 @@ Converter.processLine = function(line)
 		self.cppLines.push indentation + line
 		return
 	end if
+	
+	// Check for other special control comments
+	if comment == "//*** BEGIN CS_ONLY ***" then
+		self.csOnly = true
+	else if comment == "//*** END CS_ONLY ***" then
+		self.csOnly = false
+		return
+	end if
+	if self.csOnly then return
 
 	// If it's an empty line, or just a comment, then push and we're done
 	if not line then
@@ -108,6 +121,10 @@ Converter.processLine = function(line)
 	self.comment = comment
 	self.indentation = indentation
 	
+	// Enforce coding standards
+	self.enforceCodeStandards line + " {" * self.addCurly
+	if self.failed then return
+	
 	// Standard syntax transformations
 	self.line = self.tweakSyntax(line)
 	
@@ -125,9 +142,7 @@ Converter.processLine = function(line)
 	end if
 	  
 	// namespace line
-	if self.match("namespace ≤name≥",
-	  "namespace ""≤name≥""",
-	  "namespace ""≤name≥""") then
+	if self.match("namespace ≤name≥", "namespace ""≤name≥""", "namespace ""≤name≥""") then
 		self.context = Context.NAMESPACE
 		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
@@ -146,6 +161,18 @@ Converter.processLine = function(line)
 		return
 	end if
 	
+	// enum declaration (becomes a class in C++)
+	if self.match("≤scope≥ enum ≤name≥ : ≤type≥", "enum class ≤name≥ : ≤type≥", "") then
+		self.context = Context.CLASS
+		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		self.className = self.m.name
+		if not self.classNames.contains(self.className) then
+			self.classNames.push self.className
+		end if
+		print "Got class (enum) name: " + self.className + "; all classes: " + self.classNames
+		return
+	end if
+	
 	// class field, with and without default value
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥;",
 	  "≤scope≥: ≤type≥ ≤name≥;", "") then return
@@ -156,6 +183,26 @@ Converter.processLine = function(line)
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ => ≤expr≥;",
 	  "≤scope≥: ≤type≥ ≤name≥() { return ≤expr≥; }", "") then
 		// ToDo: note ≤name≥ in this class as something that will need () where used.
+		return
+	end if
+	
+	// expression-bodied method
+	if self.match("≤scope:w≥ static ≤rtype:w≥ ≤name:w≥(≤params≥) => ≤expr≥;",
+	  "≤scope≥: static ≤rtype≥ ≤name≥(≤params≥) { return ≤expr≥; }", "") then
+		return
+	end if
+
+	if self.match("≤scope:w≥ ≤rtype:w≥ ≤name:w≥(≤params≥) => ≤expr≥;",
+	  "≤scope≥: ≤rtype≥ ≤name≥(≤params≥) { return ≤expr≥; }", "") then
+		return
+	end if
+
+	// constructor declaration
+	if self.match("≤scope:w≥ ≤name:w≥(≤params≥)",
+	  "≤scope≥: ≤name≥(≤params≥);",
+	  "≤className≥::≤name≥(≤params≥)") then
+		self.context = Context.METHOD
+		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
 	end if
 
@@ -198,7 +245,8 @@ Converter.processLine = function(line)
 		else if self.context == Context.METHOD then
 			self.context = Context.CLASS
 		else if self.context == Context.CLASS then
-			self.hLines[-1] = self.hLines[-1].replace("}", "};")	// add ; after class declaration
+			// add ; after class declaration in .h file; omit from .cpp file
+			self.hLines[-1] = self.hLines[-1].replace("}", "}; // end of class " + self.className)
 			self.cppLines.pop // no class curlies in cpp file!
 			self.context = Context.NAMESPACE
 		else
@@ -209,6 +257,8 @@ Converter.processLine = function(line)
 
 end function
 
+// Converter.tweakSyntax: do simple syntax transformations that can be done
+// within pretty much any line of code.
 Converter.tweakSyntax = function(line)
 	// array syntax (especially as seen in parameters)
 	line = line.replace("[] ", " *")
@@ -225,14 +275,26 @@ Converter.tweakSyntax = function(line)
 	return line
 end function
 
+// Converter.enforceCodeStandards: examine the given line for things that a
+// C# programmer might do, that we can't convert or just don't want to allow.
+Converter.enforceCodeStandards = function(line)
+	if line == " {" then
+		self.fail "Opening brace on its own line is disallowed"
+	else if line.endsWith("=>") or line.startsWith("=>") then
+		self.fail "Expression-bodied properties or methods must be all on one line"
+	end if
+end function
+
 Converter.convertClass = function(sourcePath)
 	self.hLines = []
 	self.cppLines = []
 	self.didIncludes = false
 	self.filename = file.name(sourcePath)
+	self.lineNum = 0
 	self.failed = false
 
 	for line in file.readLines(sourcePath)
+		self.lineNum += 1
 		//print line
 		self.processLine line
 		if self.failed then return
@@ -265,6 +327,7 @@ end function
 
 if locals == globals then
 	cvt = Converter.Make
-	cvt.convertClass "tests/IOHelper.cs"
-	if not cvt.failed then cvt.convertClass "tests/Program.cs"
+//	cvt.convertClass "tests/IOHelper.cs"
+//	if not cvt.failed then cvt.convertClass "tests/Program.cs"
+	cvt.convertClass "tests/VM.cs"
 end if

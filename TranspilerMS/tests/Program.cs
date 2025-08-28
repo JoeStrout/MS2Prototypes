@@ -5,17 +5,17 @@ class Program {
     public static void Main(string[] args) {
         string text = "The quick brown fox jumps over the lazy dog";
         
-        IOHelper.print("Splitting...");
+        IOHelper.Print("Splitting...");
         List<string> words = text.Split(' ').ToList();
 
-        IOHelper.print("Reversing...");
+        IOHelper.Print("Reversing...");
         words.Reverse();
         
-        IOHelper.print("Joining...");
+        IOHelper.Print("Joining...");
         string reversed = string.Join(" ", words);
         
-        IOHelper.print(reversed);
-        IOHelper.print("All done!");
+        IOHelper.Print(reversed);
+        IOHelper.Print("All done!");
     }
     
 }
