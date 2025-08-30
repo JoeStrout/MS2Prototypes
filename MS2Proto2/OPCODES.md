@@ -7,6 +7,8 @@
 | LOADN | R_dest | const_idx | ← | R[A] := constants[BC] (load from constants table) |
 | ADD | R_dest | R_op1 | R_op2 | R[A] := R[B] + R[C] |
 | SUB | R_dest | R_op1 | R_op2 | R[A] := R[B] - R[C] |
+| MULT | R_dest | R_op1 | R_op2 | R[A] := R[B] * R[C] |
+| DIV | R_dest | R_op1 | R_op2 | R[A] := R[B] / R[C] |
 | JUMP | - | offset | ←| PC += BC (16-bit signed value) |
 | IFLT | R_a | R_b | offset | if R[A] < R[B] then PC += offset (8-bit signed) |
 | CALLF | argWinStart | numArgs | funcIdx | call funcs[funcIdx] |

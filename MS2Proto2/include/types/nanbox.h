@@ -119,6 +119,8 @@ static inline double as_double(Value v) {
 // Arithmetic operations (implemented in nanbox.c)
 Value value_add(Value a, Value b);
 Value value_sub(Value a, Value b);
+Value value_mult(Value a, Value b);
+Value value_div(Value a, Value b);
 bool value_lt(Value a, Value b);
 
 // Value comparison (implemented in nanbox.c)
