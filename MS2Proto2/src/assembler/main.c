@@ -89,12 +89,12 @@ static bool assemble_file(FILE *file, Assembler *asm) {
         // Remove newline
         char *nl = strchr(line, '\r');
         if (nl){
-		*nl = '\0';
-	}
-	else {
-		nl = strchr(line, '\n');
+		    *nl = '\0';
+	    }
+	    else {
+		    nl = strchr(line, '\n');
 	        if (nl) *nl = '\0';
-	}
+	    }
         
         if (!process_line(asm, line)) {
             fprintf(stderr, "Error on line %d (len: %ld): %s\n", line_num, strlen(line), line);
