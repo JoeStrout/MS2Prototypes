@@ -14,6 +14,11 @@
 	X(ADD)              \
 	X(SUB)              \
 	X(IFLT)             \
+	X(IFGT)             \
+	X(IFEQ)             \
+	X(IFLE)             \
+	X(IFGE)             \
+	X(IFNE)             \
 	X(JMP)              \
 	X(CALLF)            \
 	X(RETURN)

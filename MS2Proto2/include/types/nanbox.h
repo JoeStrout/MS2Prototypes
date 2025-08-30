@@ -119,10 +119,19 @@ static inline double as_double(Value v) {
 // Arithmetic operations (implemented in nanbox.c)
 Value value_add(Value a, Value b);
 Value value_sub(Value a, Value b);
-bool value_lt(Value a, Value b);
 
 // Value comparison (implemented in nanbox.c)
 bool value_equal(Value a, Value b);
+bool value_lt(Value a, Value b);
+bool value_gt(Value a, Value b);
+
+// Bit-wise operations
+Value value_and(Value a, Value b);
+Value value_or(Value a, Value b);
+Value value_xor(Value a, Value b);
+Value value_unary(Value a);  // ~ (not)
+Value value_shr(Value v, int shift);
+Value value_shl(Value v, int shift);
 
 // Debug utility functions (implemented in nanbox.c)
 void debug_print_value(Value v);

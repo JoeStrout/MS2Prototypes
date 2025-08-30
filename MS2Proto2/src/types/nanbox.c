@@ -119,6 +119,19 @@ bool value_lt(Value a, Value b) {
     return false;
 }
 
+bool value_gt(Value a, Value b) {
+    // Handle numeric comparisons
+    if (is_number(a) && is_number(b)) {
+        double da = is_int(a) ? (double)as_int(a) : as_double(a);
+        double db = is_int(b) ? (double)as_int(b) : as_double(b);
+        return da < db;
+    }
+    
+    // TODO: Handle string comparisons, etc.
+    // For now, return false for unsupported comparisons
+    return false;
+}
+
 bool value_equal(Value a, Value b) {
 	bool sameType = ((a & NANISH_MASK) == (b & NANISH_MASK));
 	
@@ -143,4 +156,64 @@ bool value_equal(Value a, Value b) {
     }
     // Different types or unsupported types
     return false;
+}
+
+
+// Bitwise AND
+Value value_and(Value a, Value b) {
+    if (is_int(a) && is_int(b)) {
+        return make_int(as_int(a) & as_int(b));
+    }
+    return make_null();
+}
+
+// Bitwise OR
+Value value_or(Value a, Value b) {
+    if (is_int(a) && is_int(b)) {
+        return make_int(as_int(a) | as_int(b));
+    }
+    return make_null();
+}
+
+// Bitwise XOR
+Value value_xor(Value a, Value b) {
+    if (is_int(a) && is_int(b)) {
+        return make_int(as_int(a) ^ as_int(b));
+    }
+    return make_null();
+}
+
+// Bitwise NOT (unary)
+Value value_unary(Value a) {
+    if (is_int(a)) {
+        return make_int(~as_int(a));
+    }
+    return make_null();
+}
+
+// Shift Right
+Value value_shr(Value v, int shift) {
+    if (!is_int(v)) {
+        return make_null();
+    }
+
+    // Logical shift for unsigned behavior
+    return make_int((uint32_t)as_int(v) >> shift);
+}
+
+Value value_shl(Value v, int shift) {
+    if (!is_int(v)) {
+        // Unsupported type for shift-left
+        return make_null();
+    }
+
+    int64_t result = (int64_t)as_int(v) << shift;
+
+    // Check for overflow beyond 32-bit signed integer range
+    if (result >= INT32_MIN && result <= INT32_MAX) {
+        return make_int((int32_t)result);
+    } else {
+        // Overflow: represent as double
+        return make_double((double)result);
+    }
 }
