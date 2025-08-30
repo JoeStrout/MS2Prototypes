@@ -13,6 +13,8 @@
 	X(LOADN)            \
 	X(ADD)              \
 	X(SUB)              \
+	X(MULT)             \
+	X(DIV)              \
 	X(IFLT)             \
 	X(JMP)              \
 	X(CALLF)            \

@@ -250,6 +250,20 @@ bool asm_instruction(Assembler *asm, const char *line) {
             return true;
         }
     }
+    else if (strcmp(opcode, "MULT") == 0 && token_count == 4) {
+        uint8_t a, b, c;
+        if (is_register(tokens[1], &a) && is_register(tokens[2], &b) && is_register(tokens[3], &c)) {
+            emit_instruction(asm, INS_ABC(MULT, a, b, c));
+            return true;
+        }
+    }
+    else if (strcmp(opcode, "DIV") == 0 && token_count == 4) {
+        uint8_t a, b, c;
+        if (is_register(tokens[1], &a) && is_register(tokens[2], &b) && is_register(tokens[3], &c)) {
+            emit_instruction(asm, INS_ABC(DIV, a, b, c));
+            return true;
+        }
+    }
     else if (strcmp(opcode, "IFLT") == 0 && token_count == 4) {
     	if (!ensure_function(asm)) return false;
 
