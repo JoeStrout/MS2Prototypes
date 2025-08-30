@@ -97,11 +97,7 @@ static bool assemble_file(FILE *file, Assembler *asm) {
 	    }
         
         if (!process_line(asm, line)) {
-            fprintf(stderr, "Error on line %d (len: %ld): %s\n", line_num, strlen(line), line);
-            for(size_t i=0;i<strlen(line);i++)
-            {
-                printf("Line[%ld] = %c [%d]\n", i, line[i], line[i]);
-            }
+            fprintf(stderr, "Error on line %d: %s\n", line_num, line);
             success = false;
             break;
         }
