@@ -164,13 +164,15 @@ Value vm_exec(VM *vm, Proto *entry, unsigned int max_cycles) {
 	}
 
 	VM_CASE(IFEQ) {
+		// if base[A] == base[B], jump by signed 8-bit C from NEXT pc
+		// (IFLT keeps 8-bit offset since it needs both A and B for comparison)
 		int8_t off = (int8_t)C(ins);
 		if (value_equal(base[A(ins)], base[B(ins)])) pc += off;
 		VM_NEXT();
 	}
 
 	VM_CASE(IFLE) {
-		// if base[A] < base[B], jump by signed 8-bit C from NEXT pc
+		// if base[A] <= base[B], jump by signed 8-bit C from NEXT pc
 		// (IFLT keeps 8-bit offset since it needs both A and B for comparison)
 		int8_t off = (int8_t)C(ins);
 		if (value_lt(base[A(ins)], base[B(ins)]) && value_equal(base[A(ins)], base[B(ins)])) pc += off;
@@ -178,7 +180,7 @@ Value vm_exec(VM *vm, Proto *entry, unsigned int max_cycles) {
 	}
 
 	VM_CASE(IFNE) {
-		// if base[A] < base[B], jump by signed 8-bit C from NEXT pc
+		// if base[A] != base[B], jump by signed 8-bit C from NEXT pc
 		// (IFLT keeps 8-bit offset since it needs both A and B for comparison)
 		int8_t off = (int8_t)C(ins);
 		if (!value_equal(base[A(ins)], base[B(ins)])) pc += off;
