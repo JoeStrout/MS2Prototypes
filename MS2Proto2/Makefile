@@ -2,7 +2,7 @@
 # Build system for the core library and tests/benchmarks
 
 CC = gcc
-CFLAGS = -std=c99 -Wall -Wextra -O3 -g
+CFLAGS = -std=c99 -Wall -Wextra -O3 -g -D_DEFAULT_SOURCE
 
 # Directories
 SRCDIR = src

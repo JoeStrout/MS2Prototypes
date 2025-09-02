@@ -145,6 +145,16 @@ Value vm_exec(VM *vm, Proto *entry, unsigned int max_cycles) {
 		VM_NEXT();
 	}
 
+	VM_CASE(MULT) {
+		base[A(ins)] = value_mult(base[B(ins)], base[C(ins)]);
+		VM_NEXT();
+	}
+
+	VM_CASE(DIV) {
+		base[A(ins)] = value_div(base[B(ins)], base[C(ins)]);
+		VM_NEXT();
+	}
+
 	VM_CASE(IFLT) {
 		// if base[A] < base[B], jump by signed 8-bit C from NEXT pc
 		// (IFLT keeps 8-bit offset since it needs both A and B for comparison)
