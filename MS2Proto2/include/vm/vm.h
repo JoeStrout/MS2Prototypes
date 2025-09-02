@@ -38,6 +38,8 @@ enum { VM_OPCODES(X) op__COUNT };
 #define INS(OPC)               ((uint32_t)((op_##OPC) << 24))
 #define INS_ABC(OPC,A_,B_,C_)  ((uint32_t)(((op_##OPC) << 24) | ((A_) << 16) | ((B_) << 8) | (C_)))
 #define INS_AB(OPC,A_,BC_)     ((uint32_t)(((op_##OPC) << 24) | ((A_) << 16) | ((uint16_t)(BC_))))
+#define MODIFY_INS_ABC(OPC,A_,B_,C_)  ((uint32_t)(((OPC) << 24) | ((A_) << 16) | ((B_) << 8) | (C_)))
+#define MODIFY_INS_AB(OPC,A_,BC_)     ((uint32_t)(((OPC) << 24) | ((A_) << 16) | ((uint16_t)(BC_))))
 #define OFF8(d)  ((uint8_t)(int8_t)(d))
 
 // Function prototype
