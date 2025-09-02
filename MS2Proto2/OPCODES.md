@@ -11,6 +11,9 @@
 | DIV | R_dest | R_op1 | R_op2 | R[A] := R[B] / R[C] |
 | JUMP | - | offset | ←| PC += BC (16-bit signed value) |
 | IFLT | R_a | R_b | offset | if R[A] < R[B] then PC += offset (8-bit signed) |
+| IFEQ | R_a | R_b | offset | if R[A] == R[B] then PC += offset (8-bit signed) |
+| IFLE | R_a | R_b | offset | if R[A] <= R[B] then PC += offset (8-bit signed) |
+| IFNE | R_a | R_b | offset | if R[A] != R[B] then PC += offset (8-bit signed) |
 | CALLF | argWinStart | numArgs | funcIdx | call funcs[funcIdx] |
 | RETURN | - | - | - | return with result in R[0]
 
