@@ -366,6 +366,11 @@ public:
         return s ? s->getData() : nullptr;
     }
     
+    // Operators
+	explicit operator bool() const {
+		return !Empty();
+	}
+    
     // Iterator support
     T* begin() { 
         ListStorage<T>* s = getStorage();

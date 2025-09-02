@@ -36,8 +36,8 @@ end function
 Converter.match = function(inp, hOut, cppOut)
 	self.m = self.line.match(inp)
 	if not self.m then return false
-	self.m.className = self.className
-	print "--> " + inp
+	if not self.m.hasIndex("className") then self.m.className = self.className
+	print "[" + self.context + "] --> " + inp
 	curly = " {" * self.addCurly
 	if cppOut then
 		self.cppLines.push self.indentation + cppOut.fill(self.m) + curly + self.comment
@@ -127,6 +127,38 @@ Converter.processLine = function(line)
 	
 	// Standard syntax transformations
 	self.line = self.tweakSyntax(line)
+
+	if self.context == Context.METHOD then
+		self.processMethodLine
+	else
+		self.processNonmethodLine
+	end if
+	
+	// Closing curly: close the open code block or scope
+	if self.line == "}" then
+		print "CLOSING CURLY!!"		
+		fullLine = self.indentation + "}" + self.comment
+
+		if self.context == Context.METHOD and self.codeBlockDepth > 0 then
+			self.codeBlockDepth -= 1
+		else if self.context == Context.METHOD then
+			self.context = Context.CLASS
+		else if self.context == Context.CLASS then
+			// add ; after class declaration in .h file; omit from .cpp file
+			self.hLines.push self.indentation + "}; // end of class " + self.className
+			self.context = Context.NAMESPACE
+		else
+			self.hLines.push fullLine
+			self.cppLines.push fullLine
+			self.context = Context.START
+		end if
+		print "Context down: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+	end if
+
+end function
+
+// Process a line of code *not* found within a method.
+Converter.processNonmethodLine = function
 	
 	// using: ignored, but our chance to output standard includes
 	if self.match("using ≤lib≥;", "", "") then
@@ -142,7 +174,7 @@ Converter.processLine = function(line)
 	end if
 	  
 	// namespace line
-	if self.match("namespace ≤name≥", "namespace ""≤name≥""", "namespace ""≤name≥""") then
+	if self.match("namespace ≤name≥", "namespace ≤name≥", "namespace ≤name≥") then
 		self.context = Context.NAMESPACE
 		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
@@ -163,6 +195,7 @@ Converter.processLine = function(line)
 	
 	// enum declaration (becomes a class in C++)
 	if self.match("≤scope≥ enum ≤name≥ : ≤type≥", "enum class ≤name≥ : ≤type≥", "") then
+		if not self.checkType then return
 		self.context = Context.CLASS
 		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		self.className = self.m.name
@@ -173,15 +206,23 @@ Converter.processLine = function(line)
 		return
 	end if
 	
+	// enum value
+	if self.match("≤name:w≥ = ≤value≥,", "≤name≥ = ≤value≥,", "") or
+	   self.match("≤name:w≥ = ≤value≥",  "≤name≥ = ≤value≥", "") then
+		return
+	end if
+	
 	// class field, with and without default value
+	// (note: default values, i.e. i-class member initializers, are valid since C++11)
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥;",
-	  "≤scope≥: ≤type≥ ≤name≥;", "") then return
+	  "≤scope≥: ≤type≥ ≤name≥;", "") then return self.checkType
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ = ≤value≥;",
-	  "≤scope≥: ≤type≥ ≤name≥ = ≤value≥;", "") then return
+	  "≤scope≥: ≤type≥ ≤name≥ = ≤value≥;", "") then return self.checkType
 
 	// class property with expression body
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ => ≤expr≥;",
 	  "≤scope≥: ≤type≥ ≤name≥() { return ≤expr≥; }", "") then
+		self.checkType
 		// ToDo: note ≤name≥ in this class as something that will need () where used.
 		return
 	end if
@@ -224,36 +265,22 @@ Converter.processLine = function(line)
 		return
 	end if
 	
+end function
+
+// Process a line of code within a method.
+Converter.processMethodLine = function
 	// foreach statement
 	if self.match("foreach (≤type:w≥ ≤var:w≥ in ≤seq≥)", "",
 	  "for (int __≤var≥_idx=0, __≤var≥_qty=≤seq≥.Count(); __≤var≥_idx < __≤var≥_qty; __≤var≥_idx++)") then
 		self.cppLines.push indentation + TAB + 
 		  "≤type≥ ≤var≥ = ≤seq≥[__≤var≥_idx];".fill(self.m)
-		return
+		return self.checkType
 	end if
 	  
 	// Anything else: copy to header and/or CPP file according to context
 	curly = " {" * self.addCurly
 	fullLine = self.indentation + self.line + curly + self.comment
 	self.cppLines.push fullLine
-	if self.context != Context.METHOD then self.hLines.push fullLine
-	
-	// Closing curly: close the open code block or scope
-	if self.line == "}" then
-		if self.context == Context.METHOD and self.codeBlockDepth > 0 then
-			self.codeBlockDepth -= 1
-		else if self.context == Context.METHOD then
-			self.context = Context.CLASS
-		else if self.context == Context.CLASS then
-			// add ; after class declaration in .h file; omit from .cpp file
-			self.hLines[-1] = self.hLines[-1].replace("}", "}; // end of class " + self.className)
-			self.cppLines.pop // no class curlies in cpp file!
-			self.context = Context.NAMESPACE
-		else
-			self.context = Context.START
-		end if
-		print "Context down: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
-	end if
 
 end function
 
@@ -272,6 +299,13 @@ Converter.tweakSyntax = function(line)
 	m = line.match("≤pre≥.Split(≤args≥).ToList()≤post≥")
 	if m then line = "≤pre≥.SplitToList(≤args≥)≤post≥".fill(m)
 	
+	// Object creation (assuming a compatible memory-managed type).
+	line = line.replace(" new ", " ")
+	
+	// Count -- a property in C#, but a method in C++.
+	// We may need to handle this more generally.  But for now:
+	line = line.replace(".Count;", ".Count()")
+	
 	return line
 end function
 
@@ -283,6 +317,26 @@ Converter.enforceCodeStandards = function(line)
 	else if line.endsWith("=>") or line.startsWith("=>") then
 		self.fail "Expression-bodied properties or methods must be all on one line"
 	end if
+end function
+
+disallowedTypes = {
+	"sbyte": "SByte",
+	"byte": "Byte",
+	"short": "Int16",
+	"ushort": "UInt16",
+	"int": "Int32",
+	"uint": "UInt32",
+	"long": "Int64",
+	"ulong": "UInt64" }
+
+// Converter.checkType: ensure that the given type is something we can deal
+// with, and throw and error if it is disallowed.  Return true if OK, 
+// false if failed.
+Converter.checkType = function(type)
+	if type == null then type = self.m["type"]
+	if not disallowedTypes.hasIndex(type) then return true
+	self.fail "Type " + type + " disallowed; use " + disallowedTypes[type] + " instead"
+	return false
 end function
 
 Converter.convertClass = function(sourcePath)

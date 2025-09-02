@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ScriptingVM {
     // Opcodes matching the C VM implementation
-    public enum Opcode : byte {
+    public enum Opcode : Byte {
         MOVE = 0,
         LOADK = 1,
         LOADN = 2,
@@ -17,37 +17,37 @@ namespace ScriptingVM {
 
     // Instruction field extraction helpers (matching C implementation)
     public static class InstructionHelpers {
-        public static byte OP(uint instruction) => (byte)((instruction >> 24) & 0xFF);
-        public static byte A(uint instruction) => (byte)((instruction >> 16) & 0xFF);
-        public static byte B(uint instruction) => (byte)((instruction >> 8) & 0xFF);
-        public static byte C(uint instruction) => (byte)(instruction & 0xFF);
-        public static short BC(uint instruction) => (short)(instruction & 0xFFFF);
+        public static Byte OP(UInt32 instruction) => (Byte)((instruction >> 24) & 0xFF);
+        public static Byte A(UInt32 instruction) => (Byte)((instruction >> 16) & 0xFF);
+        public static Byte B(UInt32 instruction) => (Byte)((instruction >> 8) & 0xFF);
+        public static Byte C(UInt32 instruction) => (Byte)(instruction & 0xFF);
+        public static Int16 BC(UInt32 instruction) => (Int16)(instruction & 0xFFFF);
 
         // Instruction encoding helpers
-        public static uint INS(Opcode op) => (uint)((byte)op << 24);
-        public static uint INS_ABC(Opcode op, byte a, byte b, byte c) => (uint)(((byte)op << 24) | (a << 16) | (b << 8) | c);
-        public static uint INS_AB(Opcode op, byte a, short bc) => (uint)(((byte)op << 24) | (a << 16) | ((ushort)bc));
+        public static UInt32 INS(Opcode op) => (UInt32)((Byte)op << 24);
+        public static UInt32 INS_ABC(Opcode op, Byte a, Byte b, Byte c) => (UInt32)(((Byte)op << 24) | (a << 16) | (b << 8) | c);
+        public static UInt32 INS_AB(Opcode op, Byte a, Int16 bc) => (UInt32)(((Byte)op << 24) | (a << 16) | ((UInt16)bc));
     }
 
     // Function prototype (equivalent to C Proto struct)
     public class Proto {
-        public List<uint> Code = new List<uint>();
-        public ushort MaxRegs; // frame reservation size
+        public List<UInt32> Code = new List<UInt32>();
+        public UInt16 MaxRegs; // frame reservation size
         public List<Value> Constants = new List<Value>();
 
-        public int CodeLength => Code.Count;
-        public int ConstLength => Constants.Count;
+        public Int32 CodeLength => Code.Count;
+        public Int32 ConstLength => Constants.Count;
 
-        public Proto(List<uint> code, ushort maxRegs, List<Value> constants) {
+        public Proto(List<UInt32> code, UInt16 maxRegs, List<Value> constants) {
             Code = code;
             MaxRegs = maxRegs;
             Constants = constants;
-            if (!Code) Code = new List<uint>();
+            if (!Code) Code = new List<UInt32>();
             if (!Constants) Constants = new List<Value>();
         }
 
         public Proto() {
-            Code = new List<uint>();
+            Code = new List<UInt32>();
         	MaxRegs = 0; // frame reservation size
         	Constants = new List<Value>();
         }
@@ -56,10 +56,10 @@ namespace ScriptingVM {
 	
     // Call stack frame (return info) - equivalent to C CallInfo struct
     public struct CallInfo {
-        public int ReturnPC;     // index into caller's code array (not pointer)
-        public int ReturnBase;   // caller's base register index
+        public Int32 ReturnPC;     // index into caller's code array (not pointer)
+        public Int32 ReturnBase;   // caller's base register index
 
-        public CallInfo(int returnPC, int returnBase) {
+        public CallInfo(Int32 returnPC, Int32 returnBase) {
             ReturnPC = returnPC;
             ReturnBase = returnBase;
         }
@@ -68,16 +68,16 @@ namespace ScriptingVM {
     // VM state - equivalent to C VM struct
     public class VM {
         private List<Value> _stack;
-        private int _stackSize;
-        private int _top; // index into stack (not pointer)
+        private Int32 _stackSize;
+        private Int32 _top; // index into stack (not pointer)
         
         private List<CallInfo> _callStack;
-        private int _callStackSize;
-        private int _callIndex; // points to next free slot
+        private Int32 _callStackSize;
+        private Int32 _callIndex; // points to next free slot
         
         private List<Proto?> _functions = new List<Proto?>(256); // functions addressed by CALLF C-field
 
-        public VM(int stackSlots, int callSlots) {
+        public VM(Int32 stackSlots, Int32 callSlots) {
             _stack = new List<Value>(stackSlots);
             _stackSize = stackSlots;
             _top = 0;
@@ -87,18 +87,18 @@ namespace ScriptingVM {
             _callIndex = 0;
             
             // Initialize all stack values to null
-            for (int i = 0; i < stackSlots; i++) {
+            for (Int32 i = 0; i < stackSlots; i++) {
                 _stack.Add(Value.Null());
             }
             
             // Initialize functions list with nulls
-            for (int i = 0; i < 256; i++) {
+            for (Int32 i = 0; i < 256; i++) {
                 _functions.Add(null);
             }
         }
 
         // Register a function for CALLF calls
-        public void RegisterFunction(byte index, Proto function) {
+        public void RegisterFunction(Byte index, Proto function) {
             if (index < _functions.Count) {
                 _functions[index] = function;
             } else {
@@ -107,14 +107,14 @@ namespace ScriptingVM {
         }
 
         // Execute a function prototype
-        public Value Execute(Proto entry, uint maxCycles = 0) {
+        public Value Execute(Proto entry, UInt32 maxCycles = 0) {
             // Current frame state (equivalent to C locals)
-            int baseReg = 0; // entry executes at stack base (index 0)
-            int pc = 0; // program counter (index into entry.Code)
+            Int32 baseReg = 0; // entry executes at stack base (index 0)
+            Int32 pc = 0; // program counter (index into entry.Code)
             
             EnsureFrame(baseReg, entry.MaxRegs);
             
-            uint cycleCount = 0;
+            UInt32 cycleCount = 0;
             bool debug = false; // Set to true for debug output
 
             while (true) {
@@ -129,7 +129,7 @@ namespace ScriptingVM {
                     return Value.Null();
                 }
 
-                uint instruction = entry.Code[pc++];
+                UInt32 instruction = entry.Code[pc++];
                 
                 if (debug) {
                     IOHelper.Print($"PC: {pc - 1}, Cycle: {cycleCount}, Ins: 0x{instruction:X8}, Op: {InstructionHelpers.OP(instruction)}");
@@ -154,7 +154,7 @@ namespace ScriptingVM {
                     case Opcode.LOADN: {
                             // R[A] = constants[BC]
                         
-                            ushort constIdx = (ushort)InstructionHelpers.BC(instruction);
+                            UInt16 constIdx = (UInt16)InstructionHelpers.BC(instruction);
                             if (constIdx >= entry.ConstLength) {
                                 Console.Error.WriteLine($"LOADN: invalid constant index {constIdx}");
                                 return Value.Null();
@@ -179,7 +179,7 @@ namespace ScriptingVM {
 
                     case Opcode.IFLT: {
                             // if R[A] < R[B], jump by signed 8-bit C from current pc
-                            sbyte offset = (sbyte)InstructionHelpers.C(instruction);
+                            sByte offset = (sByte)InstructionHelpers.C(instruction);
                             if (Value.LessThan(_stack[baseReg + InstructionHelpers.A(instruction)],
                                               _stack[baseReg + InstructionHelpers.B(instruction)])) {
                                 pc += offset;
@@ -196,7 +196,7 @@ namespace ScriptingVM {
 							// A: arg window start (callee executes with base = base + A)
 							// B: nargs (ignored in this minimal VM, but here for shape)  
 							// C: function index (0..255)
-                            byte funcIdx = InstructionHelpers.C(instruction);
+                            Byte funcIdx = InstructionHelpers.C(instruction);
                             Proto? callee = _functions[funcIdx];
                             if (callee == null) {
                                 Console.Error.WriteLine($"CALLF to null func {funcIdx}");
@@ -250,19 +250,19 @@ namespace ScriptingVM {
             }
         }
 
-        private void EnsureFrame(int baseReg, ushort needRegs) {
+        private void EnsureFrame(Int32 baseReg, UInt16 needRegs) {
             // In this demo, stack is pre-allocated large enough, so this is a no-op
             // A real implementation might need to grow the stack here
-            int requiredSize = baseReg + needRegs;
+            Int32 requiredSize = baseReg + needRegs;
             if (requiredSize > _stackSize) {
                 IOHelper.Print($"Stack overflow: need {requiredSize}, have {_stackSize}");
             }
         }
 
         // Debug helper to print stack state
-        public void PrintStack(int baseReg, int count) {
+        public void PrintStack(Int32 baseReg, Int32 count) {
             IOHelper.Print("Stack:");
-            for (int i = 0; i < count; i++) {
+            for (Int32 i = 0; i < count; i++) {
                 Value val = _stack[baseReg + i];
                 IOHelper.Print($"  R[{i}] = {val}");
             }
@@ -271,63 +271,63 @@ namespace ScriptingVM {
 
     // Helper class for building Proto objects
     public class ProtoBuilder {
-        private List<uint> _code = new List<uint>();
+        private List<UInt32> _code = new List<UInt32>();
         private List<Value> _constants = new List<Value>();
-        private ushort _maxRegs = 0;
+        private UInt16 _maxRegs = 0;
 
-        public ProtoBuilder SetMaxRegs(ushort maxRegs) {
+        public ProtoBuilder SetMaxRegs(UInt16 maxRegs) {
             _maxRegs = maxRegs;
             return this;
         }
         
         public void Reset() {
-        	_code = new List<uint>();
+        	_code = new List<UInt32>();
         	_constants = new List<Value>();
         	_maxRegs = 0;
         	return this;
         }
 
-        public ProtoBuilder AddInstruction(uint instruction) {
+        public ProtoBuilder AddInstruction(UInt32 instruction) {
             _code.Add(instruction);
             return this;
         }
 
-        public ProtoBuilder Move(byte dest, byte src) {
+        public ProtoBuilder Move(Byte dest, Byte src) {
             _code.Add(InstructionHelpers.INS_ABC(Opcode.MOVE, dest, src, 0));
             return this;
         }
 
-        public ProtoBuilder LoadK(byte dest, short value) {
+        public ProtoBuilder LoadK(Byte dest, Int16 value) {
             _code.Add(InstructionHelpers.INS_AB(Opcode.LOADK, dest, value));
             return this;
         }
 
-        public ProtoBuilder LoadN(byte dest, ushort constIndex) {
-            _code.Add(InstructionHelpers.INS_AB(Opcode.LOADN, dest, (short)constIndex));
+        public ProtoBuilder LoadN(Byte dest, UInt16 constIndex) {
+            _code.Add(InstructionHelpers.INS_AB(Opcode.LOADN, dest, (Int16)constIndex));
             return this;
         }
 
-        public ProtoBuilder Add(byte dest, byte op1, byte op2) {
+        public ProtoBuilder Add(Byte dest, Byte op1, Byte op2) {
             _code.Add(InstructionHelpers.INS_ABC(Opcode.ADD, dest, op1, op2));
             return this;
         }
 
-        public ProtoBuilder Sub(byte dest, byte op1, byte op2) {
+        public ProtoBuilder Sub(Byte dest, Byte op1, Byte op2) {
             _code.Add(InstructionHelpers.INS_ABC(Opcode.SUB, dest, op1, op2));
             return this;
         }
 
-        public ProtoBuilder IfLt(byte a, byte b, sbyte offset) {
-            _code.Add(InstructionHelpers.INS_ABC(Opcode.IFLT, a, b, (byte)offset));
+        public ProtoBuilder IfLt(Byte a, Byte b, sByte offset) {
+            _code.Add(InstructionHelpers.INS_ABC(Opcode.IFLT, a, b, (Byte)offset));
             return this;
         }
 
-        public ProtoBuilder Jmp(short offset) {
+        public ProtoBuilder Jmp(Int16 offset) {
             _code.Add(InstructionHelpers.INS_AB(Opcode.JMP, 0, offset));
             return this;
         }
 
-        public ProtoBuilder CallF(byte argBase, byte numArgs, byte funcIndex) {
+        public ProtoBuilder CallF(Byte argBase, Byte numArgs, Byte funcIndex) {
             _code.Add(InstructionHelpers.INS_ABC(Opcode.CALLF, argBase, numArgs, funcIndex));
             return this;
         }
@@ -337,8 +337,8 @@ namespace ScriptingVM {
             return this;
         }
 
-        public int AddConstant(Value value) {
-            int index = _constants.Count;
+        public Int32 AddConstant(Value value) {
+            Int32 index = _constants.Count;
             _constants.Add(value);
             return index;
         }

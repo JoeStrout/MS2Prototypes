@@ -7,15 +7,29 @@ isWordChar = function(c)
 	       (c >= "0" and c <= "9") or c == "_"
 end function
 
-// Helper function to check if a substring forms a complete word
+// Helper function to check if a substring is a single word.  Note 
+// that for our purposes, a parameterized type like "List<Value>" is
+// considered a single word.
 isWholeWord = function(str, startPos, endPos)
+	if startPos == null then startPos = 0
+	if endPos == null then endPos = str.len
 	// Check character before the word
 	if startPos > 0 and isWordChar(str[startPos-1]) then return false
 	// Check character after the word  
 	if endPos < str.len and isWordChar(str[endPos]) then return false
-	// Check that the content itself contains only word characters
-	for i in range(startPos, endPos-1)
-		if not isWordChar(str[i]) then return false
+	// Check that the content itself contains only word characters,
+	// possibly including a parameterized type.
+	gotLT = false
+	gotGT = false
+	for c in str[startPos:endPos]
+		if c == "<" and not gotLT then
+			gotLT = true
+			continue
+		else if c == ">" and gotLT and not gotGT then
+			gotGT = true
+			continue
+		end if
+		if not isWordChar(c) then return false
 	end for
 	return true
 end function
@@ -76,7 +90,7 @@ string.match = function(pattern)
 		if i > 0 then
 			fieldContent = parts[i-1][1:-1]
 			fieldValue = self[lastStartPos:p]
-			// Check for :w qualifier
+			// Check for :w (whole word) qualifier
 			if fieldContent.indexOf(":w") != null then
 				if not isWholeWord(self, lastStartPos, p) then return null
 				// Remove the :w qualifier from the field name
@@ -121,10 +135,16 @@ if locals == globals then
 	
 	assertMatch "int bar = whoops()", "≤scope:w≥ ≤type:w≥ ≤name:w≥(≤args≥)", null
 
+	assertMatch "List<UInt32> ints = new List<UInt32>()", "≤type:w≥ ≤name:w≥ = ≤expr≥",
+	  { "type": "List<UInt32>", "name":"ints", "expr":"new List<UInt32>()" }
+
 	assertMatch "public static byte OP(uint instruction) => (byte)((instruction >> 24) & 0xFF);",
 	  "≤scope:w≥ static ≤rtype:w≥ ≤name:w≥(≤params≥) => ≤expr≥;",
 	  {"scope":"public", "rtype":"byte", "name":"OP", "params":"uint instruction",
 	   "expr":"(byte)((instruction >> 24) & 0xFF)"}
+	
+	assertMatch "ADD = 3,", "≤name:w≥ = ≤value:w≥,",
+	   { "name":"ADD", "value":"3" }
 	
 	print "All tests complete."
 end if
