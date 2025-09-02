@@ -135,7 +135,7 @@ Converter.processLine = function(line)
 	end if
 	
 	// Closing curly: close the open code block or scope
-	if self.line == "}" then
+	if self.line and self.line[0] == "}" then
 		print "CLOSING CURLY!!"		
 		fullLine = self.indentation + "}" + self.comment
 
@@ -180,9 +180,21 @@ Converter.processNonmethodLine = function
 		return
 	end if
 
-	// class declaration
+	// class/struct declaration
 	if self.match("≤qualifiers≥ class ≤name:w≥", "class ≤name≥", "") or
 	  self.match("class ≤name≥", "class ≤name≥", "") then
+		self.context = Context.CLASS
+		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		self.className = self.m.name
+		if not self.classNames.contains(self.className) then
+			self.classNames.push self.className
+		end if
+		print "Got class name: " + self.className + "; all classes: " + self.classNames
+		return
+	end if
+
+	if self.match("≤qualifiers≥ struct ≤name:w≥", "struct ≤name≥", "") or
+	  self.match("struct ≤name≥", "struct ≤name≥", "") then
 		self.context = Context.CLASS
 		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		self.className = self.m.name

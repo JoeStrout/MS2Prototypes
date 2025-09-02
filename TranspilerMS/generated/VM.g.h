@@ -39,5 +39,40 @@ namespace ScriptingVM {
 
         public: Proto();
     }; // end of class Proto
+	
+    // Call stack frame (return info) - equivalent to C CallInfo struct
+    struct CallInfo {
+        public: Int32 ReturnPC;     // index into caller's code array (not pointer)
+        public: Int32 ReturnBase;   // caller's base register index
+
+        public: CallInfo(Int32 returnPC, Int32 returnBase);
+    }; // end of class CallInfo
+
+    // VM state - equivalent to C VM struct
+    class VM {
+        private: List<Value> _stack;
+        private: Int32 _stackSize;
+        private: Int32 _top; // index into stack (not pointer)
+        
+        private: List<CallInfo> _callStack;
+        private: Int32 _callStackSize;
+        private: Int32 _callIndex; // points to next free slot
+        
+        private: List<Proto> _functions = List<Proto>(256); // functions addressed by CALLF C-field
+
+        public: VM(Int32 stackSlots, Int32 callSlots);
+
+        // Register a function for CALLF calls
+        public: void RegisterFunction(Byte index, Proto function);
+
+        // Execute a function prototype
+        public: Value Execute(Proto entry, UInt32 maxCycles = 0);
+
+        private: void EnsureFrame(Int32 baseReg, UInt16 needRegs);
+
+        // Debug helper to print stack state
+        public: void PrintStack(Int32 baseReg, Int32 count);
+    }; // end of class VM
+
 
 }

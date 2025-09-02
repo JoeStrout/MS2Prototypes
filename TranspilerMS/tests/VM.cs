@@ -52,7 +52,6 @@ namespace ScriptingVM {
         	Constants = new List<Value>();
         }
     }
-	//*** BEGIN CS_ONLY ***
 	
     // Call stack frame (return info) - equivalent to C CallInfo struct
     public struct CallInfo {
@@ -75,7 +74,7 @@ namespace ScriptingVM {
         private Int32 _callStackSize;
         private Int32 _callIndex; // points to next free slot
         
-        private List<Proto?> _functions = new List<Proto?>(256); // functions addressed by CALLF C-field
+        private List<Proto> _functions = new List<Proto>(256); // functions addressed by CALLF C-field
 
         public VM(Int32 stackSlots, Int32 callSlots) {
             _stack = new List<Value>(stackSlots);
@@ -197,7 +196,7 @@ namespace ScriptingVM {
 							// B: nargs (ignored in this minimal VM, but here for shape)  
 							// C: function index (0..255)
                             Byte funcIdx = InstructionHelpers.C(instruction);
-                            Proto? callee = _functions[funcIdx];
+                            Proto callee = _functions[funcIdx];
                             if (callee == null) {
                                 Console.Error.WriteLine($"CALLF to null func {funcIdx}");
                                 return Value.Null();
@@ -268,6 +267,9 @@ namespace ScriptingVM {
             }
         }
     }
+
+	//*** BEGIN CS_ONLY ***
+
 
     // Helper class for building Proto objects
     public class ProtoBuilder {

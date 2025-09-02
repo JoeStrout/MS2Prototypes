@@ -1,6 +1,6 @@
 # C++ String Class with Intern Pooling
 
-This directory contains a lightweight C#-style string implementation in C++ that uses intern pooling for efficient string management.
+This directory contains lightweight C#-style string and list implementations in C++ that use intern pooling for efficient string management.
 
 ## Features
 
