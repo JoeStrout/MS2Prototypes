@@ -87,10 +87,10 @@ case "$TARGET" in
     "test")
         echo "Running tests..."
         echo "Testing C# version:"
-        cd build/cs && echo "test input" | ./MS2Proto3
+        cd build/cs && echo "These are some words for testing" | ./MS2Proto3
         cd ../..
         echo "Testing C++ version:"
-        cd build/cpp && echo "test input" | ./MS2Proto3
+        cd build/cpp && echo "These are some words for testing" | ./MS2Proto3
         cd ../..
         ;;
     

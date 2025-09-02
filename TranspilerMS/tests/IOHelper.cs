@@ -6,8 +6,13 @@ using System;
 
 public static class IOHelper {
 
-    public static void Print(string message) {
-        Console.WriteLine(message);  // CPP: std::cout << message.c_str() << std::endl;
-    }
+	public static void Print(String message) {
+		Console.WriteLine(message);  // CPP: std::cout << message.c_str() << std::endl;
+	}
+	
+	public static void Input(String prompt) {
+		Console.Write(prompt);      // CPP: std::cout << message.c_str() 
+		return Console.ReadLine();  // CPP: return std::getline();
+	}
 
 }

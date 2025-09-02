@@ -77,11 +77,11 @@ Converter.processLine = function(line)
 	// and substitute what appears after that in the CPP code.
 	if comment.startsWith("// CPP:") then
 		line = comment[7:].trimLeft
-		self.cppLines.push indentation + line
 		if self.context == Context.METHOD then
+			self.cppLines.push indentation + line
 			if line and line[-1] == "{" then self.codeBlockDepth += 1
 		else
-			self.fail "The `CPP:` comment trick works only on method lines!"
+			self.hLines.push indentation + line
 		end if
 		return
 	end if
@@ -91,6 +91,14 @@ Converter.processLine = function(line)
 		self.csOnly = true
 	else if comment == "//*** END CS_ONLY ***" then
 		self.csOnly = false
+		return
+	else if line == "/*** BEGIN CPP_ONLY" then
+		print "CPP ONLY MODE!"
+		self.cppOnly = true
+		return
+	else if line == "*** END CPP_ONLY ***/" then
+		print "CPP ONLY off"
+		self.cppOnly = false
 		return
 	end if
 	if self.csOnly then return

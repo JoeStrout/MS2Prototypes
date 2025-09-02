@@ -87,6 +87,14 @@ Converter.processLine = function(line)
 	else if comment == "//*** END CS_ONLY ***" then
 		self.csOnly = false
 		return
+	else if line == "/*** BEGIN CPP_ONLY" then
+		print "CPP ONLY MODE!
+		self.cppOnly = true
+		return
+	else if line == "*** END CPP_ONLY ***/" then
+		print "CPP ONLY off"
+		self.cppOnly = false
+		return
 	end if
 	if self.csOnly then return
 
