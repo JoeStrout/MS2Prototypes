@@ -19,6 +19,13 @@ test_vm
 # Claude Code settings
 .claude/
 
+# C/C++ BUild Products
+build/
+
+# Generated (transpiled) files... not entirely sure whether we want
+# to push these to github or not, but probably not in this prototype.
+MS2Proto3/generated/
+
 # C# / .NET / Mono Build Products
 *.exe
 *.dll
