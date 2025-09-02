@@ -16,10 +16,8 @@
 	X(MULT)             \
 	X(DIV)              \
 	X(IFLT)             \
-	X(IFGT)             \
 	X(IFEQ)             \
 	X(IFLE)             \
-	X(IFGE)             \
 	X(IFNE)             \
 	X(JMP)              \
 	X(CALLF)            \
