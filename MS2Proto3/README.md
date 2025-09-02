@@ -14,13 +14,13 @@ Developing and validating this dual-management strategy is an important goal of 
 
 ## Development Milestones
 
-1. *Main Program Stub*: runs, prints some program info, reads a line from stdin, and prints something about it to stdout.  This is just to get our directory structure and toolchain up and running.
+1. ✅ **Main Program Stub**: runs, prints some program info, reads a line from stdin, and prints something about it to stdout.  This is just to get our directory structure and toolchain up and running.
 
-2. *Assembler/Disassembler*: reads a .msa (MiniScript Assembly) file from disk or stdin, and writes a .mso (object) file out; or vice versa.  Note that this does not yet require any `Value`s.  It might (or might not!) require adding a Dictionary type to our core types.
+2. **Assembler/Disassembler**: reads a .msa (MiniScript Assembly) file from disk or stdin, and writes a .mso (object) file out; or vice versa.  Note that this does not yet require any `Value`s.  It might (or might not!) require adding a Dictionary type to our core types.
 
-3. *Minimal VM*: reads a .msa or .mso file, assembling the .msa on the fly, and then executes it.  The VM at this point will support only a handful of opcodes.
+3. **Minimal VM**: reads a .msa or .mso file, assembling the .msa on the fly, and then executes it.  The VM at this point will support only a handful of opcodes.
 
-4. *Extended VM*: same as above, but with what we believe to be a complete set of opcodes, including calls and captures.
+4. **Extended VM**: same as above, but with what we believe to be a complete set of opcodes, including calls and captures.
 
 Note that the compiler is beyond scope for this prototype -- but if we make it through milestone 4, we'll probably move all this over to its own fresh GitHub project, and start working on that.
 
@@ -29,3 +29,14 @@ Note that the compiler is beyond scope for this prototype -- but if we make it t
 As much as possible, code should be written in .cs (C#) files.  There will be a set of core classes/modules in C++ supporting the common types, such as String and List, and the support code those require (e.g. memory management).  But all the logic of the assembler, disassembler, and VM should be written in C# only, and then run through transpiler.ms to output equivalent C++ code.
 
 To make this work, we place rather strict requirements on the .cs code.  See [CS Coding Standards](CS_CODING_STANDARDS.md).
+
+## How to Build and Test
+
+All the management is done by the `tools/build.sh` shell script.  (You will need an environment that can run bash scripts to use this, of course.)
+
+1. `cd MS2Proto3` if you're not already in the right folder
+2. `tools/build.sh setup` to set up your folders (you only need to do this once)
+3. `tools/build.sh cs` to compile the C# code
+4. `tools/build.sh transpile` to convert C# to C++ code
+5. `tools/build.sh cpp` to compile the C++ code
+6. `tools/build.sh test` to run both projects; or you can manually run `build/cs/MS2Proto3` or `build/cpp/MS2Proto3`
