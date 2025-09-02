@@ -86,11 +86,12 @@ case "$TARGET" in
     
     "test")
         echo "Running tests..."
-        $0 all
         echo "Testing C# version:"
         cd build/cs && echo "test input" | ./MS2Proto3
+        cd ../..
         echo "Testing C++ version:"
         cd build/cpp && echo "test input" | ./MS2Proto3
+        cd ../..
         ;;
     
     *)

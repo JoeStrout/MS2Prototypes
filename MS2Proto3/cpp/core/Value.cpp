@@ -1,19 +1,4 @@
 #include "Value.h"
-#include <cstring>
-
-Value& Value::operator=(const Value& other) {
-    type = other.type;
-    switch (type) {
-        case NIL: break;
-        case BOOL: boolValue = other.boolValue; break;
-        case INT: intValue = other.intValue; break;
-        case FLOAT: floatValue = other.floatValue; break;
-        case STRING:
-        case LIST:
-        case MAP: ptrValue = other.ptrValue; break;
-    }
-    return *this;
-}
 
 Value Value::Add(const Value& a, const Value& b) {
     if (a.type == INT && b.type == INT) {

@@ -49,6 +49,7 @@ struct Value {
     bool IsFloat() const { return type == FLOAT; }
     bool IsString() const { return type == STRING; }
     
-    // Assignment operator
-    Value& operator=(const Value& other);
+    // Copy constructor and assignment operator (trivial - just copy 8 bytes)
+    Value(const Value& other) = default;
+    Value& operator=(const Value& other) = default;
 };

@@ -2,7 +2,9 @@
 # Builds the transpiled C++ version
 
 CXX = g++
+CC = gcc
 CXXFLAGS = -std=c++11 -Wall -Wextra -Icore
+CFLAGS = -std=c99 -Wall -Wextra -Icore
 SRCDIR = core
 GENDIR = ../generated
 BUILDDIR = ../build/cpp
@@ -38,7 +40,7 @@ $(OBJDIR)/core_%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
 
 # Core C object files
 $(OBJDIR)/core_%.o: $(SRCDIR)/%.c | $(OBJDIR)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # Generated C++ object files  
 $(OBJDIR)/gen_%.o: $(GENDIR)/%.g.cpp | $(OBJDIR)

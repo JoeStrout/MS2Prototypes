@@ -78,6 +78,11 @@ Converter.processLine = function(line)
 	if comment.startsWith("// CPP:") then
 		line = comment[7:].trimLeft
 		self.cppLines.push indentation + line
+		if self.context == Context.METHOD then
+			if line and line[-1] == "{" then self.codeBlockDepth += 1
+		else
+			self.fail "The `CPP:` comment trick works only on method lines!"
+		end if
 		return
 	end if
 	
@@ -317,7 +322,7 @@ Converter.tweakSyntax = function(line)
 	// Count -- a property in C#, but a method in C++.
 	// We may need to handle this more generally.  But for now:
 	line = line.replace(".Count;", ".Count()")
-	
+		
 	return line
 end function
 
@@ -395,6 +400,7 @@ if locals == globals then
 	cvt = Converter.Make
 	for path in shellArgs[1:]
 		cvt.convertClass path
-		if cvt.failed then break
+		if cvt.failed then exit -1
 	end for
 end if
+
