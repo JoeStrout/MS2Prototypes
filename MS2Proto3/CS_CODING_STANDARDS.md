@@ -10,10 +10,13 @@ Including non-integer types, the full set of types you can use are: `Byte`, `SBy
 
 ## Brace placement
 
-- Always put an *opening brace at the end of a line*, never on a line by itself.
+- Always put an **opening brace at the end of a line**, never on a line by itself.
 
-- Put a *close brace at the start of a line*.  It will usually be the *only* thing on that line, except for something like `} else {` or in a `switch` statement, `} break;`.
+- Put a **close brace at the start of a line**.  It will usually be the *only* thing on that line, except for something like `} else {` or in a `switch` statement, `} break;`.
 
+## Other limitations
+
+- The `switch` statement may only be used with integer types (including enums).  For Strings or other custom types, use `if` statements instead.
 
 ## To be continued...
 
