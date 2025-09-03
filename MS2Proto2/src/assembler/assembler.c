@@ -5,6 +5,8 @@
 #include <string.h>
 #include <ctype.h>
 
+static bool debug = false;
+
 static void init_function(Function *func) {
     func->code_capacity = 256;
     func->code = (uint32_t*)calloc(func->code_capacity, sizeof(uint32_t));
@@ -79,6 +81,7 @@ static void emit_instruction(Assembler *asm, uint32_t ins) {
     ensure_capacity(func);
     func->code[func->code_len++] = ins;
     asm->current_address++;
+    if (debug) printf("Emitting opcode instruction: %d (%d)(%d)(%d)\n", OP(ins), A(ins), B(ins), C(ins));
 }
 
 static bool is_register(const char *str, uint8_t *reg) {
@@ -171,7 +174,7 @@ bool asm_instruction(Assembler *asm, const char *line) {
     }
     
     const char *opcode = tokens[0];
-    
+
     if (strcmp(opcode, "MOVE") == 0 && token_count == 3) {
         uint8_t a, b;
         if (is_register(tokens[1], &a) && is_register(tokens[2], &b)) {
@@ -284,6 +287,66 @@ bool asm_instruction(Assembler *asm, const char *line) {
             }
         }
     }
+    else if (strcmp(opcode, "IFEQ") == 0 && token_count == 4) {
+    	if (!ensure_function(asm)) return false;
+
+        uint8_t a, b;        
+        if (is_register(tokens[1], &a) && is_register(tokens[2], &b)) {
+            // Third argument could be immediate or label
+            int32_t imm;
+            if (is_immediate(tokens[3], &imm)) {
+                if (imm >= -128 && imm <= 127) {
+                    emit_instruction(asm, INS_ABC(IFEQ, a, b, (uint8_t)(int8_t)imm));
+                    return true;
+                }
+            } else {
+                // Label reference - will be resolved in second pass
+                asm_add_reference(asm->current_function, tokens[3], asm->current_address, false);
+                emit_instruction(asm, INS_ABC(IFEQ, a, b, 0));
+                return true;
+            }
+        }
+    }
+    else if (strcmp(opcode, "IFLE") == 0 && token_count == 4) {
+    	if (!ensure_function(asm)) return false;
+
+        uint8_t a, b;        
+        if (is_register(tokens[1], &a) && is_register(tokens[2], &b)) {
+            // Third argument could be immediate or label
+            int32_t imm;
+            if (is_immediate(tokens[3], &imm)) {
+                if (imm >= -128 && imm <= 127) {
+                    emit_instruction(asm, INS_ABC(IFLE, a, b, (uint8_t)(int8_t)imm));
+                    return true;
+                }
+            } else {
+                // Label reference - will be resolved in second pass
+                asm_add_reference(asm->current_function, tokens[3], asm->current_address, false);
+                emit_instruction(asm, INS_ABC(IFLE, a, b, 0));
+                return true;
+            }
+        }
+    }
+    else if (strcmp(opcode, "IFNE") == 0 && token_count == 4) {
+    	if (!ensure_function(asm)) return false;
+
+        uint8_t a, b;        
+        if (is_register(tokens[1], &a) && is_register(tokens[2], &b)) {
+            // Third argument could be immediate or label
+            int32_t imm;
+            if (is_immediate(tokens[3], &imm)) {
+                if (imm >= -128 && imm <= 127) {
+                    emit_instruction(asm, INS_ABC(IFNE, a, b, (uint8_t)(int8_t)imm));
+                    return true;
+                }
+            } else {
+                // Label reference - will be resolved in second pass
+                asm_add_reference(asm->current_function, tokens[3], asm->current_address, false);
+                emit_instruction(asm, INS_ABC(IFNE, a, b, 0));
+                return true;
+            }
+        }
+    }
     else if (strcmp(opcode, "JMP") == 0 && token_count == 2) {
     	if (!ensure_function(asm)) return false;
         int32_t imm;
@@ -392,17 +455,17 @@ static bool resolve_function_labels(Function *func) {
         if (ref->is_jump) {
             // JMP instruction - update 16-bit BC field
             if (offset >= -32768 && offset <= 32767) {
-                *ins = INS_AB(JMP, 0, (int16_t)offset);
+                *ins = MODIFY_INS_AB(OP(*ins), 0, (int16_t)offset);
             } else {
                 fprintf(stderr, "Error: Jump offset too large for label %s\n", ref->label_name);
                 return false;
             }
         } else {
-            // IFLT instruction - update 8-bit C field
+            // IF* instruction - update 8-bit C field
             if (offset >= -128 && offset <= 127) {
                 uint8_t a = A(*ins);
                 uint8_t b = B(*ins);
-                *ins = INS_ABC(IFLT, a, b, OFF8(offset));
+                *ins = MODIFY_INS_ABC(OP(*ins), a, b, OFF8(offset));
             } else {
                 fprintf(stderr, "Error: Branch offset too large for label %s\n", ref->label_name);
                 return false;
