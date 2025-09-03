@@ -16,6 +16,19 @@ namespace MiniScript {
 			}
 			return new String(hexChars);
 		}
+		
+		//*** BEGIN CS_ONLY ***
+		public static string Left(this string s, int n) {
+			if (String.IsNullOrEmpty(s)) return "";
+			return s.Substring(0, Math.Min(n, s.Length));
+		}
+
+		public static string Right(this string s, int n) {
+			if (String.IsNullOrEmpty(s)) return "";
+			return s.Substring(Math.Max(s.Length-n, 0));
+		}
+		
+		//*** END CS_ONLY ***
 	}
 
 }

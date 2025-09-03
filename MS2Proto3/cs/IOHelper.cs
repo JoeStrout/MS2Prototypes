@@ -21,7 +21,6 @@ public static class IOHelper {
 		char *line = NULL;
 		size_t len = 0;
 		
-		printf("Enter a line of text: ");
 		String result;
 		int bytes = getline(&line, &len, stdin);
 		if (bytes != -1) {

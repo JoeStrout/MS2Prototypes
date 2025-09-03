@@ -188,6 +188,16 @@ public:
         return fromStorage(result, poolNum);
     }
     
+    String Left(int chars) const {
+    	return Substring(0, chars);
+    }
+    
+    String Right(int chars) const {
+    	int len = Length();
+    	if (chars > len) return *this;
+    	return Substring(len - chars, chars);
+    }
+    
     String Insert(int startIndex, const String& value) const {
         const StringStorage* s = getStorage();
         const StringStorage* v = value.getStorage();
