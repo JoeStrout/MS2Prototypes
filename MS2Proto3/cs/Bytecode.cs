@@ -2,22 +2,18 @@ using System;
 using System.Collections.Generic;
 
 namespace MiniScript {
-    // Opcodes
+    // Opcodes.  Note that these must have sequential values, starting at 0.
     public enum Opcode : Byte {
     	NOOP = 0,
-    	// 1-9: Simple register loads
         MOVE = 1,
         LOADK = 2,
-        LOADN = 3,
-        // 10s: Math operations
-        ADD = 10,
-        SUB = 11,
-        // 20s: jumps/branches
-        JMP = 20,
-        IFLT = 21,
-        // 30s: function support
-        CALLF = 30,
-        RETURN = 31
+        LOADI = 3,
+        ADD = 4,
+        SUB = 5,
+        JMP = 6,
+        IFLT = 7,
+        CALLF = 8,
+        RETURN = 9
     }
 
     public static class BytecodeUtil {
@@ -39,7 +35,7 @@ namespace MiniScript {
         		case Opcode.NOOP:   return "NOOP";
         		case Opcode.MOVE:   return "MOVE";
         		case Opcode.LOADK:  return "LOADK";
-        		case Opcode.LOADN:  return "LOADN";
+        		case Opcode.LOADI:  return "LOADI";
         		case Opcode.ADD:    return "ADD";
         		case Opcode.SUB:    return "SUB";
         		case Opcode.JMP:    return "JMP";
@@ -55,7 +51,7 @@ namespace MiniScript {
         	if (s == "NOOP")   return Opcode.NOOP;
 			if (s == "MOVE")   return Opcode.MOVE;
 			if (s == "LOADK")  return Opcode.LOADK;
-			if (s == "LOADN")  return Opcode.LOADN;
+			if (s == "LOADI")  return Opcode.LOADI;
 			if (s == "ADD")    return Opcode.ADD;
 			if (s == "SUB")    return Opcode.SUB;
 			if (s == "JMP")    return Opcode.JMP;
@@ -65,5 +61,13 @@ namespace MiniScript {
         	return Opcode.NOOP;
         }
     }
+    
+    // Function definition: code, constants, and how many registers it needs
+    public class FuncDef {
+        public List<UInt32> Code = new List<UInt32>();
+        public List<Int32> Constants = new List<Int32>(); // ToDo: use Value instead
+        public UInt16 MaxRegs = 0; // frame reservation size
+    }
+
 }
 

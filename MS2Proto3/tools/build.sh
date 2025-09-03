@@ -42,15 +42,13 @@ case "$TARGET" in
         echo "Found C# files:"
         echo "$cs_files"
         
-        # Transpile each .cs file
-        for cs_file in $cs_files; do
-            echo "Transpiling $cs_file..."
-            miniscript tools/transpile.ms "$cs_file"
-            if [ $? -ne 0 ]; then
-                echo "Error: Failed to transpile $cs_file"
-                exit 1
-            fi
-        done
+        # Transpile all .cs files in a single call
+        echo "Transpiling all files..."
+        miniscript tools/transpile.ms $cs_files
+        if [ $? -ne 0 ]; then
+            echo "Error: Failed to transpile C# files"
+            exit 1
+        fi
         
         echo "Transpilation complete."
         ;;

@@ -6,6 +6,10 @@ import "fancyMatch"  // overrides standard string.match and string.fill
 
 TAB = char(9)
 
+debugPrint = function(s)
+	// print s
+end function
+
 Context = {}
 Context.START = "START"  // before or after namespace, file scope
 Context.NAMESPACE = "NAMESPACE"  // within a namespace, but not a class
@@ -37,7 +41,7 @@ Converter.match = function(inp, hOut, cppOut)
 	self.m = self.line.match(inp)
 	if not self.m then return false
 	if not self.m.hasIndex("className") then self.m.className = self.className
-	print "[" + self.context + "] --> " + inp
+	debugPrint "[" + self.context + "] --> " + inp
 	curly = " {" * self.addCurly
 	if cppOut then
 		self.cppLines.push self.indentation + cppOut.fill(self.m) + curly + self.comment
@@ -93,11 +97,11 @@ Converter.processLine = function(line)
 		self.csOnly = false
 		return
 	else if line == "/*** BEGIN CPP_ONLY" then
-		print "CPP ONLY MODE!"
+		debugPrint "CPP ONLY MODE!"
 		self.cppOnly = true
 		return
 	else if line == "*** END CPP_ONLY ***/" then
-		print "CPP ONLY off"
+		debugPrint "CPP ONLY off"
 		self.cppOnly = false
 		return
 	end if
@@ -116,7 +120,7 @@ Converter.processLine = function(line)
 		line = line[:-1]
 	end while
 	
-	print line
+	debugPrint line
 	
 	// And split off an opening curly too
 	if line[-1] == "{" then
@@ -124,7 +128,7 @@ Converter.processLine = function(line)
 		line = line[:-1]
 		line = line.trimRight
 		if self.context == Context.METHOD then self.codeBlockDepth += 1
-		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 	else
 		self.addCurly = false
 	end if
@@ -149,7 +153,7 @@ Converter.processLine = function(line)
 	
 	// Closing curly: close the open code block or scope
 	if self.line and self.line[0] == "}" then
-		print "CLOSING CURLY!!"		
+		debugPrint "CLOSING CURLY!!"		
 		fullLine = self.indentation + "}" + self.comment
 
 		if self.context == Context.METHOD and self.codeBlockDepth > 0 then
@@ -165,7 +169,7 @@ Converter.processLine = function(line)
 			self.cppLines.push fullLine
 			self.context = Context.START
 		end if
-		print "Context down: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		debugPrint "Context down: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 	end if
 
 end function
@@ -189,7 +193,7 @@ Converter.processNonmethodLine = function
 	// namespace line
 	if self.match("namespace ≤name≥", "namespace ≤name≥", "namespace ≤name≥") then
 		self.context = Context.NAMESPACE
-		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
 	end if
 
@@ -197,24 +201,24 @@ Converter.processNonmethodLine = function
 	if self.match("≤qualifiers≥ class ≤name:w≥", "class ≤name≥", "") or
 	  self.match("class ≤name≥", "class ≤name≥", "") then
 		self.context = Context.CLASS
-		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		self.className = self.m.name
 		if not self.classNames.contains(self.className) then
 			self.classNames.push self.className
 		end if
-		print "Got class name: " + self.className + "; all classes: " + self.classNames
+		debugPrint "Got class name: " + self.className + "; all classes: " + self.classNames
 		return
 	end if
 
 	if self.match("≤qualifiers≥ struct ≤name:w≥", "struct ≤name≥", "") or
 	  self.match("struct ≤name≥", "struct ≤name≥", "") then
 		self.context = Context.CLASS
-		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		self.className = self.m.name
 		if not self.classNames.contains(self.className) then
 			self.classNames.push self.className
 		end if
-		print "Got class name: " + self.className + "; all classes: " + self.classNames
+		debugPrint "Got class name: " + self.className + "; all classes: " + self.classNames
 		return
 	end if
 	
@@ -222,12 +226,12 @@ Converter.processNonmethodLine = function
 	if self.match("≤scope≥ enum ≤name≥ : ≤type≥", "enum class ≤name≥ : ≤type≥", "") then
 		if not self.checkType then return
 		self.context = Context.CLASS
-		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		self.className = self.m.name
 		if not self.classNames.contains(self.className) then
 			self.classNames.push self.className
 		end if
-		print "Got class (enum) name: " + self.className + "; all classes: " + self.classNames
+		debugPrint "Got class (enum) name: " + self.className + "; all classes: " + self.classNames
 		return
 	end if
 	
@@ -243,6 +247,12 @@ Converter.processNonmethodLine = function
 	  "≤scope≥: ≤type≥ ≤name≥;", "") then return self.checkType
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ = ≤value≥;",
 	  "≤scope≥: ≤type≥ ≤name≥ = ≤value≥;", "") then return self.checkType
+
+	// (static) const class field with default value
+	if self.context == Context.CLASS and 
+	  self.match("≤scope:w≥ const ≤type:w≥ ≤name:w≥ = ≤value≥;",
+	  "≤scope≥: static const ≤type≥ ≤name≥;",
+	  "const ≤type≥ ≤className≥::≤name≥ = ≤value≥;") then return self.checkType
 
 	// class property with expression body
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ => ≤expr≥;",
@@ -268,7 +278,7 @@ Converter.processNonmethodLine = function
 	  "≤scope≥: ≤name≥(≤params≥);",
 	  "≤className≥::≤name≥(≤params≥)") then
 		self.context = Context.METHOD
-		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
 	end if
 
@@ -277,7 +287,7 @@ Converter.processNonmethodLine = function
 	  "≤scope≥: static ≤rtype≥ ≤name≥(≤params≥);",
 	  "≤rtype≥ ≤className≥::≤name≥(≤params≥)") then
 		self.context = Context.METHOD
-		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
 	end if
 
@@ -286,7 +296,7 @@ Converter.processNonmethodLine = function
 	  "≤rtype≥ ≤className≥::≤name≥(≤params≥)") then
 	  	if self.m.scope == "static" then return self.fail("scope qualifier required on static method")
 		self.context = Context.METHOD
-		print "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
 	end if
 	
@@ -301,7 +311,7 @@ Converter.processMethodLine = function
 		  "≤type≥ ≤var≥ = ≤seq≥[__≤var≥_idx];".fill(self.m)
 		return self.checkType
 	end if
-	  
+	
 	// Anything else: copy to header and/or CPP file according to context
 	curly = " {" * self.addCurly
 	fullLine = self.indentation + self.line + curly + self.comment
@@ -312,6 +322,10 @@ end function
 // Converter.tweakSyntax: do simple syntax transformations that can be done
 // within pretty much any line of code.
 Converter.tweakSyntax = function(line)
+	// local array declaration
+	m = line.match("≤type:w≥[] ≤name≥ = new ≤type2:w≥[≤count≥];")
+	if m then return "≤type≥ ≤name≥[≤count≥];".fill(m)	  
+
 	// array syntax (especially as seen in parameters)
 	line = line.replace("[] ", " *")
 	
@@ -326,6 +340,7 @@ Converter.tweakSyntax = function(line)
 	
 	// Object creation (assuming a compatible memory-managed type).
 	line = line.replace(" new ", " ")
+	line = line.replace("(new ", "(")
 	
 	// Count -- a property in C#, but a method in C++.
 	// We may need to handle this more generally.  But for now:
@@ -365,7 +380,11 @@ Converter.checkType = function(type)
 end function
 
 Converter.convertClass = function(sourcePath)
-	self.hLines = []
+	fileNameBase = file.name(sourcePath) - ".cs"
+	print "≤fileNameBase≥.cs --> ≤fileNameBase≥.h/.cpp".fill(locals)
+	
+	guardSymbol = ("__" + file.name(sourcePath) - ".cs" + "_H").upper
+	self.hLines = ["#ifndef " + guardSymbol, "#define " + guardSymbol, ""]
 	self.cppLines = []
 	self.didIncludes = false
 	self.filename = file.name(sourcePath)
@@ -374,10 +393,13 @@ Converter.convertClass = function(sourcePath)
 
 	for line in file.readLines(sourcePath)
 		self.lineNum += 1
-		//print line
+		//debugPrint line
 		self.processLine line
 		if self.failed then return
 	end for
+
+	self.hLines.push ""
+	self.hLines.push "#endif // " + guardSymbol
 
 	if self.className == "Program" then
 		// main-program boilerplate goes with the program
@@ -386,26 +408,37 @@ Converter.convertClass = function(sourcePath)
 		self.cppLines.push TAB + "Program::Main(nullptr);"
 		self.cppLines.push "}"
 	end if
-
-	
-	fileNameBase = file.name(sourcePath) - ".cs"
+		
 	outFolder = "generated/"
-	print "-----------------------------------"
-	print "HEADER:"
-	print self.hLines.join(char(10))
+	debugPrint "-----------------------------------"
+	debugPrint "HEADER:"
+	debugPrint self.hLines.join(char(10))
 	file.writeLines outFolder + fileNameBase + ".g.h", self.hLines
-	print
-	print "-----------------------------------"
-	print "CPP:"
-	print self.cppLines.join(char(10))
+	debugPrint
+	debugPrint "-----------------------------------"
+	debugPrint "CPP:"
+	debugPrint self.cppLines.join(char(10))
 	file.writeLines outFolder + fileNameBase + ".g.cpp", self.cppLines
-	print
-	
-	
+	debugPrint
+end function
+
+Converter.findClassNames = function(sourcePath)
+	for line in file.readLines(sourcePath)
+		m = line.match("≤≥≤scope≥ class ≤class:w≥ {≤≥")
+		if m then
+			print "Found class: " + m.class + " in: " + sourcePath
+			self.classNames.push m.class
+		end if
+	end for
 end function
 
 if locals == globals then
 	cvt = Converter.Make
+
+	for path in shellArgs[1:]
+		cvt.findClassNames path
+	end for
+
 	for path in shellArgs[1:]
 		cvt.convertClass path
 		if cvt.failed then exit -1
