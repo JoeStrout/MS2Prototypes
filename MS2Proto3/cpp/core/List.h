@@ -3,6 +3,7 @@
 #include <type_traits>
 #include <new>
 #include <cstring>
+#include <initializer_list>
 
 // Forward declaration
 template<typename T> class List;
@@ -119,6 +120,22 @@ public:
             
             // Free the original array
             free(adoptedArray);
+        }
+    }
+    
+    // Initializer list constructor
+    List(std::initializer_list<T> items, uint8_t poolNum = 0) : storage(poolNum, 0) {
+        if (items.size() > 0) {
+            ensureCapacity(static_cast<int>(items.size()));
+            ListStorage<T>* s = getStorage();
+            if (s) {
+                int i = 0;
+                for (const auto& item : items) {
+                    new(&s->getData()[i]) T(item);
+                    i++;
+                }
+                s->count = static_cast<int>(items.size());
+            }
         }
     }
     

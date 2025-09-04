@@ -359,10 +359,15 @@ Converter.tweakSyntax = function(line)
 	// Object creation (assuming a compatible memory-managed type).
 	line = line.replace(" new ", " ")
 	line = line.replace("(new ", "(")
+	if line.startsWith("new ") then line = line[4:]
 	
-	// Count -- a property in C#, but a method in C++.
+	// null --> nullptr
+	line = line.replace("null", "nullptr")
+	
+	// Count and Length -- properties in C#, but methods in C++.
 	// We may need to handle this more generally.  But for now:
-	line = line.replace(".Count;", ".Count()")
+	line = line.replace(".Count", ".Count()")
+	line = line.replace(".Length", ".Length()")
 		
 	return line
 end function

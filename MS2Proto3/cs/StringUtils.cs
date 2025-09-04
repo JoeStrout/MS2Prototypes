@@ -1,6 +1,7 @@
 // String utilities: conversion between ints and strings, etc.
 
 using System;
+using System.Collections.Generic;
 // CPP: #include "IOHelper.g.h"
 // CPP: #include <sstream>
 // CPP: #include <cctype>
@@ -26,6 +27,12 @@ namespace MiniScript {
 				value >>= 4;
 			}
 			return new String(hexChars);
+		}
+		
+		public static String Str(List<String> list) {
+			if (list == null) return "null"; // CPP: // (null not possible)
+			if (list.Count == 0) return "[]";
+			return new String("[\"") + String.Join("\", \"", list) + "\"]";
 		}
 		
 		//*** BEGIN CS_ONLY ***
