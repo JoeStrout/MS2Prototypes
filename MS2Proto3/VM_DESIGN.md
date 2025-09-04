@@ -1,6 +1,6 @@
 ## Overview
 
-The VM in this prototype is register (rather than stack) based.  Instructions are fixed-width, 32-bit values, with 8 bits for the opcode and 24 bits for the operand(s).
+The VM in this prototype is register (rather than stack) based.  Instructions are fixed-width, 32-bit values, with 8 bits for the opcode and 24 bits for the operand(s).  Our instruction set slightly favors speed over minimalism.
 
 ## Registers
 
@@ -20,9 +20,11 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | DIV_rA_rB_rC | R[A] := R[B] / R[C] |
 | LT_rA_rB_rC | R[A] := (R[B] < R[C]) |
 | JUMP_iABC | PC += ABC (24-bit signed value) |
+| BRTRUE_rA_iBC | if R[A] is true then PC += BC (16-bit signed) |
+| BRFALSE_rA_iBC | if R[A] is false then PC += BC (16-bit signed) |
 | BRLT_rA_rB_iC | if R[A] < R[B] then PC += C (8-bit signed) |
-| IFLT_rA_rB | if R[A] < R[B] is **false** then PC += 1 |
 | BRLT_rA_iB_iC | if R[A] < B then PC += C (8-bit signed) |
+| IFLT_rA_rB | if R[A] < R[B] is **false** then PC += 1 |
 | IFLT_rA_iBC | if R[A] < BC is **false** then PC += 1 |
 | CALLF_iA_iBC | call funcs[BC] reserving A registers |
 | RETURN | return with result in R[0]
@@ -49,13 +51,18 @@ This assembly representation is easier to read and write, but it does require th
 For each comparison operator (LT: less than, LE: less than or equal, EQ: equal, NE: not equal), there are several related opcodes:
 
 - `BR` (branch) opcodes take a short (±127) jump if the comparison is true.
-- - `BRLT_rA_rB_iC` jumps by C (8-bit signed) if R[A] < r[B]
-- - `BRLT_rA_iB_iC` jumps by C (8-bit signed) if R[A] < B (8-bit signed)
+  - `BRLT_rA_rB_iC` jumps by C (8-bit signed) if R[A] < r[B]
+  - `BRLT_rA_iB_iC` jumps by C (8-bit signed) if R[A] < B (8-bit signed)
 - `IF` opcodes execute the next instruction if the comparison is true; otherwise, they skip over it.
-- - `IFLT_rA_rB` skips the next instruction unless R[A] < r[B]
-- - `IFLT_rA_iBC` skips the next instruction unless R[A] < BC (16-bit signed)
+  - `IFLT_rA_rB` skips the next instruction unless R[A] < r[B]
+  - `IFLT_rA_iBC` skips the next instruction unless R[A] < BC (16-bit signed)
 - plain comparison opcodes just like the math opcodes
-- - `LT_rA_rB` computes R[B] < R[C], and stores the result in R[A]
+  - `LT_rA_rB` computes R[B] < R[C], and stores the result in R[A]
+
+For when we have a truth value already in a register (a common situation when compiling `if` statements), there are also:
+
+- `BRTRUE_rA_iBC` jumps ±32767 steps if the register value is truthy
+- `BRFALSE_rA_iBC` jumps ±32767 steps if the register value is falsey
 
 Note that when emitting code, we often don't know whether a branch is going to be ±127 steps or less; we "back-patch" the jump later, once we've found the branch target.  We can accomplish that with these opcodes by first emitting a long branch:
 
