@@ -16,7 +16,7 @@ public static class IOHelper {
 		Console.Write(prompt);
 		return Console.ReadLine() ?? "";
 		//*** END CS_ONLY ***
-		/*** BEGIN CPP_ONLY
+		/*** BEGIN CPP_ONLY ***
 		std::cout << prompt.c_str();
 		char *line = NULL;
 		size_t len = 0;

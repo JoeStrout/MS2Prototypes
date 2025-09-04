@@ -23,6 +23,7 @@ namespace MiniScript {
         public static Byte B(UInt32 instruction) => (Byte)((instruction >> 8) & 0xFF);
         public static Byte C(UInt32 instruction) => (Byte)(instruction & 0xFF);
         public static Int16 BC(UInt32 instruction) => (Int16)(instruction & 0xFFFF);
+        public static UInt16 BCu(UInt32 instruction) => (UInt16)(instruction & 0xFFFF);
 
         // Instruction encoding helpers
         public static UInt32 INS(Opcode op) => (UInt32)((Byte)op << 24);

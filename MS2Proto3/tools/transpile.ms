@@ -30,6 +30,9 @@ Converter.lineNum = 0
 Converter.line = ""
 Converter.addCurly = false
 Converter.csOnly = false  // when true, skip conversion entirely
+Converter.hOnly = false   // when true, output only to hLines
+Converter.cppOnly = false // when true, output only to cppLines
+
 
 Converter.Make = function
 	noob = new self
@@ -96,7 +99,15 @@ Converter.processLine = function(line)
 	else if comment == "//*** END CS_ONLY ***" then
 		self.csOnly = false
 		return
-	else if line == "/*** BEGIN CPP_ONLY" then
+	else if line == "/*** BEGIN H_ONLY ***" then
+		debugPrint "H ONLY MODE!"
+		self.hOnly = true
+		return
+	else if line == "*** END H_ONLY ***/" then
+		debugPrint "H ONLY off"
+		self.hOnly = false
+		return
+	else if line == "/*** BEGIN CPP_ONLY ***" then
 		debugPrint "CPP ONLY MODE!"
 		self.cppOnly = true
 		return
@@ -106,6 +117,13 @@ Converter.processLine = function(line)
 		return
 	end if
 	if self.csOnly then return
+	if self.hOnly then
+		self.hLines.push indentation + line + comment
+		return
+	else if self.cppOnly then
+		self.cppLines.push indentation + line + comment
+		return
+	end if
 
 	// If it's an empty line, or just a comment, then push and we're done
 	if not line then
@@ -424,7 +442,8 @@ end function
 
 Converter.findClassNames = function(sourcePath)
 	for line in file.readLines(sourcePath)
-		m = line.match("≤≥≤scope≥ class ≤class:w≥ {≤≥")
+		m = line.match("≤scope≥ class ≤class:w≥ {≤≥")
+		if not m then m = line.match("≤scope≥ enum ≤class:w≥ : ≤type:w≥ {≤≥")
 		if m then
 			print "Found class: " + m.class + " in: " + sourcePath
 			self.classNames.push m.class
