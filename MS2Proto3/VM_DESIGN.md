@@ -1,10 +1,10 @@
-== Overview
+## Overview
 
 The VM in this prototype is register (rather than stack) based.  Instructions are fixed-width, 32-bit values, with 8 bits for the opcode and 24 bits for the operand(s).
 
-== Registers
+## Registers
 
-== Opcodes and Operands
+## Opcodes and Operands
 
 Our internal opcode names include a verb/mnemonic, and a description of how the three operand bytes (A, B, and C) are used.  This allows us to overload the same verb with different variants that use the operands in different ways, and make it easy to remember what's going on with each one.
 
@@ -27,7 +27,9 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | CALLF_iA_iBC | call funcs[BC] reserving A registers |
 | RETURN | return with result in R[0]
 
-== Assembly Language
+(More opcodes will be added as the prototype develops.)
+
+## Assembly Language
 
 While an official assembly language (or assembler) will probably not be part of MiniScript 2.0, it will be darned handy during development.  So let's define one we can live with for the next year.  To be somewhat easier to read and write than the above opcodes, we'll remove the operand usage codes, and instead use prefixes on the actual operands: "r" for register, "k" for constant, no prefix for a signed integer.  We'll also allow some degree of constant and label lookup by the assembler itself.  Examples:
 
@@ -42,7 +44,7 @@ While an official assembly language (or assembler) will probably not be part of 
 
 This assembly representation is easier to read and write, but it does require the writer to remember which opcode modes are available, as the last example shows.
 
-== Comparison and Branching
+## Comparison and Branching
 
 For each comparison operator (LT: less than, LE: less than or equal, EQ: equal, NE: not equal), there are several related opcodes:
 
@@ -80,6 +82,6 @@ And the NOOP could then be optimized away, making the code shorter.  (All jumps/
 
 Note that all jump/branch targets are relative to the *next* instruction.  So, `JUMP_iABC 0` would do the same as `NOOP`, and `JUMP_iABC -1` would put the machine into a tight infinite loop.
 
-== Function Calls
+## Function Calls
 
 (To-Do.)
