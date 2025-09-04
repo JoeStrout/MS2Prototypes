@@ -56,8 +56,8 @@ For each comparison operator (LT: less than, LE: less than or equal, EQ: equal, 
 - `IF` opcodes execute the next instruction if the comparison is true; otherwise, they skip over it.
   - `IFLT_rA_rB` skips the next instruction unless R[A] < r[B]
   - `IFLT_rA_iBC` skips the next instruction unless R[A] < BC (16-bit signed)
-- plain comparison opcodes just like the math opcodes
-  - `LT_rA_rB` computes R[B] < R[C], and stores the result in R[A]
+- plain comparison opcodes work just like the math opcodes
+  - `LT_rA_rB_rC` computes R[B] < R[C], and stores the result in R[A]
 
 For when we have a truth value already in a register (a common situation when compiling `if` statements), there are also:
 
