@@ -21,8 +21,8 @@
 | LOAD | R_dest | constant | - | Auto-selects LOADK or LOADN based on constant type/size |
 
 The `LOAD` pseudo-opcode automatically chooses the most efficient loading instruction:
-- If the constant is a 16-bit signed integer (-32768 to 32767), compiles as `LOADK`
-- Otherwise (large integers, doubles, strings), compiles as `LOADN`
+- If the constant is a 16-bit signed integer (-32768 to 32767), compiles as `LOADN`
+- Otherwise (large integers, doubles, strings), compiles as `LOADK`
 
 ### Notes on CALLF
 
