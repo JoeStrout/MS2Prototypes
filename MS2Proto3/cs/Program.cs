@@ -6,8 +6,14 @@ using MiniScript;
 // CPP: using namespace MiniScript;
 
 public class Program {
-	public static void Main(String[] args) {
-		// CPP: (void)args;
+	public static void Main(string[] args) {
+		//*** BEGIN CPP_ONLY ***
+		// The args passed to the C# main program do not include the program path.
+		// To get an arg list like what C++ gets, we must do:
+		args = Environment.GetCommandLineArgs();
+		Int32 argCount = args.Length;
+		//*** END CPP_ONLY ***
+		
 		IOHelper.Print("MiniScript 2.0 Prototype 3");
 		IOHelper.Print(
 			"Build: C# version" // CPP: "Build: C++ version"
@@ -19,19 +25,21 @@ public class Program {
 		if (!UnitTests.RunAll()) return;
 		IOHelper.Print("Unit tests complete.");
 		
-		String text = IOHelper.Input("Enter some words: ");
+		IOHelper.Print(StringUtils.Format("Got {0} args", argCount));
+		for (Int32 i=0; i<argCount; i++) {
+			IOHelper.Print(StringUtils.Format("{0}: {1}", i, args[i]));
+		}
 		
-		IOHelper.Print("Splitting...");
-		List<String> words = text.Split(' ').ToList();
-		
-		IOHelper.Print("Reversing...");
-		words.Reverse();
-		
-		IOHelper.Print("Joining...");
-		String reversed = String.Join(" ", words);
-		
-		IOHelper.Print(reversed);
 		IOHelper.Print("All done!");
 	}
 }
 
+/*** BEGIN CPP_ONLY ***
+
+int main(int argc, const char* argv[]) {
+	String* args = new String[argc];
+	for (int i=0; i<argc; i++) args[i] = String(argv[i]);
+	Program::Main(args, argc);
+}
+
+*** END CPP_ONLY ***/

@@ -8,6 +8,10 @@ Use the type names from `System` instead of the shorthand types.  For example, i
 
 Including non-integer types, the full set of types you can use are: `Byte`, `SByte`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Int64`, `UInt64`, `Char`, `Single`, `Double`, `Boolean`, `String`, `List<>`.
 
+## Very limited use of properties
+
+A C# property has code for a getter and/or setter.  The closest C++ equivalent would be an inline method or pair of methods.  This makes transpilation awkward.  So, the C# could should use fields rather than properties wherever possible, and especially avoid properties with setters.
+
 ## Brace placement
 
 - Always put an **opening brace at the end of a line**, never on a line by itself.

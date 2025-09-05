@@ -350,6 +350,9 @@ Converter.tweakSyntax = function(line)
 	// array syntax (especially as seen in parameters)
 	line = line.replace("[] ", " *")
 	
+	// special case of a Main program args: add the count
+	line = line.replace("string *args", "String args[], int argCount")
+	
 	// static class methods (invoked on the class name itself)
 	for cls in self.classNames
 		line = line.replace(cls+".", cls+"::")
@@ -436,14 +439,6 @@ Converter.convertClass = function(sourcePath)
 	self.hLines.push ""
 	self.hLines.push "#endif // " + guardSymbol
 
-	if self.className == "Program" then
-		// main-program boilerplate goes with the program
-		self.cppLines.push ""
-		self.cppLines.push "int main() {"
-		self.cppLines.push TAB + "Program::Main(nullptr);"
-		self.cppLines.push "}"
-	end if
-		
 	outFolder = "generated/"
 	debugPrint "-----------------------------------"
 	debugPrint "HEADER:"

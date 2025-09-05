@@ -16,9 +16,9 @@ Developing and validating this dual-management strategy is an important goal of 
 
 1. ✅ **Main Program Stub**: runs, prints some program info, reads a line from stdin, and prints something about it to stdout.  This is just to get our directory structure and toolchain up and running.
 
-2. **Assembler/Disassembler**: reads a .msa (MiniScript Assembly) file from disk or stdin, and writes a .mso (object) file out; or vice versa.  Note that this does not yet require any `Value`s.  It might (or might not!) require adding a Dictionary type to our core types.
+2. **Assembler/Disassembler**: reads a .msa (MiniScript Assembly) file from disk or stdin, assembles it to bytecode, disassembles the bytecode, and prints to stdout.  Note that this will require some `Value` support, for the constants table.  It might (or might not!) require adding a Dictionary type to our core types.
 
-3. **Minimal VM**: reads a .msa or .mso file, assembling the .msa on the fly, and then executes it.  The VM at this point will support only a handful of opcodes.
+3. **Minimal VM**: reads a .msa file, assembles it, and then executes it.  The VM at this point will support only a handful of opcodes.
 
 4. **Extended VM**: same as above, but with what we believe to be a complete set of opcodes, including calls and captures.
 
