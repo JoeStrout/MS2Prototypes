@@ -7,12 +7,12 @@ using MiniScript;
 
 public class Program {
 	public static void Main(string[] args) {
-		//*** BEGIN CPP_ONLY ***
+		//*** BEGIN CS_ONLY ***
 		// The args passed to the C# main program do not include the program path.
 		// To get an arg list like what C++ gets, we must do:
 		args = Environment.GetCommandLineArgs();
 		Int32 argCount = args.Length;
-		//*** END CPP_ONLY ***
+		//*** END CS_ONLY ***
 		
 		IOHelper.Print("MiniScript 2.0 Prototype 3");
 		IOHelper.Print(
@@ -28,6 +28,38 @@ public class Program {
 		IOHelper.Print(StringUtils.Format("Got {0} args", argCount));
 		for (Int32 i=0; i<argCount; i++) {
 			IOHelper.Print(StringUtils.Format("{0}: {1}", i, args[i]));
+		}
+		
+		// Check for assembly file argument
+		if (argCount > 1) {
+			String filePath = args[1];
+			IOHelper.Print(StringUtils.Format("Reading assembly file: {0}", filePath));
+			
+			List<String> lines = IOHelper.ReadFile(filePath);
+			if (lines.Count == 0) {
+				IOHelper.Print("No lines read from file.");
+				return;
+			}
+			
+			IOHelper.Print(StringUtils.Format("Assembling {0} lines...", lines.Count));
+			Assembler assembler = new Assembler();
+			
+			// Assemble each line
+			for (Int32 i = 0; i < lines.Count; i++) {
+				UInt32 instruction = assembler.AddLine(lines[i]);
+				if (instruction != 0) { // Skip empty lines/comments
+					IOHelper.Print(StringUtils.Format("Line {0}: {1} -> 0x{2}", i, lines[i], StringUtils.ToHex(instruction)));
+				}
+			}
+			
+			IOHelper.Print(StringUtils.Format("Assembly complete. Function has {0} instructions.", assembler.Current.Code.Count));
+			
+			// Disassemble and print the code
+			IOHelper.Print("Disassembly:");
+			List<String> disassembly = Disassembler.Disassemble(assembler.Current, true);
+			for (Int32 i = 0; i < assembler.Current.Code.Count; i++) {
+				IOHelper.Print(disassembly[i]);
+			}
 		}
 		
 		IOHelper.Print("All done!");

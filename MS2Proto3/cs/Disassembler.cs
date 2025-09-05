@@ -96,8 +96,8 @@ namespace MiniScript {
 			for (Int32 i = 0; i < funcDef.Code.Count; i++) {
 				String s = ToString(funcDef.Code[i]);
 				if (detailed) {
-					s = StringUtils.ZeroPad(i, 4) + "   "
-					  + StringUtils.ToHex(funcDef.Code[i]) + "   "
+					s = StringUtils.ZeroPad(i, 4) + ":  "
+					  + StringUtils.ToHex(funcDef.Code[i]) + " | "
 					  + s;
 				}
 				result.Add(s);

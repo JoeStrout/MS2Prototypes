@@ -2,8 +2,11 @@
 //	This is a simple wrapper for console output on each platform.
 
 using System;
+using System.Collections.Generic;
 // CPP: #include <iostream>
 // CPP: #include <stdio.h>
+// CPP: #include <fstream>
+// CPP: #include <string>
 
 public static class IOHelper {
 
@@ -30,6 +33,34 @@ public static class IOHelper {
 		}
 		return result;
 		*** END CPP_ONLY ***/
+	}
+	
+	public static List<String> ReadFile(String filePath) {
+		List<String> lines = new List<String>();
+		//*** BEGIN CS_ONLY ***
+		try {
+			String[] fileLines = System.IO.File.ReadAllLines(filePath);
+			for (Int32 i = 0; i < fileLines.Length; i++) {
+				lines.Add(fileLines[i]);
+			}
+		} catch (Exception e) {
+			Print("Error reading file: " + e.Message);
+		}
+		//*** END CS_ONLY ***
+		/*** BEGIN CPP_ONLY ***
+		std::ifstream file(filePath.c_str());
+		if (!file.is_open()) {
+			Print(String("Error: Could not open file ") + filePath);
+			return lines;
+		}
+		
+		std::string line;
+		while (std::getline(file, line)) {
+			lines.Add(String(line.c_str()));
+		}
+		file.close();
+		*** END CPP_ONLY ***/
+		return lines;
 	}
 	
 }
