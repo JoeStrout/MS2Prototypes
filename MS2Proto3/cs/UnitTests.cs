@@ -70,37 +70,37 @@ namespace MiniScript {
 			if (!tokensOk) return false;
 			
 			// Test instruction assembly
-			Assembler asm = new Assembler();
+			Assembler assem = new Assembler();
 			
 			// Test NOOP
-			Boolean asmOk = AssertEqual(asm.AddLine("NOOP"), 
+			Boolean asmOk = AssertEqual(assem.AddLine("NOOP"), 
 				BytecodeUtil.INS(Opcode.NOOP));
 			
 			// Test LOAD variants
-			asmOk = asmOk && AssertEqual(asm.AddLine("LOAD r5, r3"), 
+			asmOk = asmOk && AssertEqual(assem.AddLine("LOAD r5, r3"), 
 				BytecodeUtil.INS_ABC(Opcode.LOAD_rA_rB, 5, 3, 0));
 			
-			asmOk = asmOk && AssertEqual(asm.AddLine("LOAD r2, 42"), 
+			asmOk = asmOk && AssertEqual(assem.AddLine("LOAD r2, 42"), 
 				BytecodeUtil.INS_AB(Opcode.LOAD_rA_iBC, 2, 42));
 			
-			asmOk = asmOk && AssertEqual(asm.AddLine("LOAD r7, k15"), 
+			asmOk = asmOk && AssertEqual(assem.AddLine("LOAD r7, k15"), 
 				BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, 7, 15));
 			
 			// Test arithmetic
-			asmOk = asmOk && AssertEqual(asm.AddLine("ADD r1, r2, r3"), 
+			asmOk = asmOk && AssertEqual(assem.AddLine("ADD r1, r2, r3"), 
 				BytecodeUtil.INS_ABC(Opcode.ADD_rA_rB_rC, 1, 2, 3));
 			
-			asmOk = asmOk && AssertEqual(asm.AddLine("SUB r4, r5, r6"), 
+			asmOk = asmOk && AssertEqual(assem.AddLine("SUB r4, r5, r6"), 
 				BytecodeUtil.INS_ABC(Opcode.SUB_rA_rB_rC, 4, 5, 6));
 			
 			// Test control flow
-			asmOk = asmOk && AssertEqual(asm.AddLine("JUMP 10"), 
+			asmOk = asmOk && AssertEqual(assem.AddLine("JUMP 10"), 
 				BytecodeUtil.INS(Opcode.JUMP_iABC) | (UInt32)(10 & 0xFFFFFF));
 			
-			asmOk = asmOk && AssertEqual(asm.AddLine("IFLT r8, r9"), 
+			asmOk = asmOk && AssertEqual(assem.AddLine("IFLT r8, r9"), 
 				BytecodeUtil.INS_ABC(Opcode.IFLT_rA_rB, 8, 9, 0));
 			
-			asmOk = asmOk && AssertEqual(asm.AddLine("RETURN"), 
+			asmOk = asmOk && AssertEqual(assem.AddLine("RETURN"), 
 				BytecodeUtil.INS(Opcode.RETURN));
 			
 			return asmOk;

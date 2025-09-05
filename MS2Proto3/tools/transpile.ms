@@ -44,6 +44,9 @@ Converter.match = function(inp, hOut, cppOut)
 	self.m = self.line.match(inp)
 	if not self.m then return false
 	if not self.m.hasIndex("className") then self.m.className = self.className
+	if self.m.hasIndex("params") then
+		self.m.paramNamesOnly = self.removeDefaultValues(self.m.params)
+	end if
 	debugPrint "[" + self.context + "] --> " + inp
 	curly = " {" * self.addCurly
 	if cppOut then
@@ -303,7 +306,7 @@ Converter.processNonmethodLine = function
 	// method declaration
 	if self.match("≤scope:w≥ static ≤rtype:w≥ ≤name:w≥(≤params≥)",
 	  "≤scope≥: static ≤rtype≥ ≤name≥(≤params≥);",
-	  "≤rtype≥ ≤className≥::≤name≥(≤params≥)") then
+	  "≤rtype≥ ≤className≥::≤name≥(≤paramNamesOnly≥)") then
 		self.context = Context.METHOD
 		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
@@ -311,7 +314,7 @@ Converter.processNonmethodLine = function
 
 	if self.match("≤scope:w≥ ≤rtype:w≥ ≤name:w≥(≤params≥)",
 	  "≤scope≥: ≤rtype≥ ≤name≥(≤params≥);",
-	  "≤rtype≥ ≤className≥::≤name≥(≤params≥)") then
+	  "≤rtype≥ ≤className≥::≤name≥(≤paramNamesOnly≥)") then
 	  	if self.m.scope == "static" then return self.fail("scope qualifier required on static method")
 		self.context = Context.METHOD
 		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
@@ -370,6 +373,15 @@ Converter.tweakSyntax = function(line)
 	line = line.replace(".Length", ".Length()")
 		
 	return line
+end function
+
+Converter.removeDefaultValues = function(paramStr)
+	params = paramStr.split(",")
+	for i in params.indexes
+		eqPos = params[i].indexOf("=")
+		if eqPos != null then params[i] = params[i][:eqPos]
+	end for
+	return params.join(",")
 end function
 
 // Converter.enforceCodeStandards: examine the given line for things that a

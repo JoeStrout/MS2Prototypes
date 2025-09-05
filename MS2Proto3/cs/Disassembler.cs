@@ -89,6 +89,21 @@ namespace MiniScript {
 			}
 		}
 	
+		// Disassemble the given function.  If detailed=true, include extra
+		// details for debugging, like line numbers and instruction hex code.
+		public static List<String> Disassemble(FuncDef funcDef, Boolean detailed=true) {
+			List<String> result = new List<String>();
+			for (Int32 i = 0; i < funcDef.Code.Count; i++) {
+				String s = ToString(funcDef.Code[i]);
+				if (detailed) {
+					s = StringUtils.ZeroPad(i, 4) + "   "
+					  + StringUtils.ToHex(funcDef.Code[i]) + "   "
+					  + s;
+				}
+				result.Add(s);
+			}
+			return result;
+		}
 	}
 
 }

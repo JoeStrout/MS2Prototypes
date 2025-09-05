@@ -29,6 +29,17 @@ namespace MiniScript {
 			return new String(hexChars);
 		}
 		
+		public static String ZeroPad(Int32 value, Int32 digits = 5) {
+			return value.ToString("D" + digits.ToString()); // CPP: // set width and fill
+			/*** BEGIN CPP_ONLY ***
+			char format[] = "%05d";
+			format[2] = '0' + digits;
+			char buffer[20];
+			snprintf(buffer, 20, format, value);
+			return String(buffer);
+			*** END CPP_ONLY ***/
+		}
+		
 		public static String Str(List<String> list) {
 			if (list == null) return "null"; // CPP: // (null not possible)
 			if (list.Count == 0) return "[]";
