@@ -135,4 +135,20 @@ StringStorage* defaultStringAllocator(const char* src, int lenB, uint32_t hash) 
     return ss;
 }
 
+void* poolAllocator(size_t size) {
+    // Use pool 0 by default
+    MemRef r = MemPoolManager::alloc(size, 0);
+    return r.isNull() ? nullptr : MemPoolManager::getPtr(r);
+}
+
+void* poolAllocatorForPool(size_t size, uint8_t poolNum) {
+    MemRef r = MemPoolManager::alloc(size, poolNum);
+    return r.isNull() ? nullptr : MemPoolManager::getPtr(r);
+}
+
 } // namespace StringPool
+
+// C-compatible wrapper for the pool allocator
+extern "C" void* stringpool_allocator(size_t size) {
+    return StringPool::poolAllocator(size);
+}

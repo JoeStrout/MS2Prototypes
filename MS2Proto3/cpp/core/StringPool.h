@@ -1,4 +1,7 @@
-// StringPool.h
+// StringPool.h provides a string interning service, as well as a general
+// StringStorage allocator, for the String class (i.e., host strings).  It
+// is built on top of MemPool.
+
 #pragma once
 #include "MemPool.h"
 #include "StringStorage.h"
@@ -31,5 +34,22 @@ const StringStorage* getStorage(uint8_t poolNum, uint16_t idx);
 
 StringStorage* defaultStringAllocator(const char* src, int lenB, uint32_t hash);
 
+// Allocator function compatible with StringStorageAllocator typedef
+// Uses pool 0 by default
+void* poolAllocator(size_t size);
+
+// Pool-specific allocator (can be used with std::bind or similar)
+void* poolAllocatorForPool(size_t size, uint8_t poolNum);
 
 } // namespace StringPool
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// C-compatible allocator function for use in C code
+void* stringpool_allocator(size_t size);
+
+#ifdef __cplusplus
+}
+#endif

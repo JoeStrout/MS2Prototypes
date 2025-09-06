@@ -18,11 +18,11 @@ static uint32_t fnv1a_hash(const char* data, int len) {
 }
 
 // Creation and destruction functions
-StringStorage* ss_create(const char* cstr) {
-    if (!cstr) return NULL;
+StringStorage* ss_create(const char* cstr, StringStorageAllocator allocator) {
+    if (!cstr || !allocator) return NULL;
     
     int len = strlen(cstr);
-    StringStorage* storage = (StringStorage*)malloc(sizeof(StringStorage) + len + 1);
+    StringStorage* storage = (StringStorage*)allocator(sizeof(StringStorage) + len + 1);
     if (!storage) return NULL;
     
     storage->lenB = len;
@@ -33,10 +33,10 @@ StringStorage* ss_create(const char* cstr) {
     return storage;
 }
 
-StringStorage* ss_createWithLength(int byteLen) {
-    if (byteLen < 0) return NULL;
+StringStorage* ss_createWithLength(int byteLen, StringStorageAllocator allocator) {
+    if (byteLen < 0 || !allocator) return NULL;
     
-    StringStorage* storage = (StringStorage*)malloc(sizeof(StringStorage) + byteLen + 1);
+    StringStorage* storage = (StringStorage*)allocator(sizeof(StringStorage) + byteLen + 1);
     if (!storage) return NULL;
     
     storage->lenB = byteLen;
@@ -236,18 +236,18 @@ bool ss_endsWith(const StringStorage* storage, const StringStorage* suffix) {
 }
 
 // String manipulation functions
-StringStorage* ss_substring(const StringStorage* storage, int startIndex) {
-    return ss_substringLen(storage, startIndex, ss_lengthC(storage) - startIndex);
+StringStorage* ss_substring(const StringStorage* storage, int startIndex, StringStorageAllocator allocator) {
+    return ss_substringLen(storage, startIndex, ss_lengthC(storage) - startIndex, allocator);
 }
 
-StringStorage* ss_substringLen(const StringStorage* storage, int startIndex, int length) {
-    if (!storage || startIndex < 0 || length < 0) return NULL;
-    if (startIndex >= ss_lengthC(storage)) return ss_create("");
+StringStorage* ss_substringLen(const StringStorage* storage, int startIndex, int length, StringStorageAllocator allocator) {
+    if (!storage || startIndex < 0 || length < 0 || !allocator) return NULL;
+    if (startIndex >= ss_lengthC(storage)) return ss_create("", allocator);
     
     // Convert character indices to byte indices
     int startByteIndex = UTF8CharIndexToByteIndex(
         (const unsigned char*)storage->data, startIndex, storage->lenB);
-    if (startByteIndex < 0) return ss_create("");
+    if (startByteIndex < 0) return ss_create("", allocator);
     
     int endCharIndex = startIndex + length;
     if (endCharIndex > ss_lengthC(storage)) endCharIndex = ss_lengthC(storage);
@@ -256,9 +256,9 @@ StringStorage* ss_substringLen(const StringStorage* storage, int startIndex, int
     if (endByteIndex < 0) endByteIndex = storage->lenB;
     
     int subLenB = endByteIndex - startByteIndex;
-    if (subLenB <= 0) return ss_create("");
+    if (subLenB <= 0) return ss_create("", allocator);
     
-    StringStorage* result = ss_createWithLength(subLenB);
+    StringStorage* result = ss_createWithLength(subLenB, allocator);
     if (!result) return NULL;
     
     memcpy(result->data, storage->data + startByteIndex, subLenB);
@@ -268,11 +268,11 @@ StringStorage* ss_substringLen(const StringStorage* storage, int startIndex, int
     return result;
 }
 
-StringStorage* ss_concat(const StringStorage* storage, const StringStorage* other) {
-    if (!storage || !other) return NULL;
+StringStorage* ss_concat(const StringStorage* storage, const StringStorage* other, StringStorageAllocator allocator) {
+    if (!storage || !other || !allocator) return NULL;
     
     int totalLen = storage->lenB + other->lenB;
-    StringStorage* result = ss_createWithLength(totalLen);
+    StringStorage* result = ss_createWithLength(totalLen, allocator);
     if (!result) return NULL;
     
     memcpy(result->data, storage->data, storage->lenB);
@@ -283,9 +283,9 @@ StringStorage* ss_concat(const StringStorage* storage, const StringStorage* othe
     return result;
 }
 
-StringStorage* ss_toLower(const StringStorage* storage) {
-    if (!storage) return NULL;
-    StringStorage* result = ss_createWithLength(storage->lenB);
+StringStorage* ss_toLower(const StringStorage* storage, StringStorageAllocator allocator) {
+    if (!storage || !allocator) return NULL;
+    StringStorage* result = ss_createWithLength(storage->lenB, allocator);
     if (!result) return NULL;
     
     for (int i = 0; i < storage->lenB; i++) {
@@ -297,9 +297,9 @@ StringStorage* ss_toLower(const StringStorage* storage) {
     return result;
 }
 
-StringStorage* ss_toUpper(const StringStorage* storage) {
-    if (!storage) return NULL;
-    StringStorage* result = ss_createWithLength(storage->lenB);
+StringStorage* ss_toUpper(const StringStorage* storage, StringStorageAllocator allocator) {
+    if (!storage || !allocator) return NULL;
+    StringStorage* result = ss_createWithLength(storage->lenB, allocator);
     if (!result) return NULL;
     
     for (int i = 0; i < storage->lenB; i++) {
@@ -311,8 +311,9 @@ StringStorage* ss_toUpper(const StringStorage* storage) {
     return result;
 }
 
-StringStorage* ss_trim(const StringStorage* storage) {
-    if (!storage || ss_isEmpty(storage)) return ss_create("");
+StringStorage* ss_trim(const StringStorage* storage, StringStorageAllocator allocator) {
+    if (!storage || ss_isEmpty(storage)) return ss_create("", allocator);
+    if (!allocator) return NULL;
     
     unsigned char* start = (unsigned char*)storage->data;
     unsigned char* end = start + storage->lenB;
@@ -337,10 +338,10 @@ StringStorage* ss_trim(const StringStorage* storage) {
         current = next;
     }
     
-    if (start >= lastNonWhite) return ss_create("");
+    if (start >= lastNonWhite) return ss_create("", allocator);
     
     int trimmedLen = lastNonWhite - start;
-    StringStorage* result = ss_createWithLength(trimmedLen);
+    StringStorage* result = ss_createWithLength(trimmedLen, allocator);
     if (!result) return NULL;
     
     memcpy(result->data, start, trimmedLen);
@@ -350,8 +351,9 @@ StringStorage* ss_trim(const StringStorage* storage) {
     return result;
 }
 
-StringStorage* ss_trimStart(const StringStorage* storage) {
-    if (!storage || ss_isEmpty(storage)) return ss_create("");
+StringStorage* ss_trimStart(const StringStorage* storage, StringStorageAllocator allocator) {
+    if (!storage || ss_isEmpty(storage)) return ss_create("", allocator);
+    if (!allocator) return NULL;
     
     unsigned char* start = (unsigned char*)storage->data;
     unsigned char* end = start + storage->lenB;
@@ -365,9 +367,9 @@ StringStorage* ss_trimStart(const StringStorage* storage) {
     }
     
     int trimmedLen = end - start;
-    if (trimmedLen <= 0) return ss_create("");
+    if (trimmedLen <= 0) return ss_create("", allocator);
     
-    StringStorage* result = ss_createWithLength(trimmedLen);
+    StringStorage* result = ss_createWithLength(trimmedLen, allocator);
     if (!result) return NULL;
     
     memcpy(result->data, start, trimmedLen);
@@ -377,8 +379,9 @@ StringStorage* ss_trimStart(const StringStorage* storage) {
     return result;
 }
 
-StringStorage* ss_trimEnd(const StringStorage* storage) {
-    if (!storage || ss_isEmpty(storage)) return ss_create("");
+StringStorage* ss_trimEnd(const StringStorage* storage, StringStorageAllocator allocator) {
+    if (!storage || ss_isEmpty(storage)) return ss_create("", allocator);
+    if (!allocator) return NULL;
     
     unsigned char* start = (unsigned char*)storage->data;
     unsigned char* end = start + storage->lenB;
@@ -396,9 +399,9 @@ StringStorage* ss_trimEnd(const StringStorage* storage) {
     }
     
     int trimmedLen = lastNonWhite - start;
-    if (trimmedLen <= 0) return ss_create("");
+    if (trimmedLen <= 0) return ss_create("", allocator);
     
-    StringStorage* result = ss_createWithLength(trimmedLen);
+    StringStorage* result = ss_createWithLength(trimmedLen, allocator);
     if (!result) return NULL;
     
     memcpy(result->data, start, trimmedLen);
@@ -423,11 +426,13 @@ bool ss_isNullOrWhiteSpace(const StringStorage* storage) {
     return true;
 }
 
-StringStorage** ss_split(const StringStorage* storage, char separator, int* count) {
+StringStorage** ss_split(const StringStorage* storage, char separator, int* count, StringStorageAllocator allocator) {
     *count = 0;
+    if (!allocator) return NULL;
+    
     if (!storage || ss_isEmpty(storage)) {
         StringStorage** result = (StringStorage**)malloc(sizeof(StringStorage*));
-        result[0] = ss_create("");
+        result[0] = ss_create("", allocator);
         *count = 1;
         return result;
     }
@@ -449,7 +454,7 @@ StringStorage** ss_split(const StringStorage* storage, char separator, int* coun
     for (int i = 0; i <= storage->lenB; i++) {
         if (i == storage->lenB || storage->data[i] == separator) {
             int tokenLen = i - start;
-            StringStorage* token = ss_createWithLength(tokenLen);
+            StringStorage* token = ss_createWithLength(tokenLen, allocator);
             if (token) {
                 memcpy(token->data, storage->data + start, tokenLen);
                 token->lenC = -1;  // Compute lazily when needed
@@ -477,38 +482,38 @@ void ss_ensureHashComputed(StringStorage* storage) {
 }
 
 // Not yet implemented - more complex methods
-StringStorage* ss_insert(const StringStorage* storage, int startIndex, const StringStorage* value) {
+StringStorage* ss_insert(const StringStorage* storage, int startIndex, const StringStorage* value, StringStorageAllocator allocator) {
     // TODO: Implement
-    (void)storage; (void)startIndex; (void)value;
+    (void)storage; (void)startIndex; (void)value; (void)allocator;
     return NULL;
 }
 
-StringStorage* ss_remove(const StringStorage* storage, int startIndex) {
+StringStorage* ss_remove(const StringStorage* storage, int startIndex, StringStorageAllocator allocator) {
     // TODO: Implement
-    (void)storage; (void)startIndex;
+    (void)storage; (void)startIndex; (void)allocator;
     return NULL;
 }
 
-StringStorage* ss_removeLen(const StringStorage* storage, int startIndex, int count) {
+StringStorage* ss_removeLen(const StringStorage* storage, int startIndex, int count, StringStorageAllocator allocator) {
     // TODO: Implement
-    (void)storage; (void)startIndex; (void)count;
+    (void)storage; (void)startIndex; (void)count; (void)allocator;
     return NULL;
 }
 
-StringStorage* ss_replace(const StringStorage* storage, const StringStorage* oldValue, const StringStorage* newValue) {
+StringStorage* ss_replace(const StringStorage* storage, const StringStorage* oldValue, const StringStorage* newValue, StringStorageAllocator allocator) {
     // TODO: Implement
-    (void)storage; (void)oldValue; (void)newValue;
+    (void)storage; (void)oldValue; (void)newValue; (void)allocator;
     return NULL;
 }
 
-StringStorage* ss_replaceChar(const StringStorage* storage, char oldChar, char newChar) {
+StringStorage* ss_replaceChar(const StringStorage* storage, char oldChar, char newChar, StringStorageAllocator allocator) {
     // TODO: Implement
-    (void)storage; (void)oldChar; (void)newChar;
+    (void)storage; (void)oldChar; (void)newChar; (void)allocator;
     return NULL;
 }
 
-StringStorage** ss_splitStr(const StringStorage* storage, const StringStorage* separator, int* count) {
+StringStorage** ss_splitStr(const StringStorage* storage, const StringStorage* separator, int* count, StringStorageAllocator allocator) {
     // TODO: Implement
-    (void)storage; (void)separator; (void)count;
+    (void)storage; (void)separator; (void)count; (void)allocator;
     return NULL;
 }

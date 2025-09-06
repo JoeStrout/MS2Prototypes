@@ -1,11 +1,13 @@
+// List implementation for NaN-boxed Values.  I.e., this is the underlying
+// implementation of MiniScript lists.  All memory management is done via
+// the gc module.
+
 #ifndef LISTS_H
 #define LISTS_H
 
 #include "nanbox.h"
 #include <stdbool.h>
 
-// List implementation for NaN-boxed Values
-// Dynamic arrays with automatic capacity management
 
 // List structure
 typedef struct {

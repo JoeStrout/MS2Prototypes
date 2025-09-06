@@ -1,3 +1,13 @@
+// MemPool -- a memory management system for "host" code, e.g. the
+// compiler, assembler, disassembler, main program, and anything else
+// outside of the actual MiniScript runtime and VM.
+//
+// The basic idea is: allocations happen within a "pool" (0-255), and are
+// never released, until the whole pool is explicitly drained (released)
+// at once.  So for example, when we go to compile a file, we might switch
+// to a pool for that process, and then drain it after compilation is 
+// complete.
+
 #pragma once
 #include <cstdint>
 #include <cstdlib>

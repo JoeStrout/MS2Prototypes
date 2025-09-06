@@ -1,3 +1,10 @@
+// This header defines the String class, which is our equivalent of
+// a C# String, and is used with C++ code transpiled from C#.
+// It uses a MemPool for all its memory allocations.
+//
+// (Called ms_string.h because String.h conflicts with a standard 
+// C++ library header.)
+
 #pragma once
 #include <cstdint>
 #include <cstring>
@@ -76,7 +83,7 @@ public:
         const StringStorage* s2 = other.getStorage();
         if (!s1 || !s2) return String();
         
-        StringStorage* result = ss_concat(s1, s2);
+        StringStorage* result = ss_concat(s1, s2, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -176,7 +183,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_substring(s, startIndex);
+        StringStorage* result = ss_substring(s, startIndex, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -184,7 +191,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_substringLen(s, startIndex, length);
+        StringStorage* result = ss_substringLen(s, startIndex, length, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -203,7 +210,7 @@ public:
         const StringStorage* v = value.getStorage();
         if (!s || !v) return String();
         
-        StringStorage* result = ss_insert(s, startIndex, v);
+        StringStorage* result = ss_insert(s, startIndex, v, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -211,7 +218,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_remove(s, startIndex);
+        StringStorage* result = ss_remove(s, startIndex, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -219,7 +226,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_removeLen(s, startIndex, count);
+        StringStorage* result = ss_removeLen(s, startIndex, count, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -229,7 +236,7 @@ public:
         const StringStorage* newVal = newValue.getStorage();
         if (!s || !oldVal || !newVal) return String();
         
-        StringStorage* result = ss_replace(s, oldVal, newVal);
+        StringStorage* result = ss_replace(s, oldVal, newVal, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -237,7 +244,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_replaceChar(s, oldChar, newChar);
+        StringStorage* result = ss_replaceChar(s, oldChar, newChar, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -246,7 +253,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_toLower(s);
+        StringStorage* result = ss_toLower(s, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -254,7 +261,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_toUpper(s);
+        StringStorage* result = ss_toUpper(s, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -263,7 +270,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_trim(s);
+        StringStorage* result = ss_trim(s, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -271,7 +278,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_trimStart(s);
+        StringStorage* result = ss_trimStart(s, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -279,7 +286,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_trimEnd(s);
+        StringStorage* result = ss_trimEnd(s, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
     }
     
@@ -291,7 +298,7 @@ public:
             return nullptr;
         }
         
-        StringStorage** parts = ss_split(s, separator, count);
+        StringStorage** parts = ss_split(s, separator, count, StringPool::poolAllocator);
         if (!parts) return nullptr;
         
         String* result = (String*)malloc(*count * sizeof(String));
@@ -311,7 +318,7 @@ public:
             return nullptr;
         }
         
-        StringStorage** parts = ss_splitStr(s, sep, count);
+        StringStorage** parts = ss_splitStr(s, sep, count, StringPool::poolAllocator);
         if (!parts) return nullptr;
         
         String* result = (String*)malloc(*count * sizeof(String));
@@ -330,7 +337,7 @@ public:
         if (!s) return result;
         
         int count = 0;
-        StringStorage** parts = ss_split(s, separator, &count);
+        StringStorage** parts = ss_split(s, separator, &count, StringPool::poolAllocator);
         if (!parts) return result;
         
         // Add all parts to the list
@@ -350,7 +357,7 @@ public:
         if (!s || !sep) return result;
         
         int count = 0;
-        StringStorage** parts = ss_splitStr(s, sep, &count);
+        StringStorage** parts = ss_splitStr(s, sep, &count, StringPool::poolAllocator);
         if (!parts) return result;
         
         // Add all parts to the list

@@ -1,3 +1,7 @@
+// String implementation for NaN-boxed Values.
+// Supports both tiny strings (≤5 chars) and heap strings with interning.
+// Uses GC-managed StringStorage for heap-allocated strings.
+
 #ifndef STRINGS_H
 #define STRINGS_H
 
@@ -9,9 +13,6 @@
 extern "C" {
 #endif
 
-// String implementation for NaN-boxed Values
-// Supports both tiny strings (≤5 chars) and heap strings with interning
-// Uses StringStorage for heap-allocated strings
 
 // String creation
 Value make_string(const char* str);

@@ -1,3 +1,4 @@
+// Includes and type definitions needed by all our transpiled C# --> C++ files.
 #ifndef CORE_INCLUDES_H
 #define CORE_INCLUDES_H
 

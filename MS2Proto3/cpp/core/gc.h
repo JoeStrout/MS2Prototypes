@@ -1,11 +1,15 @@
+// Shadow stack garbage collector for NaN-boxed Values (defined in 
+// nanbox.h/.c).  Garbage collection may happen on allocation attempts
+// (unless disabled with gc_disable()), or explicitly via gc_collect().
+// To keep objects referenced by local Value variables from being
+// prematurely collected, use the GC_PROTECT macro, within a block
+// bracketed by GC_PUSH_SCOPE/GC_POP_SCOPE.  See GC_USAGE.md for details.
+
 #ifndef GC_H
 #define GC_H
 
 #include "nanbox.h"
 #include <stddef.h>
-
-// Shadow stack garbage collector for NaN-boxed Values
-// Uses explicit root set management for precise collection
 
 // Initialize/shutdown the garbage collector
 void gc_init(void);

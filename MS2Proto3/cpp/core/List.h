@@ -1,3 +1,7 @@
+// This is our List template used with transpiled C# --> C++ code.
+// It matches the API and behavior of System.Collections.Generic.List
+// as well as possible.  Memory management is done via MemPool.
+
 #pragma once
 #include "MemPool.h"
 #include <type_traits>

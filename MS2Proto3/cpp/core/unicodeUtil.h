@@ -1,3 +1,5 @@
+// Functions for working with Unicode text in UTF-8 format.
+
 #ifndef UNICODEUTIL_H
 #define UNICODEUTIL_H
 
@@ -8,8 +10,6 @@
 extern "C" {
 #endif
 
-// UTF-8 utility functions adapted from MiniScript's UnicodeUtil
-// All functions work with UTF-8 encoding only
 
 // IsUTF8IntraChar
 //

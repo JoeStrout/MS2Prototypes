@@ -1,8 +1,3 @@
-// lists.c
-//
-// List implementation for NaN-boxed Values
-// Dynamic arrays with automatic capacity management
-
 #include "lists.h"
 #include "nanbox.h"
 #include "gc.h"

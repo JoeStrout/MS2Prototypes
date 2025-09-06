@@ -230,8 +230,8 @@ Value make_string_interned(const char* str) {
             return existing;
         }
         
-        // Create new interned string with malloc (not GC'd - immortal by design)
-        StringStorage* s = ss_create(str);
+        // Create new interned string with pool allocator (not GC'd - immortal by design)
+        StringStorage* s = ss_create(str, stringpool_allocator);
         s->hash = hash;  // Store computed hash
         Value new_string = STRING_MASK | ((uintptr_t)s & 0xFFFFFFFFFFFFULL);
         
