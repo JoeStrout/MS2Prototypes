@@ -1,93 +1,91 @@
 #pragma once
-#include <cstdint>
-#include "unicodeUtil.h"
+#include <stdint.h>
+#include <stdbool.h>
 
-// Forward declarations
-struct StringStorage;
-typedef StringStorage* (*StringStorageAllocator)(const char* source, int byteLen, uint32_t hash);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "unicodeUtil.h"
 
 // Core string storage structure (heap-allocated)
 // This structure and its associated functions are completely independent 
 // of any string class or pool management
-struct StringStorage {
+typedef struct StringStorage {
     int lenB;           // Length in bytes
     int lenC;           // Length in characters (UTF-8)
     uint32_t hash;      // String hash for fast comparison
     char data[];        // Flexible array member for string data
-    
-    // Public static allocator - can be changed by user
-    static StringStorageAllocator allocator;
-    
-    // Create a new StringStorage from a C string
-    static StringStorage* create(const char* cstr);
-    
-    // Create a new StringStorage with specified length (data uninitialized)
-    static StringStorage* createWithLength(int byteLen);
-    
-    // Destroy a StringStorage (free memory)
-    static void destroy(StringStorage* storage);
-    
-    // Get C string pointer (data is always null-terminated)
-    const char* getCString() const { return data; }
-    
-    // Basic properties
-    int lengthB() const { return lenB; }
-    int lengthC() const { return lenC; }
-    bool isEmpty() const { return lenB == 0; }
-    
-    // Character access (byte-based indexing)
-    char charAt(int byteIndex) const;
-    
-    // Comparison
-    bool equals(const StringStorage* other) const;
-    int compare(const StringStorage* other) const;
-    bool equalsIgnoreCase(const StringStorage* other) const;
-    int compareIgnoreCase(const StringStorage* other) const;
-    
-    // Search methods
-    int indexOf(const StringStorage* needle) const;
-    int indexOf(const StringStorage* needle, int startIndex) const;
-    int indexOf(char ch) const;
-    int indexOf(char ch, int startIndex) const;
-    int lastIndexOf(const StringStorage* needle) const;
-    int lastIndexOf(char ch) const;
-    bool contains(const StringStorage* needle) const;
-    bool startsWith(const StringStorage* prefix) const;
-    bool endsWith(const StringStorage* suffix) const;
-    
-    // String manipulation (returns new StringStorage instances)
-    StringStorage* substring(int startIndex) const;
-    StringStorage* substring(int startIndex, int length) const;
-    StringStorage* concat(const StringStorage* other) const;
-    StringStorage* insert(int startIndex, const StringStorage* value) const;
-    StringStorage* remove(int startIndex) const;
-    StringStorage* remove(int startIndex, int count) const;
-    StringStorage* replace(const StringStorage* oldValue, const StringStorage* newValue) const;
-    StringStorage* replace(char oldChar, char newChar) const;
-    
-    // Case conversion (ASCII only)
-    StringStorage* toLower() const;
-    StringStorage* toUpper() const;
-    
-    // Trimming (Unicode-aware)
-    StringStorage* trim() const;
-    StringStorage* trimStart() const;
-    StringStorage* trimEnd() const;
-    
-    // Whitespace checking (Unicode-aware)
-    bool isNullOrWhiteSpace() const;
-    
-    // Splitting (caller must free returned array and its contents)
-    StringStorage** split(char separator, int* count) const;
-    StringStorage** split(const StringStorage* separator, int* count) const;
-    
-    // Hash computation
-    uint32_t computeHash() const;
-    void ensureHashComputed();
-    
-private:
-    // Helper methods for internal use
-    static int utf8CharCount(const char* str, int byteLen);
-    static char asciiToLower(char c);
-    static char asciiToUpper(char c);
-};
+} StringStorage;
+
+// Core StringStorage functions (ss_ prefix for "string storage")
+
+// Creation and destruction
+StringStorage* ss_create(const char* cstr);
+StringStorage* ss_createWithLength(int byteLen);
+void ss_destroy(StringStorage* storage);
+
+// Basic accessors
+const char* ss_getCString(const StringStorage* storage);
+int ss_lengthB(const StringStorage* storage);
+int ss_lengthC(const StringStorage* storage);
+bool ss_isEmpty(const StringStorage* storage);
+
+// Character access (byte-based indexing)
+char ss_charAt(const StringStorage* storage, int byteIndex);
+
+// Comparison
+bool ss_equals(const StringStorage* storage, const StringStorage* other);
+int ss_compare(const StringStorage* storage, const StringStorage* other);
+bool ss_equalsIgnoreCase(const StringStorage* storage, const StringStorage* other);
+int ss_compareIgnoreCase(const StringStorage* storage, const StringStorage* other);
+
+// Search methods
+int ss_indexOf(const StringStorage* storage, const StringStorage* needle);
+int ss_indexOfFrom(const StringStorage* storage, const StringStorage* needle, int startIndex);
+int ss_indexOfChar(const StringStorage* storage, char ch);
+int ss_indexOfCharFrom(const StringStorage* storage, char ch, int startIndex);
+int ss_lastIndexOf(const StringStorage* storage, const StringStorage* needle);
+int ss_lastIndexOfChar(const StringStorage* storage, char ch);
+bool ss_contains(const StringStorage* storage, const StringStorage* needle);
+bool ss_startsWith(const StringStorage* storage, const StringStorage* prefix);
+bool ss_endsWith(const StringStorage* storage, const StringStorage* suffix);
+
+// String manipulation (returns new StringStorage instances)
+StringStorage* ss_substring(const StringStorage* storage, int startIndex);
+StringStorage* ss_substringLen(const StringStorage* storage, int startIndex, int length);
+StringStorage* ss_concat(const StringStorage* storage, const StringStorage* other);
+StringStorage* ss_insert(const StringStorage* storage, int startIndex, const StringStorage* value);
+StringStorage* ss_remove(const StringStorage* storage, int startIndex);
+StringStorage* ss_removeLen(const StringStorage* storage, int startIndex, int count);
+StringStorage* ss_replace(const StringStorage* storage, const StringStorage* oldValue, const StringStorage* newValue);
+StringStorage* ss_replaceChar(const StringStorage* storage, char oldChar, char newChar);
+
+// Case conversion (ASCII only)
+StringStorage* ss_toLower(const StringStorage* storage);
+StringStorage* ss_toUpper(const StringStorage* storage);
+
+// Trimming (Unicode-aware)
+StringStorage* ss_trim(const StringStorage* storage);
+StringStorage* ss_trimStart(const StringStorage* storage);
+StringStorage* ss_trimEnd(const StringStorage* storage);
+
+// Whitespace checking (Unicode-aware)
+bool ss_isNullOrWhiteSpace(const StringStorage* storage);
+
+// Splitting (caller must free returned array and its contents)
+StringStorage** ss_split(const StringStorage* storage, char separator, int* count);
+StringStorage** ss_splitStr(const StringStorage* storage, const StringStorage* separator, int* count);
+
+// Hash computation
+uint32_t ss_computeHash(const StringStorage* storage);
+void ss_ensureHashComputed(StringStorage* storage);
+
+// Internal helper functions
+int ss_utf8CharCount(const char* str, int byteLen);
+char ss_asciiToLower(char c);
+char ss_asciiToUpper(char c);
+
+#ifdef __cplusplus
+}
+#endif

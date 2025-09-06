@@ -18,8 +18,8 @@ private:
     // Helper to create String from StringStorage (takes ownership)
     static String fromStorage(StringStorage* storage, uint8_t pool = 0) {
         if (!storage) return String();
-        uint16_t idx = StringPool::internString(pool, storage->getCString());
-        StringStorage::destroy(storage);  // Clean up temporary storage
+        uint16_t idx = StringPool::internString(pool, ss_getCString(storage));
+        ss_destroy(storage);  // Clean up temporary storage
         return String(pool, idx);
     }
     
@@ -58,12 +58,12 @@ public:
     // Basic operations (inline wrappers)
     int lengthB() const { 
         const StringStorage* s = getStorage(); 
-        return s ? s->lengthB() : 0; 
+        return ss_lengthB(s);
     }
     
     int lengthC() const { 
         const StringStorage* s = getStorage(); 
-        return s ? s->lengthC() : 0; 
+        return ss_lengthC(s);
     }
     
     const char* c_str() const { 
@@ -76,7 +76,7 @@ public:
         const StringStorage* s2 = other.getStorage();
         if (!s1 || !s2) return String();
         
-        StringStorage* result = s1->concat(s2);
+        StringStorage* result = ss_concat(s1, s2);
         return fromStorage(result, poolNum);
     }
     
@@ -88,7 +88,7 @@ public:
         const StringStorage* s2 = other.getStorage();
         if (!s1 || !s2) return false;
         
-        return s1->equals(s2);
+        return ss_equals(s1, s2);
     }
     
     bool operator!=(const String& other) const { return !(*this == other); }
@@ -116,59 +116,59 @@ public:
     // C# String API - Character access
     char operator[](int index) const {
         const StringStorage* s = getStorage();
-        return s ? s->charAt(index) : '\0';
+        return ss_charAt(s, index);
     }
     
     // C# String API - Search methods
     int IndexOf(const String& value) const {
         const StringStorage* s = getStorage();
         const StringStorage* needle = value.getStorage();
-        return (s && needle) ? s->indexOf(needle) : -1;
+        return (s && needle) ? ss_indexOf(s, needle) : -1;
     }
     
     int IndexOf(const String& value, int startIndex) const {
         const StringStorage* s = getStorage();
         const StringStorage* needle = value.getStorage();
-        return (s && needle) ? s->indexOf(needle, startIndex) : -1;
+        return (s && needle) ? ss_indexOfFrom(s, needle, startIndex) : -1;
     }
     
     int IndexOf(char value) const {
         const StringStorage* s = getStorage();
-        return s ? s->indexOf(value) : -1;
+        return ss_indexOfChar(s, value);
     }
     
     int IndexOf(char value, int startIndex) const {
         const StringStorage* s = getStorage();
-        return s ? s->indexOf(value, startIndex) : -1;
+        return ss_indexOfCharFrom(s, value, startIndex);
     }
     
     int LastIndexOf(const String& value) const {
         const StringStorage* s = getStorage();
         const StringStorage* needle = value.getStorage();
-        return (s && needle) ? s->lastIndexOf(needle) : -1;
+        return (s && needle) ? ss_lastIndexOf(s, needle) : -1;
     }
     
     int LastIndexOf(char value) const {
         const StringStorage* s = getStorage();
-        return s ? s->lastIndexOf(value) : -1;
+        return ss_lastIndexOfChar(s, value);
     }
     
     bool Contains(const String& value) const {
         const StringStorage* s = getStorage();
         const StringStorage* needle = value.getStorage();
-        return (s && needle) ? s->contains(needle) : false;
+        return (s && needle) ? ss_contains(s, needle) : false;
     }
     
     bool StartsWith(const String& value) const {
         const StringStorage* s = getStorage();
         const StringStorage* prefix = value.getStorage();
-        return (s && prefix) ? s->startsWith(prefix) : false;
+        return (s && prefix) ? ss_startsWith(s, prefix) : false;
     }
     
     bool EndsWith(const String& value) const {
         const StringStorage* s = getStorage();
         const StringStorage* suffix = value.getStorage();
-        return (s && suffix) ? s->endsWith(suffix) : false;
+        return (s && suffix) ? ss_endsWith(s, suffix) : false;
     }
     
     // C# String API - Manipulation methods
@@ -176,7 +176,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = s->substring(startIndex);
+        StringStorage* result = ss_substring(s, startIndex);
         return fromStorage(result, poolNum);
     }
     
@@ -184,7 +184,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = s->substring(startIndex, length);
+        StringStorage* result = ss_substringLen(s, startIndex, length);
         return fromStorage(result, poolNum);
     }
     
@@ -203,7 +203,7 @@ public:
         const StringStorage* v = value.getStorage();
         if (!s || !v) return String();
         
-        StringStorage* result = s->insert(startIndex, v);
+        StringStorage* result = ss_insert(s, startIndex, v);
         return fromStorage(result, poolNum);
     }
     
@@ -211,7 +211,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = s->remove(startIndex);
+        StringStorage* result = ss_remove(s, startIndex);
         return fromStorage(result, poolNum);
     }
     
@@ -219,7 +219,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = s->remove(startIndex, count);
+        StringStorage* result = ss_removeLen(s, startIndex, count);
         return fromStorage(result, poolNum);
     }
     
@@ -229,7 +229,7 @@ public:
         const StringStorage* newVal = newValue.getStorage();
         if (!s || !oldVal || !newVal) return String();
         
-        StringStorage* result = s->replace(oldVal, newVal);
+        StringStorage* result = ss_replace(s, oldVal, newVal);
         return fromStorage(result, poolNum);
     }
     
@@ -237,7 +237,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = s->replace(oldChar, newChar);
+        StringStorage* result = ss_replaceChar(s, oldChar, newChar);
         return fromStorage(result, poolNum);
     }
     
@@ -246,7 +246,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = s->toLower();
+        StringStorage* result = ss_toLower(s);
         return fromStorage(result, poolNum);
     }
     
@@ -254,7 +254,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = s->toUpper();
+        StringStorage* result = ss_toUpper(s);
         return fromStorage(result, poolNum);
     }
     
@@ -263,7 +263,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = s->trim();
+        StringStorage* result = ss_trim(s);
         return fromStorage(result, poolNum);
     }
     
@@ -271,7 +271,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = s->trimStart();
+        StringStorage* result = ss_trimStart(s);
         return fromStorage(result, poolNum);
     }
     
@@ -279,7 +279,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = s->trimEnd();
+        StringStorage* result = ss_trimEnd(s);
         return fromStorage(result, poolNum);
     }
     
@@ -291,7 +291,7 @@ public:
             return nullptr;
         }
         
-        StringStorage** parts = s->split(separator, count);
+        StringStorage** parts = ss_split(s, separator, count);
         if (!parts) return nullptr;
         
         String* result = (String*)malloc(*count * sizeof(String));
@@ -311,7 +311,7 @@ public:
             return nullptr;
         }
         
-        StringStorage** parts = s->split(sep, count);
+        StringStorage** parts = ss_splitStr(s, sep, count);
         if (!parts) return nullptr;
         
         String* result = (String*)malloc(*count * sizeof(String));
@@ -330,7 +330,7 @@ public:
         if (!s) return result;
         
         int count = 0;
-        StringStorage** parts = s->split(separator, &count);
+        StringStorage** parts = ss_split(s, separator, &count);
         if (!parts) return result;
         
         // Add all parts to the list
@@ -350,7 +350,7 @@ public:
         if (!s || !sep) return result;
         
         int count = 0;
-        StringStorage** parts = s->split(sep, &count);
+        StringStorage** parts = ss_splitStr(s, sep, &count);
         if (!parts) return result;
         
         // Add all parts to the list
@@ -368,7 +368,7 @@ public:
     
     bool IsNullOrWhiteSpace() const {
         const StringStorage* s = getStorage();
-        return s ? s->isNullOrWhiteSpace() : true;
+        return ss_isNullOrWhiteSpace(s);
     }
     
     // C# String API - Comparison (case-insensitive)
@@ -377,7 +377,7 @@ public:
     bool EqualsIgnoreCase(const String& other) const {
         const StringStorage* s1 = getStorage();
         const StringStorage* s2 = other.getStorage();
-        return (s1 && s2) ? s1->equalsIgnoreCase(s2) : false;
+        return (s1 && s2) ? ss_equalsIgnoreCase(s1, s2) : false;
     }
     
     int Compare(const String& other) const {
@@ -386,7 +386,7 @@ public:
         if (!s1 && !s2) return 0;
         if (!s1) return -1;
         if (!s2) return 1;
-        return s1->compare(s2);
+        return ss_compare(s1, s2);
     }
     
     int CompareIgnoreCase(const String& other) const {
@@ -395,7 +395,7 @@ public:
         if (!s1 && !s2) return 0;
         if (!s1) return -1;
         if (!s2) return 1;
-        return s1->compareIgnoreCase(s2);
+        return ss_compareIgnoreCase(s1, s2);
     }
     
     // C# String API - Static methods (Join)
@@ -406,12 +406,12 @@ public:
         // Calculate total length needed
         int totalLength = 0;
         const StringStorage* sepStorage = separator.getStorage();
-        int sepLength = sepStorage ? sepStorage->lengthB() : 0;
+        int sepLength = sepStorage ? ss_lengthB(sepStorage) : 0;
         
         for (int i = 0; i < count; i++) {
             const StringStorage* valueStorage = values[i].getStorage();
             if (valueStorage) {
-                totalLength += valueStorage->lengthB();
+                totalLength += ss_lengthB(valueStorage);
             }
         }
         totalLength += sepLength * (count - 1); // separators between elements
@@ -423,7 +423,7 @@ public:
         if (!result) return String();
         
         int pos = 0;
-        const char* sepCStr = sepStorage ? sepStorage->getCString() : "";
+        const char* sepCStr = sepStorage ? ss_getCString(sepStorage) : "";
         
         for (int i = 0; i < count; i++) {
             if (i > 0 && sepLength > 0) {
@@ -433,8 +433,8 @@ public:
             
             const StringStorage* valueStorage = values[i].getStorage();
             if (valueStorage) {
-                const char* valueCStr = valueStorage->getCString();
-                int valueLength = valueStorage->lengthB();
+                const char* valueCStr = ss_getCString(valueStorage);
+                int valueLength = ss_lengthB(valueStorage);
                 strcpy(result + pos, valueCStr);
                 pos += valueLength;
             }
@@ -456,12 +456,12 @@ public:
         // Calculate total length needed
         int totalLength = 0;
         const StringStorage* sepStorage = separator.getStorage();
-        int sepLength = sepStorage ? sepStorage->lengthB() : 0;
+        int sepLength = sepStorage ? ss_lengthB(sepStorage) : 0;
         
         for (int i = 0; i < count; i++) {
             const StringStorage* valueStorage = values[i].getStorage();
             if (valueStorage) {
-                totalLength += valueStorage->lengthB();
+                totalLength += ss_lengthB(valueStorage);
             }
         }
         totalLength += sepLength * (count - 1); // separators between elements
@@ -473,7 +473,7 @@ public:
         if (!result) return String();
         
         int pos = 0;
-        const char* sepCStr = sepStorage ? sepStorage->getCString() : "";
+        const char* sepCStr = sepStorage ? ss_getCString(sepStorage) : "";
         
         for (int i = 0; i < count; i++) {
             if (i > 0 && sepLength > 0) {
@@ -483,8 +483,8 @@ public:
             
             const StringStorage* valueStorage = values[i].getStorage();
             if (valueStorage) {
-                const char* valueCStr = valueStorage->getCString();
-                int valueLength = valueStorage->lengthB();
+                const char* valueCStr = ss_getCString(valueStorage);
+                int valueLength = ss_lengthB(valueStorage);
                 strcpy(result + pos, valueCStr);
                 pos += valueLength;
             }
