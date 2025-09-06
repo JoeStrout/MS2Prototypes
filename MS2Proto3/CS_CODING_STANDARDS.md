@@ -18,6 +18,37 @@ A C# property has code for a getter and/or setter.  The closest C++ equivalent w
 
 - Put a **close brace at the start of a line**.  It will usually be the *only* thing on that line, except for something like `} else {` or in a `switch` statement, `} break;`.
 
+## No indented blocks without braces
+
+Never, _ever_ do something like this:
+
+```
+        if (Value.Equal(_items[i], item)) 
+            return i;
+```
+
+Nor this:
+
+```
+        for (int i = 0; i < s.Length; i++)
+            parts[i] = s[i].ToString();
+```
+
+This is evil and dangerous in any C-derived language.  Either put it all on one line, or use proper curly braces.  Do this:
+
+```
+        if (Value.Equal(_items[i], item)) return i;
+```
+
+Or do this:
+
+```
+        for (int i = 0; i < s.Length; i++) {
+            parts[i] = s[i].ToString();
+        }
+```
+
+
 ## Other limitations
 
 - The `switch` statement may only be used with integer types (including enums).  For Strings or other custom types, use `if` statements instead.

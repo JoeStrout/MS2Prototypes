@@ -1,8 +1,6 @@
 #ifndef CORE_INCLUDES_H
 #define CORE_INCLUDES_H
 
-struct Value;
-
 #include "List.h"
 #include "ms_string.h"
 

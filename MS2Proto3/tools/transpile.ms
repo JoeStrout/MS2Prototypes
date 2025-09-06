@@ -419,7 +419,6 @@ end function
 
 Converter.convertClass = function(sourcePath)
 	fileNameBase = file.name(sourcePath) - ".cs"
-	print "≤fileNameBase≥.cs --> ≤fileNameBase≥.h/.cpp".fill(locals)
 	
 	guardSymbol = ("__" + file.name(sourcePath) - ".cs" + "_H").upper
 	self.hLines = ["#ifndef " + guardSymbol, "#define " + guardSymbol, ""]
@@ -428,6 +427,9 @@ Converter.convertClass = function(sourcePath)
 	self.filename = file.name(sourcePath)
 	self.lineNum = 0
 	self.failed = false
+	self.csOnly = false
+	self.hOnly = false
+	self.cppOnly = false
 
 	for line in file.readLines(sourcePath)
 		self.lineNum += 1
@@ -435,6 +437,12 @@ Converter.convertClass = function(sourcePath)
 		self.processLine line
 		if self.failed then return
 	end for
+
+	if self.hLines.len <= 3 and not self.cppLines then
+		print fileNameBase + ".cs: skipped (C# only)"
+		return
+	end if
+	print "≤fileNameBase≥.cs --> ≤fileNameBase≥.h/.cpp".fill(locals)
 
 	self.hLines.push ""
 	self.hLines.push "#endif // " + guardSymbol

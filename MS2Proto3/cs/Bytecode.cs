@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+// CPP: #include "nanbox.h"
 
 namespace MiniScript {
 	// Opcodes.  Note that these must have sequential values, starting at 0.
@@ -88,7 +89,7 @@ namespace MiniScript {
 	// Function definition: code, constants, and how many registers it needs
 	public class FuncDef {
 		public List<UInt32> Code = new List<UInt32>();
-		public List<Int32> Constants = new List<Int32>(); // ToDo: use Value instead
+		public List<Value> Constants = new List<Value>();
 		public UInt16 MaxRegs = 0; // frame reservation size
 	}
 

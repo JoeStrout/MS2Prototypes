@@ -1,6 +1,6 @@
 #include "../../include/assembler/assembler.h"
 #include "../../include/vm/vm.h"
-#include "../../include/types/gc.h"
+#include "gc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

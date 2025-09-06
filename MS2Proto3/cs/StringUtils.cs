@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 // CPP: #include "IOHelper.g.h"
+// CPP: #include "strings.h"
 // CPP: #include <sstream>
 // CPP: #include <cctype>
 
@@ -113,6 +114,19 @@ namespace MiniScript {
 		inline static String makeString(uint8_t pool, char c) {
 			char buf[2] = {c, '\0'};
 			return String(buf, pool);
+		}
+		// Value type support
+		inline static String makeString(uint8_t pool, Value v) {
+			if (is_null(v)) return String("null", pool);
+			if (is_int(v)) return makeString(pool, as_int(v));
+			if (is_double(v)) return makeString(pool, as_double(v));
+			if (is_string(v)) {
+				const char* str = as_cstring(v);
+				return str ? String(str, pool) : String("<str?>", pool);
+			}
+			std::ostringstream oss;
+			oss << "<value:0x" << std::hex << v << ">";
+			return String(oss.str().c_str(), pool);
 		}
 		// Generic fallback for numbers and streamable types.
 		template <typename T>

@@ -72,7 +72,11 @@ namespace MiniScript {
 			&&  AssertEqual(Assembler.GetTokens("  NOOP  "),
 				  new List<String> { "NOOP" })
 			&&  AssertEqual(Assembler.GetTokens(" # comment only"),
-				  new List<String>());
+				  new List<String>())
+			&&  AssertEqual(Assembler.GetTokens("LOAD r1, \"Hello world\""),
+				  new List<String> { "LOAD", "r1", "\"Hello world\"" })
+			&&  AssertEqual(Assembler.GetTokens("LOAD r2, \"test\" # comment after string"),
+				  new List<String> { "LOAD", "r2", "\"test\"" });
 			
 			if (!tokensOk) return false;
 			
@@ -132,6 +136,65 @@ namespace MiniScript {
 			UInt32 jumpInstruction = labelAssem.Current.Code[4]; // 5th instruction (0-indexed)
 			UInt32 expectedJump = BytecodeUtil.INS(Opcode.JUMP_iABC) | (UInt32)((-4) & 0xFFFFFF);
 			asmOk = asmOk && AssertEqual(jumpInstruction, expectedJump);
+			
+			// Test constant support
+			Assembler constAssem = new Assembler();
+			
+			// Test string literal
+			asmOk = asmOk && AssertEqual(constAssem.AddLine("LOAD r0, \"hello\""),
+				BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, 0, 0)); // Should use constant index 0
+			asmOk = asmOk && AssertEqual(constAssem.Current.Constants.Count, 1);
+			
+			// Test floating point number
+			asmOk = asmOk && AssertEqual(constAssem.AddLine("LOAD r1, 3.14"),
+				BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, 1, 1)); // Should use constant index 1
+			asmOk = asmOk && AssertEqual(constAssem.Current.Constants.Count, 2);
+			
+			// Test large integer
+			asmOk = asmOk && AssertEqual(constAssem.AddLine("LOAD r2, 100000"),
+				BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, 2, 2)); // Should use constant index 2
+			asmOk = asmOk && AssertEqual(constAssem.Current.Constants.Count, 3);
+			
+			// Test small integer (should use immediate form, not constant)
+			asmOk = asmOk && AssertEqual(constAssem.AddLine("LOAD r3, 42"),
+				BytecodeUtil.INS_AB(Opcode.LOAD_rA_iBC, 3, 42)); // Should use immediate
+			asmOk = asmOk && AssertEqual(constAssem.Current.Constants.Count, 3); // No new constant added
+			
+			// Test two-pass assembly with multiple constants and instructions
+			List<String> multiTest = new List<String> {
+				"LOAD r1, \"Hello\"",
+				"LOAD r2, \"World\"", 
+				"ADD r0, r1, r2",
+				"RETURN"
+			};
+			
+			Assembler multiAssem = new Assembler();
+			multiAssem.Assemble(multiTest);
+			
+			// Check that we have 2 constants
+			asmOk = asmOk && AssertEqual(multiAssem.Current.Constants.Count, 2);
+			
+			// Check that we have 4 instructions
+			asmOk = asmOk && AssertEqual(multiAssem.Current.Code.Count, 4);
+			
+			// Check specific instructions
+			if (multiAssem.Current.Code.Count >= 4) {
+				// First instruction: LOAD r1, k0 (where k0 = "Hello")
+				asmOk = asmOk && AssertEqual(multiAssem.Current.Code[0],
+					BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, 1, 0));
+				
+				// Second instruction: LOAD r2, k1 (where k1 = "World")
+				asmOk = asmOk && AssertEqual(multiAssem.Current.Code[1],
+					BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, 2, 1));
+				
+				// Third instruction: ADD r0, r1, r2
+				asmOk = asmOk && AssertEqual(multiAssem.Current.Code[2],
+					BytecodeUtil.INS_ABC(Opcode.ADD_rA_rB_rC, 0, 1, 2));
+				
+				// Fourth instruction: RETURN
+				asmOk = asmOk && AssertEqual(multiAssem.Current.Code[3],
+					BytecodeUtil.INS(Opcode.RETURN));
+			}
 			
 			return asmOk;
 		}

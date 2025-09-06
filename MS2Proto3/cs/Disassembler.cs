@@ -93,7 +93,14 @@ namespace MiniScript {
 		// details for debugging, like line numbers and instruction hex code.
 		public static List<String> Disassemble(FuncDef funcDef, Boolean detailed=true) {
 			List<String> result = new List<String>();
-			for (Int32 i = 0; i < funcDef.Code.Count; i++) {
+			
+			result.Add(StringUtils.Format("Constants ({0}):", funcDef.Constants.Count));
+			for (Int32 i = 0; i < funcDef.Constants.Count; i++) {
+				result.Add(StringUtils.Format("   {0}. {1}", i, funcDef.Constants[i]));
+			}
+			
+			result.Add(StringUtils.Format("Instructions ({0}):", funcDef.Code.Count));
+			for (Int32 i = 0; i < funcDef.Code.Count; i++) {				
 				String s = ToString(funcDef.Code[i]);
 				if (detailed) {
 					s = StringUtils.ZeroPad(i, 4) + ":  "
@@ -104,6 +111,7 @@ namespace MiniScript {
 			}
 			return result;
 		}
+
 	}
 
 }

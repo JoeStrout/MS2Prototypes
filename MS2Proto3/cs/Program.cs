@@ -46,13 +46,12 @@ public class Program {
 			
 			// Use two-pass assembly for label support
 			assembler.Assemble(lines);
-			
-			IOHelper.Print(StringUtils.Format("Assembly complete. Function has {0} instructions.", assembler.Current.Code.Count));
+			IOHelper.Print("Assembly complete.");
 			
 			// Disassemble and print the code
 			IOHelper.Print("Disassembly:");
 			List<String> disassembly = Disassembler.Disassemble(assembler.Current, true);
-			for (Int32 i = 0; i < assembler.Current.Code.Count; i++) {
+			for (Int32 i = 0; i < disassembly.Count; i++) {
 				IOHelper.Print(disassembly[i]);
 			}
 		}
