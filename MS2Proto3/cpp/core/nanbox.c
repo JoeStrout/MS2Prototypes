@@ -4,7 +4,7 @@
 // Most functionality is in nanbox.h as inline functions
 
 #include "nanbox.h"
-#include "strings.h"
+#include "value_string.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <limits.h>

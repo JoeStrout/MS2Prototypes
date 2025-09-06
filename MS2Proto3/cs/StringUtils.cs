@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 // CPP: #include "IOHelper.g.h"
-// CPP: #include "strings.h"
+// CPP: #include "value_string.h"
 // CPP: #include <sstream>
 // CPP: #include <cctype>
 

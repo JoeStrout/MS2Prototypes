@@ -4,7 +4,7 @@
 #include <cstdlib>  // For malloc/free
 #include "StringStorage.h"
 #include "StringPool.h"
-#include "List.h"
+#include "CS_List.h"
 
 // Forward declaration to avoid circular dependency
 template<typename T> class List;

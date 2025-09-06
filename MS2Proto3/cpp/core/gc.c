@@ -1,7 +1,7 @@
 #include "gc.h"
 #include "nanbox.h"
-#include "strings.h"
-#include "lists.h"
+#include "value_string.h"
+#include "value_list.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -45,7 +45,7 @@ typedef struct GC {
 GC gc = {0};
 
 // Forward declarations for marking functions
-void gc_mark_string(String* str);
+void gc_mark_string(StringStorage* str);
 void gc_mark_list(List* list);
 
 void gc_init(void) {
@@ -159,7 +159,7 @@ void* gc_allocate(size_t size) {
 
 void gc_mark_value(Value v) {
     if (is_string(v)) {
-        String* str = as_string(v);
+        StringStorage* str = as_string(v);
         if (str) gc_mark_string(str);
     } else if (is_list(v)) {
         List* list = as_list(v);
@@ -168,7 +168,7 @@ void gc_mark_value(Value v) {
     // Numbers, ints, nil don't need marking
 }
 
-void gc_mark_string(String* str) {
+void gc_mark_string(StringStorage* str) {
     if (!str) return;
     
     // Get GC object header (it's right before the String data)

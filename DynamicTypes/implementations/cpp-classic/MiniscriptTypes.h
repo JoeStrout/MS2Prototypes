@@ -10,7 +10,7 @@
 #define MINISCRIPTTYPES_H
 
 #include "SimpleString.h"
-#include "List.h"
+#include "CS_List.h"
 #include "Dictionary.h"
 
 #include <cstdint>

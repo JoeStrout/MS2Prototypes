@@ -3,10 +3,10 @@
 // List implementation for NaN-boxed Values
 // Dynamic arrays with automatic capacity management
 
-#include "lists.h"
+#include "value_list.h"
 #include "nanbox.h"
 #include "gc.h"
-#include "strings.h"
+#include "value_string.h"
 #include <stdlib.h>
 #include <assert.h>
 

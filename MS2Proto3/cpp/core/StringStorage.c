@@ -22,6 +22,10 @@ StringStorage* ss_create(const char* cstr, StringStorageAllocator allocator) {
     if (!cstr || !allocator) return NULL;
     
     int len = strlen(cstr);
+    
+    // Optimization: empty strings are represented as NULL
+    if (len == 0) return NULL;
+    
     StringStorage* storage = (StringStorage*)allocator(sizeof(StringStorage) + len + 1);
     if (!storage) return NULL;
     
@@ -35,6 +39,9 @@ StringStorage* ss_create(const char* cstr, StringStorageAllocator allocator) {
 
 StringStorage* ss_createWithLength(int byteLen, StringStorageAllocator allocator) {
     if (byteLen < 0 || !allocator) return NULL;
+    
+    // Optimization: empty strings are represented as NULL
+    if (byteLen == 0) return NULL;
     
     StringStorage* storage = (StringStorage*)allocator(sizeof(StringStorage) + byteLen + 1);
     if (!storage) return NULL;
@@ -54,6 +61,7 @@ void ss_destroy(StringStorage* storage) {
 }
 
 // Helper functions
+// ToDo: replace this with standard unicodeUtil function.
 int ss_utf8CharCount(const char* str, int byteLen) {
     int count = 0;
     for (int i = 0; i < byteLen; i++) {
@@ -64,6 +72,7 @@ int ss_utf8CharCount(const char* str, int byteLen) {
     return count;
 }
 
+// ToDo: use Unicode-savvy functions instead.
 char ss_asciiToLower(char c) {
     return (c >= 'A' && c <= 'Z') ? c + 32 : c;
 }
@@ -74,7 +83,7 @@ char ss_asciiToUpper(char c) {
 
 // Basic accessor functions
 const char* ss_getCString(const StringStorage* storage) {
-    return storage ? storage->data : NULL;
+    return storage ? storage->data : "";
 }
 
 int ss_lengthB(const StringStorage* storage) {
@@ -105,6 +114,8 @@ char ss_charAt(const StringStorage* storage, int byteIndex) {
 
 // Comparison functions
 bool ss_equals(const StringStorage* storage, const StringStorage* other) {
+    // NULL represents empty string, so NULL == NULL is true
+    if (!storage && !other) return true;
     if (!storage || !other) return false;
     if (storage == other) return true;
     if (storage->lenB != other->lenB) return false;
@@ -124,6 +135,8 @@ int ss_compare(const StringStorage* storage, const StringStorage* other) {
 }
 
 bool ss_equalsIgnoreCase(const StringStorage* storage, const StringStorage* other) {
+    // NULL represents empty string, so NULL == NULL is true
+    if (!storage && !other) return true;
     if (!storage || !other) return false;
     if (storage == other) return true;
     if (storage->lenB != other->lenB) return false;
@@ -269,7 +282,12 @@ StringStorage* ss_substringLen(const StringStorage* storage, int startIndex, int
 }
 
 StringStorage* ss_concat(const StringStorage* storage, const StringStorage* other, StringStorageAllocator allocator) {
-    if (!storage || !other || !allocator) return NULL;
+    if (!allocator) return NULL;
+    
+    // Handle empty strings (NULL means empty) - strings are immutable, so just return the non-empty one
+    if (!storage && !other) return NULL;  // empty + empty = empty
+    if (!storage) return (StringStorage*)other;  // empty + other = other
+    if (!other) return (StringStorage*)storage;   // storage + empty = storage
     
     int totalLen = storage->lenB + other->lenB;
     StringStorage* result = ss_createWithLength(totalLen, allocator);
@@ -285,6 +303,17 @@ StringStorage* ss_concat(const StringStorage* storage, const StringStorage* othe
 
 StringStorage* ss_toLower(const StringStorage* storage, StringStorageAllocator allocator) {
     if (!storage || !allocator) return NULL;
+    
+    // Check if string is already lowercase (immutable optimization)
+    bool hasUppercase = false;
+    for (int i = 0; i < storage->lenB; i++) {
+        if (storage->data[i] >= 'A' && storage->data[i] <= 'Z') {
+            hasUppercase = true;
+            break;
+        }
+    }
+    if (!hasUppercase) return (StringStorage*)storage;  // Already lowercase
+    
     StringStorage* result = ss_createWithLength(storage->lenB, allocator);
     if (!result) return NULL;
     
@@ -299,6 +328,17 @@ StringStorage* ss_toLower(const StringStorage* storage, StringStorageAllocator a
 
 StringStorage* ss_toUpper(const StringStorage* storage, StringStorageAllocator allocator) {
     if (!storage || !allocator) return NULL;
+    
+    // Check if string is already uppercase (immutable optimization)
+    bool hasLowercase = false;
+    for (int i = 0; i < storage->lenB; i++) {
+        if (storage->data[i] >= 'a' && storage->data[i] <= 'z') {
+            hasLowercase = true;
+            break;
+        }
+    }
+    if (!hasLowercase) return (StringStorage*)storage;  // Already uppercase
+    
     StringStorage* result = ss_createWithLength(storage->lenB, allocator);
     if (!result) return NULL;
     

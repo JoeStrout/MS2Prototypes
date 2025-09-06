@@ -6,7 +6,7 @@
 //  Copyright © 2018 Joe Strout. All rights reserved.
 //
 
-#include "List.h"
+#include "CS_List.h"
 #include "UnitTest.h"
 
 namespace MiniScript {

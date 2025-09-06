@@ -1,7 +1,7 @@
-#include "lists.h"
+#include "value_list.h"
 #include "nanbox.h"
 #include "gc.h"
-#include "strings.h"
+#include "value_string.h"
 #include <stdlib.h>
 #include <assert.h>
 

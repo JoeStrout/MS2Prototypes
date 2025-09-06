@@ -3,8 +3,8 @@
 
 struct Value;
 
-#include "List.h"
-#include "ms_string.h"
+#include "CS_List.h"
+#include "CS_String.h"
 
 #include <cstdint>
 

@@ -8,7 +8,7 @@
 #ifndef HASHMAP_H
 #define HASHMAP_H
 
-#include "List.h"
+#include "CS_List.h"
 
 namespace MiniScript {
 

@@ -3,12 +3,12 @@
 // String operations for the NaN-boxing implementation
 // These functions are too complex to be inlined and need proper GC management
 
-#include "strings.h"
+#include "value_string.h"
 #include "StringStorage.h"
 #include "nanbox.h"
 #include "gc.h"
 #include "unicodeUtil.h"
-#include "lists.h"
+#include "value_list.h"
 #include <stdlib.h>
 #include <string.h>
 

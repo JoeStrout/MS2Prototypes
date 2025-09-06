@@ -1,5 +1,5 @@
 #include "../../include/assembler/assembler.h"
-#include "strings.h"
+#include "value_string.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

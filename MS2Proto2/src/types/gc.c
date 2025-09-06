@@ -1,7 +1,7 @@
 #include "gc.h"
 #include "nanbox.h"
-#include "strings.h"
-#include "lists.h"
+#include "value_string.h"
+#include "value_list.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
