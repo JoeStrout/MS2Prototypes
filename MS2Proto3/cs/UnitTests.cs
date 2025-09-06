@@ -32,6 +32,13 @@ namespace MiniScript {
 			return false;
 		}
 			
+		public static Boolean AssertEqual(Int32 actual, Int32 expected) {
+			if (actual == expected) return true;
+			Assert(false, StringUtils.Format("Unit test failure: expected {0} but got {1}",
+					expected, actual));
+			return false;
+		}
+			
 		public static Boolean AssertEqual(List<String> actual, List<String> expected) {
 			Boolean ok = true;
 			if ((actual == null) != (expected == null)) ok = false; // CPP: // (no nulls)
@@ -102,6 +109,29 @@ namespace MiniScript {
 			
 			asmOk = asmOk && AssertEqual(assem.AddLine("RETURN"), 
 				BytecodeUtil.INS(Opcode.RETURN));
+			
+			// Test label assembly with two-pass approach
+			List<String> labelTest = new List<String> {
+				"NOOP",
+				"loop:",
+				"LOAD r1, 42",
+				"SUB r1, r1, r0", 
+				"IFLT r1, r0",
+				"JUMP loop",
+				"RETURN"
+			};
+			
+			Assembler labelAssem = new Assembler();
+			labelAssem.Assemble(labelTest);
+			
+			// Verify the assembled instructions
+			asmOk = asmOk && AssertEqual(labelAssem.Current.Code.Count, 6); // 6 instructions (label doesn't count)
+			
+			// Check that JUMP loop resolves to correct relative offset
+			// loop is at instruction 1, JUMP is at instruction 5, so offset should be 1-5 = -4
+			UInt32 jumpInstruction = labelAssem.Current.Code[4]; // 5th instruction (0-indexed)
+			UInt32 expectedJump = BytecodeUtil.INS(Opcode.JUMP_iABC) | (UInt32)((-4) & 0xFFFFFF);
+			asmOk = asmOk && AssertEqual(jumpInstruction, expectedJump);
 			
 			return asmOk;
 		}

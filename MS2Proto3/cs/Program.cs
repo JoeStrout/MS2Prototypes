@@ -44,13 +44,8 @@ public class Program {
 			IOHelper.Print(StringUtils.Format("Assembling {0} lines...", lines.Count));
 			Assembler assembler = new Assembler();
 			
-			// Assemble each line
-			for (Int32 i = 0; i < lines.Count; i++) {
-				UInt32 instruction = assembler.AddLine(lines[i]);
-				if (instruction != 0) { // Skip empty lines/comments
-					IOHelper.Print(StringUtils.Format("Line {0}: {1} -> 0x{2}", i, lines[i], StringUtils.ToHex(instruction)));
-				}
-			}
+			// Use two-pass assembly for label support
+			assembler.Assemble(lines);
 			
 			IOHelper.Print(StringUtils.Format("Assembly complete. Function has {0} instructions.", assembler.Current.Code.Count));
 			

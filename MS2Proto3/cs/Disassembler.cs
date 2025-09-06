@@ -45,7 +45,7 @@ namespace MiniScript {
         		case Opcode.JUMP_iABC:
         			return StringUtils.Format("{0} {1}",
         				mnemonic,
-        				(Int32)BytecodeUtil.ABC(instruction));
+        				BytecodeUtil.ABCs(instruction));
         		
         		// Two Operands:
 				// rA, rB
@@ -53,27 +53,27 @@ namespace MiniScript {
         		case Opcode.IFLT_rA_rB:
 					return StringUtils.Format("{0} r{1}, r{2}",
 						mnemonic,
-						(Int32)BytecodeUtil.A(instruction),
-						(Int32)BytecodeUtil.B(instruction));
+						(Int32)BytecodeUtil.Au(instruction),
+						(Int32)BytecodeUtil.Bu(instruction));
 				// rA, kBC
         		case Opcode.LOAD_rA_kBC:
         			return StringUtils.Format("{0} r{1}, k{2}",
         				mnemonic,
-        				(Int32)BytecodeUtil.A(instruction),
+        				(Int32)BytecodeUtil.Au(instruction),
         				(Int32)BytecodeUtil.BCu(instruction));
         		// rA, iBC
         		case Opcode.LOAD_rA_iBC:
         		case Opcode.IFLT_rA_iBC:
         			return StringUtils.Format("{0} r{1}, {2}",
         				mnemonic,
-        				(Int32)BytecodeUtil.A(instruction),
-        				(Int32)BytecodeUtil.BC(instruction));
+        				(Int32)BytecodeUtil.Au(instruction),
+        				(Int32)BytecodeUtil.BCs(instruction));
         		// iA, iBC
 				case Opcode.CALLF_iA_iBC:
         			return StringUtils.Format("{0} {1}, {2}",
         				mnemonic,
-        				(Int32)BytecodeUtil.A(instruction),
-        				(Int32)BytecodeUtil.BC(instruction));
+        				(Int32)BytecodeUtil.As(instruction),
+        				(Int32)BytecodeUtil.BCs(instruction));
         		
         		// Three Operands:
         		// rA, rB, rC
@@ -81,9 +81,9 @@ namespace MiniScript {
         		case Opcode.SUB_rA_rB_rC:
         			return StringUtils.Format("{0} r{1}, r{2}, r{3}",
         				mnemonic,
-        				(Int32)BytecodeUtil.A(instruction),
-        				(Int32)BytecodeUtil.B(instruction),
-        				(Int32)BytecodeUtil.C(instruction));
+        				(Int32)BytecodeUtil.Au(instruction),
+        				(Int32)BytecodeUtil.Bu(instruction),
+        				(Int32)BytecodeUtil.Cu(instruction));
 				default:
 					return new String("??? ") + StringUtils.ToHex(instruction);
 			}

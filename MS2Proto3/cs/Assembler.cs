@@ -8,9 +8,13 @@ namespace MiniScript {
 	public class Assembler {
 
 		public FuncDef Current; // function we are currently building
+		private List<String> _labelNames; // label names
+		private List<Int32> _labelAddresses; // corresponding instruction addresses
 
 		public Assembler() {
 			Current = new FuncDef();
+			_labelNames = new List<String>();
+			_labelAddresses = new List<Int32>();
 		}
 
 		public static List<String> GetTokens(String line) {
@@ -50,10 +54,16 @@ namespace MiniScript {
 			return tokens;
 		}
 		
+		// Assemble a single source line, add to our current function,
+		// and also return its value (mainly for unit testing).
 		public UInt32 AddLine(String line) {
+			// Break into tokens (stripping whitespace, commas, and comments)
 			List<String> parts = GetTokens(line);
 			
-			// Empty line or comment-only line
+			// Check if first token is a label and remove it
+			if (parts.Count > 0 && IsLabel(parts[0])) parts.RemoveAt(0);
+
+			// If there is no instruction on this line, return 0
 			if (parts.Count == 0) return 0;
 			
 			String mnemonic = parts[0];
@@ -99,21 +109,34 @@ namespace MiniScript {
 				instruction = BytecodeUtil.INS_ABC(Opcode.SUB_rA_rB_rC, dest, src1, src2);
 				
 			} else if (mnemonic == "JUMP") {
-				if (parts.Count != 2) return 0; // JUMP 42
-				Int32 offset = ParseNumber(parts[1]);
+				if (parts.Count != 2) return 0; // JUMP labelName or JUMP 42
+				String target = parts[1];
+				Int32 offset;
+				
+				// Check if target is a label or a number
+				Int32 labelAddr = FindLabelAddress(target);
+				if (labelAddr >= 0) {
+					// It's a label - calculate relative offset from next instruction
+					offset = labelAddr - (Current.Code.Count + 1);
+				} else {
+					// It's a number
+					offset = ParseNumber(target);
+				}
 				instruction = BytecodeUtil.INS(Opcode.JUMP_iABC) | (UInt32)(offset & 0xFFFFFF);
 				
 			} else if (mnemonic == "IFLT") {
-				if (parts.Count == 3) {
-					// IFLT r5, r3
-					Byte reg1 = ParseRegister(parts[1]);
+				if (parts.Count != 3) return 0; // error: wrong number of operands
+				
+				Byte reg1 = ParseRegister(parts[1]);
+				
+				if (parts[2][0] == 'r') {
+					// IFLT r5, r3  -->  IFLT_rA_rB
 					Byte reg2 = ParseRegister(parts[2]);
 					instruction = BytecodeUtil.INS_ABC(Opcode.IFLT_rA_rB, reg1, reg2, 0);
-				} else if (parts.Count == 2) {
-					// IFLT r5, 42
-					// Actually this would be parsed differently, let me fix
-					// For now, assume 2 register form
-					return 0; // TODO: handle immediate form
+				} else {
+					// IFLT r5, 42  -->  IFLT_rA_iBC
+					Int16 immediate = ParseNumber(parts[2]);
+					instruction = BytecodeUtil.INS_AB(Opcode.IFLT_rA_iBC, reg1, immediate);
 				}
 				
 			} else if (mnemonic == "CALLF") {
@@ -157,6 +180,52 @@ namespace MiniScript {
 			}
 			
 			return (Int16)(negative ? -result : result);
+		}
+
+		// Helper to determine if a token is a label (ends with colon)
+		private static Boolean IsLabel(String token) {
+			return token.Length > 1 && token[token.Length - 1] == ':';
+		}
+
+		// Helper to find the address of a label
+		private Int32 FindLabelAddress(String labelName) {
+			for (Int32 i = 0; i < _labelNames.Count; i++) {
+				if (_labelNames[i] == labelName) return _labelAddresses[i];
+			}
+			return -1; // not found
+		}
+
+		// Two-pass assembly: first pass collects labels, second pass assembles with label resolution
+		public void Assemble(List<String> sourceLines) {
+			// Clear any previous state
+			Current = new FuncDef();
+			_labelNames.Clear();
+			_labelAddresses.Clear();
+
+			// First pass: collect label positions
+			Int32 instructionAddress = 0;
+			for (Int32 i = 0; i < sourceLines.Count; i++) {
+				List<String> tokens = GetTokens(sourceLines[i]);
+				if (tokens.Count == 0) continue; // empty line or comment only
+
+				// Check if first token is a label
+				if (IsLabel(tokens[0])) {
+					String labelName = tokens[0].Substring(0, tokens[0].Length - 1);
+					_labelNames.Add(labelName);
+					_labelAddresses.Add(instructionAddress);
+				}
+				
+				// Check if there's an instruction on this line
+				// (either no label, or "NOOP", or label + instruction)
+				if (!IsLabel(tokens[0]) || tokens[0]=="NOOP" || tokens.Count > 1) {
+					instructionAddress++;
+				}
+			}
+
+			// Second pass: assemble instructions with label resolution
+			for (Int32 i = 0; i < sourceLines.Count; i++) {
+				AddLine(sourceLines[i]);
+			}
 		}
 
 	}

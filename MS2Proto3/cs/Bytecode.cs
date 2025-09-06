@@ -20,13 +20,31 @@ namespace MiniScript {
 	public static class BytecodeUtil {
 		// Instruction field extraction helpers
 		public static Byte OP(UInt32 instruction) => (Byte)((instruction >> 24) & 0xFF);
-		public static Byte A(UInt32 instruction) => (Byte)((instruction >> 16) & 0xFF);
-		public static Byte B(UInt32 instruction) => (Byte)((instruction >> 8) & 0xFF);
-		public static Byte C(UInt32 instruction) => (Byte)(instruction & 0xFF);
-		public static Int16 BC(UInt32 instruction) => (Int16)(instruction & 0xFFFF);
+		
+		// 8-bit field extractors
+		public static Byte Au(UInt32 instruction) => (Byte)((instruction >> 16) & 0xFF);
+		public static Byte Bu(UInt32 instruction) => (Byte)((instruction >> 8) & 0xFF);
+		public static Byte Cu(UInt32 instruction) => (Byte)(instruction & 0xFF);
+		
+		public static SByte As(UInt32 instruction) => (SByte)Au(instruction);
+		public static SByte Bs(UInt32 instruction) => (SByte)Bu(instruction);
+		public static SByte Cs(UInt32 instruction) => (SByte)Cu(instruction);
+		
+		// 16-bit field extractors
 		public static UInt16 BCu(UInt32 instruction) => (UInt16)(instruction & 0xFFFF);
-		public static Int32 ABC(UInt32 instruction) => (Int32)(instruction & 0xFFFFFF);
-
+		public static Int16 BCs(UInt32 instruction) => (Int16)BCu(instruction);
+		
+		// 24-bit field extractors
+		public static UInt32 ABCu(UInt32 instruction) => instruction & 0xFFFFFF;
+		public static Int32 ABCs(UInt32 instruction) {
+			UInt32 value = ABCu(instruction);
+			// If bit 23 is set (sign bit), extend the sign to upper 8 bits
+			if ((value & 0x800000) != 0) {
+				return (Int32)(value | 0xFF000000);
+			}
+			return (Int32)value;
+		}
+		
 		// Instruction encoding helpers
 		public static UInt32 INS(Opcode op) => (UInt32)((Byte)op << 24);
 		public static UInt32 INS_AB(Opcode op, Byte a, Int16 bc) => (UInt32)(((Byte)op << 24) | (a << 16) | ((UInt16)bc));
