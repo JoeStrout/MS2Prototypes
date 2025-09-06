@@ -2,6 +2,7 @@
 #define STRINGS_H
 
 #include "nanbox.h"
+#include "StringStorage.h"
 #include <stdbool.h>
 
 #ifdef __cplusplus
@@ -10,13 +11,7 @@ extern "C" {
 
 // String implementation for NaN-boxed Values
 // Supports both tiny strings (≤5 chars) and heap strings with interning
-
-// String structure for heap-allocated strings
-typedef struct {
-    int lenB;        // Length in bytes
-    uint32_t hash;   // Hash value (0 = not computed)
-    char data[];     // String data (null-terminated)
-} value_string;
+// Uses StringStorage for heap-allocated strings
 
 // String creation
 Value make_string(const char* str);
@@ -24,7 +19,7 @@ Value make_tiny_string(const char* str, int len);
 
 // String access and conversion
 const char* as_cstring(Value v);           // Get C string (may use internal buffer)
-value_string* as_string(Value v);          // Get value_string struct (heap strings only)
+StringStorage* as_string(Value v);         // Get StringStorage struct (heap strings only)
 int string_lengthB(Value v);               // Get byte length
 int string_length(Value v);                // Get character length (Unicode-aware)
 

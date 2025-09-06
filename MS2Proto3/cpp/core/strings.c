@@ -4,6 +4,7 @@
 // These functions are too complex to be inlined and need proper GC management
 
 #include "strings.h"
+#include "StringStorage.h"
 #include "nanbox.h"
 #include "gc.h"
 #include "unicodeUtil.h"
@@ -74,9 +75,9 @@ Value make_tiny_string(const char* str, int len) {
     return v;
 }
 
-value_string* as_string(Value v) {
+StringStorage* as_string(Value v) {
     if (is_heap_string(v)) {
-        return (value_string*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
+        return (StringStorage*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
     }
     return NULL; // Tiny strings don't have a String structure
 }
@@ -95,8 +96,8 @@ const char* as_cstring(Value v) {
         tiny_string_buffer[len] = '\0';
         return tiny_string_buffer;
     } else {
-        value_string* s = as_string(v);
-        return s->data;
+        StringStorage* s = as_string(v);
+        return ss_getCString(s);
     }
 }
 
@@ -107,8 +108,8 @@ int string_lengthB(Value v) {
         const char* data = GET_VALUE_DATA_PTR_CONST(&v);
         return (int)(unsigned char)data[0];  // Byte length from first byte
     } else {
-        value_string* s = as_string(v);
-        return s->lenB;  // Byte length
+        StringStorage* s = as_string(v);
+        return ss_lengthB(s);
     }
 }
 
@@ -122,8 +123,8 @@ int string_length(Value v) {
         const char* data = GET_VALUE_DATA_PTR_CONST(&v);
         return UTF8CharacterCount((const unsigned char*)(data + 1), lenB);
     } else {
-        value_string* s = as_string(v);
-        return UTF8CharacterCount((const unsigned char*)s->data, lenB);
+        StringStorage* s = as_string(v);
+        return ss_lengthC(s);  // Use cached character count
     }
 }
 
@@ -134,9 +135,9 @@ const char* get_string_data_zerocopy(const Value* v_ptr, int* out_len) {
         *out_len = (int)(unsigned char)data[0];
         return data + 1;  // Return pointer directly to string data (no copying!)
     } else if (is_heap_string(v)) {
-        value_string* s = (value_string*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
-        *out_len = s->lenB;
-        return s->data;
+        StringStorage* s = (StringStorage*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
+        *out_len = ss_lengthB(s);
+        return ss_getCString(s);
     }
     *out_len = 0;
     return NULL;
@@ -161,8 +162,8 @@ const char* get_string_data_nullterm(const Value* v_ptr, char* tiny_buffer) {
         tiny_buffer[len] = '\0';
         return tiny_buffer;
     } else if (is_heap_string(v)) {
-        value_string* s = (value_string*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
-        return s->data;
+        StringStorage* s = (StringStorage*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
+        return ss_getCString(s);
     }
     return NULL;
 }
@@ -177,8 +178,8 @@ static Value find_interned_string(const char* data, int lenB, uint32_t hash) {
     
     while (entry != NULL) {
         if (is_heap_string(entry->string_value)) {
-            value_string* s = as_string(entry->string_value);
-            if (s->lenB == lenB && s->hash == hash && memcmp(s->data, data, lenB) == 0) {
+            StringStorage* s = as_string(entry->string_value);
+            if (ss_lengthB(s) == lenB && s->hash == hash && memcmp(ss_getCString(s), data, lenB) == 0) {
                 return entry->string_value;  // Found existing interned string
             }
         }
@@ -193,7 +194,7 @@ static Value find_interned_string(const char* data, int lenB, uint32_t hash) {
 static void intern_string(Value string_value) {
     if (!is_heap_string(string_value)) return;
     
-    value_string* s = as_string(string_value);
+    StringStorage* s = as_string(string_value);
     if (s->hash == 0) return;  // Hash must be computed
     
     init_intern_table();
@@ -230,10 +231,8 @@ Value make_string_interned(const char* str) {
         }
         
         // Create new interned string with malloc (not GC'd - immortal by design)
-        value_string* s = (value_string*)malloc(sizeof(value_string) + lenB + 1);
-        s->lenB = lenB;
+        StringStorage* s = ss_create(str);
         s->hash = hash;  // Store computed hash
-        strcpy(s->data, str);
         Value new_string = STRING_MASK | ((uintptr_t)s & 0xFFFFFFFFFFFFULL);
         
         // Add to intern table
@@ -241,10 +240,11 @@ Value make_string_interned(const char* str) {
         
         return new_string;
     } else {
-        // For longer strings, use regular heap allocation with lazy hashing
-        value_string* s = (value_string*)gc_allocate(sizeof(value_string) + lenB + 1);
+        // For longer strings, use regular heap allocation
+        StringStorage* s = (StringStorage*)gc_allocate(sizeof(StringStorage) + lenB + 1);
         s->lenB = lenB;
-        s->hash = 0;  // Hash will be computed when needed
+        s->lenC = -1; // Compute character count later when needed
+        s->hash = 0;  // ...and same for hash
         strcpy(s->data, str);
         return STRING_MASK | ((uintptr_t)s & 0xFFFFFFFFFFFFULL);
     }
@@ -309,8 +309,9 @@ Value string_concat(Value a, Value b) {
         result = make_tiny_string(result_buffer, total_lenB);
     } else {
         // Use heap string for longer results
-        value_string* result_str = (value_string*)gc_allocate(sizeof(value_string) + total_lenB + 1);
+        StringStorage* result_str = (StringStorage*)gc_allocate(sizeof(StringStorage) + total_lenB + 1);
         result_str->lenB = total_lenB;
+        result_str->lenC = -1;  // Will be computed when needed
         result_str->hash = 0;  // Hash not computed yet
         memcpy(result_str->data, sa, lenB_a);
         memcpy(result_str->data + lenB_a, sb, lenB_b);
@@ -455,7 +456,7 @@ Value string_split(Value str, Value delimiter) {
     
     // Handle empty delimiter (split into characters)
     if (!has_delimiter || strlen(delim) == 0) {
-        int charCount = UTF8CharacterCount((const unsigned char*)s, str_lenB);
+        int charCount = string_length(str);  // Use optimized character count
         result = make_list(charCount);
         
         unsigned char* ptr = (unsigned char*)s;

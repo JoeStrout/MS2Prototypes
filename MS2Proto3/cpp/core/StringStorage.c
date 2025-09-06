@@ -26,8 +26,8 @@ StringStorage* ss_create(const char* cstr) {
     if (!storage) return NULL;
     
     storage->lenB = len;
-    storage->lenC = ss_utf8CharCount(cstr, len);
-    storage->hash = fnv1a_hash(cstr, len);
+    storage->lenC = -1;  // Compute lazily when needed
+    storage->hash = 0;   // Compute lazily when needed
     strcpy(storage->data, cstr);
     
     return storage;
@@ -82,7 +82,16 @@ int ss_lengthB(const StringStorage* storage) {
 }
 
 int ss_lengthC(const StringStorage* storage) {
-    return storage ? storage->lenC : 0;
+    if (!storage) return 0;
+    
+    // If character count hasn't been computed yet, compute and cache it
+    if (storage->lenC < 0) {
+        // We need to cast away const to cache the result
+        StringStorage* mutable_storage = (StringStorage*)storage;
+        mutable_storage->lenC = ss_utf8CharCount(storage->data, storage->lenB);
+    }
+    
+    return storage->lenC;
 }
 
 bool ss_isEmpty(const StringStorage* storage) {
@@ -253,7 +262,7 @@ StringStorage* ss_substringLen(const StringStorage* storage, int startIndex, int
     if (!result) return NULL;
     
     memcpy(result->data, storage->data + startByteIndex, subLenB);
-    result->lenC = ss_utf8CharCount(result->data, subLenB);
+    result->lenC = endCharIndex - startIndex;  // We know the exact character count!
     result->hash = fnv1a_hash(result->data, subLenB);
     
     return result;
@@ -443,7 +452,7 @@ StringStorage** ss_split(const StringStorage* storage, char separator, int* coun
             StringStorage* token = ss_createWithLength(tokenLen);
             if (token) {
                 memcpy(token->data, storage->data + start, tokenLen);
-                token->lenC = ss_utf8CharCount(token->data, tokenLen);
+                token->lenC = -1;  // Compute lazily when needed
                 token->hash = fnv1a_hash(token->data, tokenLen);
             }
             result[resultIndex] = token;
