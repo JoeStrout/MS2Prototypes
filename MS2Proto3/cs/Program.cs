@@ -18,8 +18,8 @@ public class Program {
 		IOHelper.Print(
 			"Build: C# version" // CPP: "Build: C++ version"
 		);
-		IOHelper.Print("Milestone 1: complete!");
-		IOHelper.Print("Milestone 2: in progress");
+		IOHelper.Print("Milestone 2: complete!");
+		IOHelper.Print("Milestone 3: not yet started");
 		
 		IOHelper.Print("Running unit tests...");
 		if (!UnitTests.RunAll()) return;

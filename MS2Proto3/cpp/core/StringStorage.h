@@ -47,8 +47,6 @@ char ss_charAt(const StringStorage* storage, int byteIndex);
 // Comparison
 bool ss_equals(const StringStorage* storage, const StringStorage* other);
 int ss_compare(const StringStorage* storage, const StringStorage* other);
-bool ss_equalsIgnoreCase(const StringStorage* storage, const StringStorage* other);
-int ss_compareIgnoreCase(const StringStorage* storage, const StringStorage* other);
 
 // Search methods
 int ss_indexOf(const StringStorage* storage, const StringStorage* needle);
@@ -90,11 +88,6 @@ StringStorage** ss_splitStr(const StringStorage* storage, const StringStorage* s
 // Hash computation
 uint32_t ss_computeHash(const StringStorage* storage);
 void ss_ensureHashComputed(StringStorage* storage);
-
-// Internal helper functions
-int ss_utf8CharCount(const char* str, int byteLen);
-char ss_asciiToLower(char c);
-char ss_asciiToUpper(char c);
 
 // StringPool allocator (defined in StringPool.cpp)
 void* stringpool_allocator(size_t size);

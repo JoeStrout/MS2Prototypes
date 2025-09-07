@@ -2,20 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-
-// FNV-1a hash function
-static uint32_t fnv1a_hash(const char* data, int len) {
-    const uint32_t FNV_PRIME = 0x01000193;
-    const uint32_t FNV_OFFSET_BASIS = 0x811c9dc5;
-    
-    uint32_t hash = FNV_OFFSET_BASIS;
-    for (int i = 0; i < len; i++) {
-        hash ^= (unsigned char)data[i];
-        hash *= FNV_PRIME;
-    }
-    
-    return hash == 0 ? 1 : hash;
-}
+#include "unicodeUtil.h"
 
 // Creation and destruction functions
 StringStorage* ss_create(const char* cstr, StringStorageAllocator allocator) {
@@ -60,27 +47,6 @@ void ss_destroy(StringStorage* storage) {
     }
 }
 
-// Helper functions
-// ToDo: replace this with standard unicodeUtil function.
-int ss_utf8CharCount(const char* str, int byteLen) {
-    int count = 0;
-    for (int i = 0; i < byteLen; i++) {
-        if ((str[i] & 0xC0) != 0x80) {
-            count++;
-        }
-    }
-    return count;
-}
-
-// ToDo: use Unicode-savvy functions instead.
-char ss_asciiToLower(char c) {
-    return (c >= 'A' && c <= 'Z') ? c + 32 : c;
-}
-
-char ss_asciiToUpper(char c) {
-    return (c >= 'a' && c <= 'z') ? c - 32 : c;
-}
-
 // Basic accessor functions
 const char* ss_getCString(const StringStorage* storage) {
     return storage ? storage->data : "";
@@ -97,7 +63,8 @@ int ss_lengthC(const StringStorage* storage) {
     if (storage->lenC < 0) {
         // We need to cast away const to cache the result
         StringStorage* mutable_storage = (StringStorage*)storage;
-        mutable_storage->lenC = ss_utf8CharCount(storage->data, storage->lenB);
+        mutable_storage->lenC = UTF8CharacterCount(
+          (const unsigned char*)storage->data, storage->lenB);
     }
     
     return storage->lenC;
@@ -132,36 +99,6 @@ int ss_compare(const StringStorage* storage, const StringStorage* other) {
         return storage->lenB - other->lenB;
     }
     return result;
-}
-
-bool ss_equalsIgnoreCase(const StringStorage* storage, const StringStorage* other) {
-    // NULL represents empty string, so NULL == NULL is true
-    if (!storage && !other) return true;
-    if (!storage || !other) return false;
-    if (storage == other) return true;
-    if (storage->lenB != other->lenB) return false;
-    
-    for (int i = 0; i < storage->lenB; i++) {
-        if (ss_asciiToLower(storage->data[i]) != ss_asciiToLower(other->data[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-int ss_compareIgnoreCase(const StringStorage* storage, const StringStorage* other) {
-    if (!storage) return !other ? 0 : -1;
-    if (!other) return 1;
-    if (storage == other) return 0;
-    
-    int minLen = storage->lenB < other->lenB ? storage->lenB : other->lenB;
-    for (int i = 0; i < minLen; i++) {
-        char c1 = ss_asciiToLower(storage->data[i]);
-        char c2 = ss_asciiToLower(other->data[i]);
-        if (c1 < c2) return -1;
-        if (c1 > c2) return 1;
-    }
-    return storage->lenB - other->lenB;
 }
 
 // Search functions
@@ -276,7 +213,6 @@ StringStorage* ss_substringLen(const StringStorage* storage, int startIndex, int
     
     memcpy(result->data, storage->data + startByteIndex, subLenB);
     result->lenC = endCharIndex - startIndex;  // We know the exact character count!
-    result->hash = fnv1a_hash(result->data, subLenB);
     
     return result;
 }
@@ -296,7 +232,6 @@ StringStorage* ss_concat(const StringStorage* storage, const StringStorage* othe
     memcpy(result->data, storage->data, storage->lenB);
     memcpy(result->data + storage->lenB, other->data, other->lenB);
     result->lenC = ss_lengthC(storage) + ss_lengthC(other);
-    result->hash = fnv1a_hash(result->data, totalLen);
     
     return result;
 }
@@ -304,24 +239,26 @@ StringStorage* ss_concat(const StringStorage* storage, const StringStorage* othe
 StringStorage* ss_toLower(const StringStorage* storage, StringStorageAllocator allocator) {
     if (!storage || !allocator) return NULL;
     
-    // Check if string is already lowercase (immutable optimization)
-    bool hasUppercase = false;
-    for (int i = 0; i < storage->lenB; i++) {
-        if (storage->data[i] >= 'A' && storage->data[i] <= 'Z') {
-            hasUppercase = true;
-            break;
-        }
+    // Check if string is caseless (immutable optimization)
+    if (UTF8IsCaseless((unsigned char*)storage->data, storage->lenB)) {
+    	return (StringStorage*)storage;  // No caseable strings.
     }
-    if (!hasUppercase) return (StringStorage*)storage;  // Already lowercase
     
-    StringStorage* result = ss_createWithLength(storage->lenB, allocator);
+    // Otherwise, do the conversion into a new buffer, and then copy it
+    // (OFI: add plumbing to avoid the extra copy).
+    unsigned char *newBuf;
+    unsigned long newLenB;
+    if (!UTF8ToLower((unsigned char*)storage->data, storage->lenB, &newBuf, &newLenB)) {
+    	// Nothing actually changed.  Return same string.
+    	free(newBuf);
+    	return (StringStorage*)storage;
+    }
+
+    StringStorage* result = ss_createWithLength(newLenB, allocator);
     if (!result) return NULL;
-    
-    for (int i = 0; i < storage->lenB; i++) {
-        result->data[i] = ss_asciiToLower(storage->data[i]);
-    }
-    result->lenC = storage->lenC;
-    result->hash = fnv1a_hash(result->data, storage->lenB);
+    memcpy(result->data, newBuf, (size_t)newLenB);
+    result->lenB = newLenB;
+    result->lenC = storage->lenC;  // (assume same number of characters)
     
     return result;
 }
@@ -329,24 +266,26 @@ StringStorage* ss_toLower(const StringStorage* storage, StringStorageAllocator a
 StringStorage* ss_toUpper(const StringStorage* storage, StringStorageAllocator allocator) {
     if (!storage || !allocator) return NULL;
     
-    // Check if string is already uppercase (immutable optimization)
-    bool hasLowercase = false;
-    for (int i = 0; i < storage->lenB; i++) {
-        if (storage->data[i] >= 'a' && storage->data[i] <= 'z') {
-            hasLowercase = true;
-            break;
-        }
+    // Check if string is caseless (immutable optimization)
+    if (UTF8IsCaseless((unsigned char*)storage->data, storage->lenB)) {
+    	return (StringStorage*)storage;  // No caseable strings.
     }
-    if (!hasLowercase) return (StringStorage*)storage;  // Already uppercase
     
-    StringStorage* result = ss_createWithLength(storage->lenB, allocator);
+    // Otherwise, do the conversion into a new buffer, and then copy it
+    // (OFI: add plumbing to avoid the extra copy).
+    unsigned char *newBuf;
+    unsigned long newLenB;
+    if (!UTF8ToUpper((unsigned char*)storage->data, storage->lenB, &newBuf, &newLenB)) {
+    	// Nothing actually changed.  Return same string.
+    	free(newBuf);
+    	return (StringStorage*)storage;
+    }
+
+    StringStorage* result = ss_createWithLength(newLenB, allocator);
     if (!result) return NULL;
-    
-    for (int i = 0; i < storage->lenB; i++) {
-        result->data[i] = ss_asciiToUpper(storage->data[i]);
-    }
-    result->lenC = storage->lenC;
-    result->hash = fnv1a_hash(result->data, storage->lenB);
+    memcpy(result->data, newBuf, (size_t)newLenB);
+    result->lenB = newLenB;
+    result->lenC = storage->lenC;  // (assume same number of characters)
     
     return result;
 }
@@ -385,8 +324,6 @@ StringStorage* ss_trim(const StringStorage* storage, StringStorageAllocator allo
     if (!result) return NULL;
     
     memcpy(result->data, start, trimmedLen);
-    result->lenC = ss_utf8CharCount(result->data, trimmedLen);
-    result->hash = fnv1a_hash(result->data, trimmedLen);
     
     return result;
 }
@@ -413,8 +350,6 @@ StringStorage* ss_trimStart(const StringStorage* storage, StringStorageAllocator
     if (!result) return NULL;
     
     memcpy(result->data, start, trimmedLen);
-    result->lenC = ss_utf8CharCount(result->data, trimmedLen);
-    result->hash = fnv1a_hash(result->data, trimmedLen);
     
     return result;
 }
@@ -445,8 +380,6 @@ StringStorage* ss_trimEnd(const StringStorage* storage, StringStorageAllocator a
     if (!result) return NULL;
     
     memcpy(result->data, start, trimmedLen);
-    result->lenC = ss_utf8CharCount(result->data, trimmedLen);
-    result->hash = fnv1a_hash(result->data, trimmedLen);
     
     return result;
 }
@@ -497,8 +430,6 @@ StringStorage** ss_split(const StringStorage* storage, char separator, int* coun
             StringStorage* token = ss_createWithLength(tokenLen, allocator);
             if (token) {
                 memcpy(token->data, storage->data + start, tokenLen);
-                token->lenC = -1;  // Compute lazily when needed
-                token->hash = fnv1a_hash(token->data, tokenLen);
             }
             result[resultIndex] = token;
             resultIndex++;

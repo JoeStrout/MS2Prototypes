@@ -364,12 +364,6 @@ public:
     // C# String API - Comparison (case-insensitive)
     bool Equals(const string& other) const { return *this == other; }
     
-    bool EqualsIgnoreCase(const string& other) const {
-        const StringStorage* s1 = getStorage();
-        const StringStorage* s2 = other.getStorage();
-        return (s1 && s2) ? s1->equalsIgnoreCase(s2) : false;
-    }
-    
     int Compare(const string& other) const {
         const StringStorage* s1 = getStorage();
         const StringStorage* s2 = other.getStorage();
