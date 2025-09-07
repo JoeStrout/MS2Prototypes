@@ -11,17 +11,19 @@ namespace MiniScript {
 		// (e.g.: LOAD instead of LOAD_rA_iBC, etc.)
 		public static String AssemOp(Opcode opcode) {
 			switch (opcode) {
-				case Opcode.NOOP:         return "NOOP";
+				case Opcode.NOOP:          return "NOOP";
 				case Opcode.LOAD_rA_rB:
 				case Opcode.LOAD_rA_iBC:
-				case Opcode.LOAD_rA_kBC:  return "LOAD";
-				case Opcode.ADD_rA_rB_rC: return "ADD";
-				case Opcode.SUB_rA_rB_rC: return "SUB";
-				case Opcode.JUMP_iABC:    return "JUMP";
+				case Opcode.LOAD_rA_kBC:   return "LOAD";
+				case Opcode.ADD_rA_rB_rC:  return "ADD";
+				case Opcode.MULT_rA_rB_rC: return "MULT";
+				case Opcode.DIV_rA_rB_rC:  return "DIV";
+				case Opcode.SUB_rA_rB_rC:  return "SUB";
+				case Opcode.JUMP_iABC:     return "JUMP";
 				case Opcode.IFLT_rA_rB:
-				case Opcode.IFLT_rA_iBC:  return "IFLT";
-				case Opcode.CALLF_iA_iBC: return "CALLF";
-				case Opcode.RETURN:       return "RETURN";
+				case Opcode.IFLT_rA_iBC:   return "IFLT";
+				case Opcode.CALLF_iA_iBC:  return "CALLF";
+				case Opcode.RETURN:        return "RETURN";
 				default:
 					return "Unknown opcode";
 			}		
@@ -79,6 +81,8 @@ namespace MiniScript {
         		// rA, rB, rC
         		case Opcode.ADD_rA_rB_rC:
         		case Opcode.SUB_rA_rB_rC:
+				case Opcode.MULT_rA_rB_rC:
+				case Opcode.DIV_rA_rB_rC:
         			return StringUtils.Format("{0} r{1}, r{2}, r{3}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),

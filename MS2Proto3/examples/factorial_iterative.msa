@@ -1,0 +1,22 @@
+@main:
+    LOAD r3, 5  # We're going with factorial of 5 for now
+    LOAD r0, r3 # This will hold our answer
+    LOAD r1, 1
+    LOAD r2, 2
+
+    initialcheck:
+        IFLT r3, r2
+        JUMP ret1
+
+    check:
+        IFLT r3, r2
+        JUMP done
+        SUB r3, r3, r1
+        MULT r0, r0, r3
+        JUMP check    
+
+    ret1:
+        LOAD r0, r1 # Special case where the initial value is <2. ie. Factorial(1) or Factorial(0)
+    done:
+
+    RETURN

@@ -146,6 +146,20 @@ namespace MiniScript {
 				Byte src2 = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.SUB_rA_rB_rC, dest, src1, src2);
 				
+			} else if (mnemonic == "MULT") {
+				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				Byte dest = ParseRegister(parts[1]);
+				Byte src1 = ParseRegister(parts[2]);
+				Byte src2 = ParseRegister(parts[3]);
+				instruction = BytecodeUtil.INS_ABC(Opcode.MULT_rA_rB_rC, dest, src1, src2);
+			
+			} else if (mnemonic == "DIV") {
+				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				Byte dest = ParseRegister(parts[1]);
+				Byte src1 = ParseRegister(parts[2]);
+				Byte src2 = ParseRegister(parts[3]);
+				instruction = BytecodeUtil.INS_ABC(Opcode.DIV_rA_rB_rC, dest, src1, src2);
+			
 			} else if (mnemonic == "JUMP") {
 				if (parts.Count != 2) return Error("Syntax error", mnemonic, line);
 				String target = parts[1];

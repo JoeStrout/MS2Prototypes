@@ -11,11 +11,13 @@ namespace MiniScript {
 		LOAD_rA_kBC = 3,
 		ADD_rA_rB_rC = 4,
 		SUB_rA_rB_rC = 5,
-		JUMP_iABC = 6,
-		IFLT_rA_rB = 7,
-		IFLT_rA_iBC = 8,
-		CALLF_iA_iBC = 9,
-		RETURN = 10
+		MULT_rA_rB_rC = 6,
+		DIV_rA_rB_rC = 7,
+		JUMP_iABC = 8,
+		IFLT_rA_rB = 9,
+		IFLT_rA_iBC = 10,
+		CALLF_iA_iBC = 11,
+		RETURN = 12
 	}
 
 	public static class BytecodeUtil {
@@ -54,34 +56,38 @@ namespace MiniScript {
 		// Conversion to/from opcode mnemonics (names)
 		public static String ToMnemonic(Opcode opcode) {
 			switch (opcode) {
-				case Opcode.NOOP:         return "NOOP";
-				case Opcode.LOAD_rA_rB:   return "LOAD_rA_rB";
-				case Opcode.LOAD_rA_iBC:  return "LOAD_rA_iBC";
-				case Opcode.LOAD_rA_kBC:  return "LOAD_rA_kBC";
-				case Opcode.ADD_rA_rB_rC: return "ADD_rA_rB_rC";
-				case Opcode.SUB_rA_rB_rC: return "SUB_rA_rB_rC";
-				case Opcode.JUMP_iABC:    return "JUMP_iABC";
-				case Opcode.IFLT_rA_rB:   return "IFLT_rA_rB";
-				case Opcode.IFLT_rA_iBC:  return "IFLT_rA_iBC";
-				case Opcode.CALLF_iA_iBC: return "CALLF_iA_iBC";
-				case Opcode.RETURN:       return "RETURN";
+				case Opcode.NOOP:          return "NOOP";
+				case Opcode.LOAD_rA_rB:    return "LOAD_rA_rB";
+				case Opcode.LOAD_rA_iBC:   return "LOAD_rA_iBC";
+				case Opcode.LOAD_rA_kBC:   return "LOAD_rA_kBC";
+				case Opcode.ADD_rA_rB_rC:  return "ADD_rA_rB_rC";
+				case Opcode.SUB_rA_rB_rC:  return "SUB_rA_rB_rC";
+				case Opcode.MULT_rA_rB_rC: return "MULT_rA_rB_rC";
+				case Opcode.DIV_rA_rB_rC: return "DIV_rA_rB_rC";
+				case Opcode.JUMP_iABC:     return "JUMP_iABC";
+				case Opcode.IFLT_rA_rB:    return "IFLT_rA_rB";
+				case Opcode.IFLT_rA_iBC:   return "IFLT_rA_iBC";
+				case Opcode.CALLF_iA_iBC:  return "CALLF_iA_iBC";
+				case Opcode.RETURN:        return "RETURN";
 				default:
 					return "Unknown opcode";
 			}
 		}
 		
 		public static Opcode FromMnemonic(String s) {
-			if (s == "NOOP")         return Opcode.NOOP;
-			if (s == "LOAD_rA_rB")   return Opcode.LOAD_rA_rB;
-			if (s == "LOAD_rA_iBC")  return Opcode.LOAD_rA_iBC;
-			if (s == "LOAD_rA_kBC")  return Opcode.LOAD_rA_kBC;
-			if (s == "ADD_rA_rB_rC") return Opcode.ADD_rA_rB_rC;
-			if (s == "SUB_rA_rB_rC") return Opcode.SUB_rA_rB_rC;
-			if (s == "JUMP_iABC")    return Opcode.JUMP_iABC;
-			if (s == "IFLT_rA_rB")   return Opcode.IFLT_rA_rB;
-			if (s == "IFLT_rA_iBC")  return Opcode.IFLT_rA_iBC;
-			if (s == "CALLF_iA_iBC") return Opcode.CALLF_iA_iBC;
-			if (s == "RETURN")       return Opcode.RETURN;
+			if (s == "NOOP")          return Opcode.NOOP;
+			if (s == "LOAD_rA_rB")    return Opcode.LOAD_rA_rB;
+			if (s == "LOAD_rA_iBC")   return Opcode.LOAD_rA_iBC;
+			if (s == "LOAD_rA_kBC")   return Opcode.LOAD_rA_kBC;
+			if (s == "ADD_rA_rB_rC")  return Opcode.ADD_rA_rB_rC;
+			if (s == "SUB_rA_rB_rC")  return Opcode.SUB_rA_rB_rC;
+			if (s == "MULT_rA_rB_rC") return Opcode.MULT_rA_rB_rC;
+			if (s == "DIV_rA_rB_rC") return Opcode.MULT_rA_rB_rC;
+			if (s == "JUMP_iABC")     return Opcode.JUMP_iABC;
+			if (s == "IFLT_rA_rB")    return Opcode.IFLT_rA_rB;
+			if (s == "IFLT_rA_iBC")   return Opcode.IFLT_rA_iBC;
+			if (s == "CALLF_iA_iBC")  return Opcode.CALLF_iA_iBC;
+			if (s == "RETURN")        return Opcode.RETURN;
 			return Opcode.NOOP;
 		}
 	}

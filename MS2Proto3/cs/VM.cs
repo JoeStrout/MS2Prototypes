@@ -94,7 +94,7 @@ namespace MiniScript {
                 
                 if (debug) {
                     // Debug output disabled for C++ transpilation
-                    // IOHelper.Print("VM instruction: " + instruction.ToString());
+                    IOHelper.Print("VM instruction: " + Disassembler.ToString(instruction));
                 }
 
                 Opcode opcode = (Opcode)BytecodeUtil.OP(instruction);
@@ -148,6 +148,24 @@ namespace MiniScript {
                         Byte b = BytecodeUtil.Bu(instruction);
                         Byte c = BytecodeUtil.Cu(instruction);
                         stack[baseIndex + a] = value_sub(stack[baseIndex + b], stack[baseIndex + c]);
+                        break;
+                    }
+
+                    case Opcode.MULT_rA_rB_rC: {
+                        // R[A] = R[B] * R[C]
+                        Byte a = BytecodeUtil.Au(instruction);
+                        Byte b = BytecodeUtil.Bu(instruction);
+                        Byte c = BytecodeUtil.Cu(instruction);
+                        stack[baseIndex + a] = value_multiply(stack[baseIndex + b], stack[baseIndex + c]);
+                        break;
+                    }
+
+                    case Opcode.DIV_rA_rB_rC: {
+                        // R[A] = R[B] * R[C]
+                        Byte a = BytecodeUtil.Au(instruction);
+                        Byte b = BytecodeUtil.Bu(instruction);
+                        Byte c = BytecodeUtil.Cu(instruction);
+                        stack[baseIndex + a] = value_divide(stack[baseIndex + b], stack[baseIndex + c]);
                         break;
                     }
 
