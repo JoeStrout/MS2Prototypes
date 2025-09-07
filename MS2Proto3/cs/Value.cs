@@ -53,9 +53,9 @@ namespace MiniScript {
         public static Value FromTinyAscii(ReadOnlySpan<byte> s) {
             int len = s.Length;
             if ((uint)len > 5u) throw new ArgumentOutOfRangeException(nameof(s), "Tiny string max 5 bytes");
-            ulong u = TINY_MASK | (ulong)(len & 0xFF);
+            ulong u = TINY_MASK | (ulong)((uint)len & 0xFFU);
             for (int i = 0; i < len; i++)
-                u |= (ulong)(byte)s[i] << (8 * (i + 1));
+                u |= (ulong)((byte)s[i]) << (8 * (i + 1));
             return new(u);
         }
 
@@ -197,8 +197,8 @@ namespace MiniScript {
 
             // Heap strings via handle indirection
             if (a.IsString && b.IsString) {
-                string? sa = a.IsTiny ? a.ToString() : HandlePool.Get(a.Handle()) as string;
-                string? sb = b.IsTiny ? b.ToString() : HandlePool.Get(b.Handle()) as string;
+                string sa = a.IsTiny ? a.ToString() : HandlePool.Get(a.Handle()) as string;
+                string sb = b.IsTiny ? b.ToString() : HandlePool.Get(b.Handle()) as string;
                 return string.Equals(sa, sb, StringComparison.Ordinal);
             }
 
@@ -258,7 +258,7 @@ namespace MiniScript {
     // A minimal, fast handle table. Stores actual C# objects referenced by Value.
     // All heap-backed Value variants carry a 32-bit index into this pool.
     internal static class HandlePool {
-        private static object?[] _objs = new object[1024];
+        private static object[] _objs = new object[1024];
         private static int _count;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -272,7 +272,7 @@ namespace MiniScript {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static object? Get(int h) => (uint)h < (uint)_count ? _objs[h] : null;
+        public static object Get(int h) => (uint)h < (uint)_count ? _objs[h] : null;
         
         public static int GetCount() => _count;
     }
@@ -376,7 +376,7 @@ namespace MiniScript {
         }
         
         private static string GetStringValue(Value val) {
-            if (val.IsTiny) val.ToString();
+            if (val.IsTiny) return val.ToString();
             if (val.IsHeapString) return HandlePool.Get(val.Handle()) as string ?? "";
             return "";
         }
