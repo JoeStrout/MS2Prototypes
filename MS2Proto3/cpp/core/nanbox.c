@@ -169,12 +169,12 @@ bool value_lt(Value a, Value b) {
     return false;
 }
 
-bool value_gt(Value a, Value b) {
+bool value_le(Value a, Value b) {
     // Handle numeric comparisons
     if (is_number(a) && is_number(b)) {
         double da = is_int(a) ? (double)as_int(a) : as_double(a);
         double db = is_int(b) ? (double)as_int(b) : as_double(b);
-        return da < db;
+        return da <= db;
     }
     
     // TODO: Handle string comparisons, etc.

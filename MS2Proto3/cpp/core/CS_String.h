@@ -390,15 +390,6 @@ public:
         return ss_compare(s1, s2);
     }
     
-    int CompareIgnoreCase(const String& other) const {
-        const StringStorage* s1 = getStorage();
-        const StringStorage* s2 = other.getStorage();
-        if (!s1 && !s2) return 0;
-        if (!s1) return -1;
-        if (!s2) return 1;
-        return ss_compareIgnoreCase(s1, s2);
-    }
-    
     // C# String API - Static methods (Join)
     static String Join(const String& separator, const String* values, int count, uint8_t pool = 0) {
         if (!values || count <= 0) return String();

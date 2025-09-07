@@ -253,6 +253,17 @@ namespace MiniScript {
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool is_number(Value v) => v.IsInt || v.IsDouble;
+        
+        // Arithmetic operations (matching nanbox.h)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Value value_add(Value a, Value b) => Value.Add(a, b);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Value value_sub(Value a, Value b) => Value.Sub(a, b);
+        
+        // Comparison operations (matching nanbox.h)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool value_lt(Value a, Value b) => Value.LessThan(a, b);
     }
 
     // A minimal, fast handle table. Stores actual C# objects referenced by Value.

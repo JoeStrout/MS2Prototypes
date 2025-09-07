@@ -368,7 +368,8 @@ Converter.tweakSyntax = function(line)
 	if line.startsWith("new ") then line = line[4:]
 	
 	// null --> nullptr
-	line = line.replace("null", "nullptr")
+	line = line.replace(" null", " nullptr")
+	line = line.replace("(null", "(nullptr")
 	
 	// Count and Length -- properties in C#, but methods in C++.
 	// We may need to handle this more generally.  But for now:

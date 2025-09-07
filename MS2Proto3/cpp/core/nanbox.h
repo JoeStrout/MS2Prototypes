@@ -131,7 +131,10 @@ bool value_lt(Value a, Value b);
 // Value comparison (implemented in nanbox.c)
 bool value_equal(Value a, Value b);
 bool value_lt(Value a, Value b);
-bool value_gt(Value a, Value b);
+bool value_le(Value a, Value b);
+static inline bool value_gt(Value a, Value b) { return !value_le(a, b); }
+static inline bool value_ge(Value a, Value b) { return !value_lt(a, b); }
+
 
 // Bit-wise operations
 Value value_and(Value a, Value b);

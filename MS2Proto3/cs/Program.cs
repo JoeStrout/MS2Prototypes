@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;	// only for ToList!
 using MiniScript;
 // CPP: #include "UnitTests.g.h"
+// CPP: #include "VM.g.h"
 // CPP: using namespace MiniScript;
 
 public class Program {
@@ -19,7 +20,7 @@ public class Program {
 			"Build: C# version" // CPP: "Build: C++ version"
 		);
 		IOHelper.Print("Milestone 2: complete!");
-		IOHelper.Print("Milestone 3: not yet started");
+		IOHelper.Print("Milestone 3: in progress");
 		
 		IOHelper.Print("Running unit tests...");
 		if (!UnitTests.RunAll()) return;
@@ -54,6 +55,15 @@ public class Program {
 			for (Int32 i = 0; i < disassembly.Count; i++) {
 				IOHelper.Print(disassembly[i]);
 			}
+			
+			// Execute the assembled code with the VM
+			IOHelper.Print("");
+			IOHelper.Print("Executing with VM...");
+			
+			VM vm = new VM();
+			Value result = vm.Execute(assembler.Current);
+			
+			IOHelper.Print(StringUtils.Format("VM execution complete. Result in r0: {0}", result));
 		}
 		
 		IOHelper.Print("All done!");
