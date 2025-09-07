@@ -26,6 +26,7 @@ int string_length(Value v);                // Get character length (Unicode-awar
 
 // String operations
 bool string_equals(Value a, Value b);
+int string_compare(Value a, Value b);          // Unicode-aware comparison
 Value string_concat(Value a, Value b);
 int string_indexOf(Value haystack, Value needle, int start_pos);
 Value string_replace(Value source, Value search, Value replacement);

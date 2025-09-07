@@ -57,57 +57,10 @@ const char* value_type_name(Value v) {
 }
 
 // Arithmetic operations for VM support
-Value value_add(Value a, Value b) {
-    // Handle integer + integer case
-    if (is_int(a) && is_int(b)) {
-        // Use int64_t to detect overflow
-        int64_t result = (int64_t)as_int(a) + (int64_t)as_int(b);
-        if (result >= INT32_MIN && result <= INT32_MAX) {
-            return make_int((int32_t)result);
-        } else {
-            // Overflow to double
-            return make_double((double)result);
-        }
-    }
-    
-    // Handle mixed integer/double or double/double cases
-    if (is_number(a) && is_number(b)) {
-        double da = is_int(a) ? (double)as_int(a) : as_double(a);
-        double db = is_int(b) ? (double)as_int(b) : as_double(b);
-        return make_double(da + db);
-    }
-    
-    // TODO: Handle string concatenation, etc.
-    // For now, return nil for unsupported operations
-    return make_null();
-}
-
-Value value_sub(Value a, Value b) {
-    // Handle integer - integer case
-    if (is_int(a) && is_int(b)) {
-        // Use int64_t to detect overflow/underflow
-        int64_t result = (int64_t)as_int(a) - (int64_t)as_int(b);
-        if (result >= INT32_MIN && result <= INT32_MAX) {
-            return make_int((int32_t)result);
-        } else {
-            // Overflow/underflow to double
-            return make_double((double)result);
-        }
-    }
-    
-    // Handle mixed integer/double or double/double cases
-    if (is_number(a) && is_number(b)) {
-        double da = is_int(a) ? (double)as_int(a) : as_double(a);
-        double db = is_int(b) ? (double)as_int(b) : as_double(b);
-        return make_double(da - db);
-    }
-    
-    // Return nil for unsupported operations
-    return make_null();
-}
+// Note: value_add() and value_sub() are now inlined in value.h
 
 Value value_mult(Value a, Value b) {
-    // Handle integer + integer case
+    // Handle integer * integer case
     if (is_int(a) && is_int(b)) {
         // Use int64_t to detect overflow
         int64_t result = (int64_t)as_int(a) * (int64_t)as_int(b);
@@ -126,7 +79,32 @@ Value value_mult(Value a, Value b) {
         return make_double(da * db);
     }
     
-    // TODO: Handle string concatenation, etc.
+    // Handle string repetition: string * int or int * string
+    if (is_string(a) && is_int(b)) {
+        int count = as_int(b);
+        if (count <= 0) return make_string("");
+        if (count == 1) return a;
+        
+        // Build repeated string
+        Value result = a;
+        for (int i = 1; i < count; i++) {
+            result = string_concat(result, a);
+        }
+        return result;
+    }
+    if (is_int(a) && is_string(b)) {
+        int count = as_int(a);
+        if (count <= 0) return make_string("");
+        if (count == 1) return b;
+        
+        // Build repeated string
+        Value result = b;
+        for (int i = 1; i < count; i++) {
+            result = string_concat(result, b);
+        }
+        return result;
+    }
+    
     // For now, return nil for unsupported operations
     return make_null();
 }
@@ -156,18 +134,7 @@ Value value_div(Value a, Value b) {
     return make_null();
 }
 
-bool value_lt(Value a, Value b) {
-    // Handle numeric comparisons
-    if (is_number(a) && is_number(b)) {
-        double da = is_int(a) ? (double)as_int(a) : as_double(a);
-        double db = is_int(b) ? (double)as_int(b) : as_double(b);
-        return da < db;
-    }
-    
-    // TODO: Handle string comparisons, etc.
-    // For now, return false for unsupported comparisons
-    return false;
-}
+// Note: value_lt() is now inlined in value.h
 
 bool value_le(Value a, Value b) {
     // Handle numeric comparisons
@@ -177,7 +144,11 @@ bool value_le(Value a, Value b) {
         return da <= db;
     }
     
-    // TODO: Handle string comparisons, etc.
+    // Handle string comparisons (Unicode-aware)
+    if (is_string(a) && is_string(b)) {
+        return string_compare(a, b) <= 0;
+    }
+    
     // For now, return false for unsupported comparisons
     return false;
 }

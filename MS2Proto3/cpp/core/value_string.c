@@ -595,3 +595,47 @@ Value string_substring(Value str, int startIndex, int len) {
 Value string_charAt(Value str, int index) {
     return string_substring(str, index, 1);
 }
+
+// Unicode-aware string comparison
+// Returns: < 0 if a < b, 0 if a == b, > 0 if a > b
+int string_compare(Value a, Value b) {
+    if (!is_string(a) || !is_string(b)) {
+        // Handle non-string cases
+        if (!is_string(a) && !is_string(b)) return 0; // Both non-strings are equal
+        return is_string(a) ? 1 : -1; // Strings are greater than non-strings
+    }
+    
+    // Handle tiny string comparisons - convert to null-terminated strings for proper comparison
+    if (is_tiny_string(a) && is_tiny_string(b)) {
+        char tiny_buffer_a[TINY_STRING_MAX_LEN + 1];
+        char tiny_buffer_b[TINY_STRING_MAX_LEN + 1];
+        
+        const char* str_a = get_string_data_nullterm(&a, tiny_buffer_a);
+        const char* str_b = get_string_data_nullterm(&b, tiny_buffer_b);
+        
+        return strcmp(str_a, str_b);
+    }
+    
+    // Handle mixed tiny/heap string comparisons
+    if (is_tiny_string(a) || is_tiny_string(b)) {
+        // Convert to C strings for comparison
+        char tiny_buffer_a[TINY_STRING_MAX_LEN + 1];
+        char tiny_buffer_b[TINY_STRING_MAX_LEN + 1];
+        
+        const char* str_a = get_string_data_nullterm(&a, tiny_buffer_a);
+        const char* str_b = get_string_data_nullterm(&b, tiny_buffer_b);
+        
+        return strcmp(str_a, str_b);
+    }
+    
+    // Both are heap strings - use StringStorage comparison
+    StringStorage* storage_a = as_string(a);
+    StringStorage* storage_b = as_string(b);
+    
+    if (storage_a == NULL || storage_b == NULL) {
+        if (storage_a == storage_b) return 0;
+        return storage_a == NULL ? -1 : 1;
+    }
+    
+    return ss_compare(storage_a, storage_b);
+}

@@ -4,10 +4,13 @@ using System.Linq;	// only for ToList!
 using MiniScript;
 // CPP: #include "UnitTests.g.h"
 // CPP: #include "VM.g.h"
+// CPP: #include "gc.h"
 // CPP: using namespace MiniScript;
 
 public class Program {
 	public static void Main(string[] args) {
+		// CPP: gc_init();
+	
 		//*** BEGIN CS_ONLY ***
 		// The args passed to the C# main program do not include the program path.
 		// To get an arg list like what C++ gets, we must do:

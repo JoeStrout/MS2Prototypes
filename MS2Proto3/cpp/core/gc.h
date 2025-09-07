@@ -11,6 +11,11 @@
 #include "value.h"
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 // Initialize/shutdown the garbage collector
 void gc_init(void);
 void gc_shutdown(void);
@@ -56,5 +61,9 @@ typedef struct {
 } GCStats;
 
 GCStats gc_get_stats(void);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif // GC_H

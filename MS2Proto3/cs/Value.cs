@@ -151,6 +151,10 @@ namespace MiniScript {
                 double db = b.IsInt ? b.AsInt() : b.AsDouble();
                 return FromDouble(da + db);
             }
+            // Handle string concatenation
+            if (a.IsString && b.IsString) {
+                return StringOperations.StringConcat(a, b);
+            }
             // string concat, list append, etc. can be added here.
             return Null();
         }
@@ -176,6 +180,10 @@ namespace MiniScript {
                 double da = a.IsInt ? a.AsInt() : a.AsDouble();
                 double db = b.IsInt ? b.AsInt() : b.AsDouble();
                 return da < db;
+            }
+            // Handle string comparison
+            if (a.IsString && b.IsString) {
+                return StringOperations.StringCompare(a, b) < 0;
             }
             return false;
         }
@@ -384,6 +392,16 @@ namespace MiniScript {
         
         public static bool StringEquals(Value str1, Value str2) {
             return Value.Equal(str1, str2);
+        }
+
+        public static int StringCompare(Value str1, Value str2) {
+            if (!str1.IsString || !str2.IsString) return 0;
+            
+            string sa = str1.IsTiny ? str1.ToString() : HandlePool.Get(str1.Handle()) as string;
+            string sb = str2.IsTiny ? str2.ToString() : HandlePool.Get(str2.Handle()) as string;
+            
+            if (sa == null || sb == null) return 0;
+            return string.Compare(sa, sb, StringComparison.Ordinal);
         }
         
         private static string GetStringValue(Value val) {

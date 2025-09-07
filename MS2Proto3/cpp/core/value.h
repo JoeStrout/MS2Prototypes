@@ -120,17 +120,93 @@ static inline double as_double(Value v) {
     #define GET_VALUE_DATA_PTR_CONST(v_ptr) (((const char*)(v_ptr)) + 2)
 #endif
 
-// Arithmetic operations (implemented in value.c)
-Value value_add(Value a, Value b);
-Value value_sub(Value a, Value b);
+// Forward declarations for string functions (implemented in value_string.h/c)
+extern Value string_concat(Value a, Value b);
+extern Value make_string(const char* str);
+extern const char* get_string_data_zerocopy(const Value* v_ptr, int* out_len);
+extern int string_compare(Value a, Value b);
 
+// Arithmetic operations (inlined for performance)
+static inline Value value_add(Value a, Value b) {
+    // Handle integer + integer case
+    if (is_int(a) && is_int(b)) {
+        // Use int64_t to detect overflow
+        int64_t result = (int64_t)as_int(a) + (int64_t)as_int(b);
+        if (result >= INT32_MIN && result <= INT32_MAX) {
+            return make_int((int32_t)result);
+        } else {
+            // Overflow to double
+            return make_double((double)result);
+        }
+    }
+    
+    // Handle mixed integer/double or double/double cases
+    if (is_number(a) && is_number(b)) {
+        double da = is_int(a) ? (double)as_int(a) : as_double(a);
+        double db = is_int(b) ? (double)as_int(b) : as_double(b);
+        return make_double(da + db);
+    }
+    
+    // Handle string concatenation
+    if (is_string(a) && is_string(b)) {
+        return string_concat(a, b);
+    }
+    
+    // For now, return nil for unsupported operations
+    return make_null();
+}
+
+static inline Value value_sub(Value a, Value b) {
+    // Handle integer - integer case
+    if (is_int(a) && is_int(b)) {
+        // Use int64_t to detect overflow/underflow
+        int64_t result = (int64_t)as_int(a) - (int64_t)as_int(b);
+        if (result >= INT32_MIN && result <= INT32_MAX) {
+            return make_int((int32_t)result);
+        } else {
+            // Overflow/underflow to double
+            return make_double((double)result);
+        }
+    }
+    
+    // Handle mixed integer/double or double/double cases
+    if (is_number(a) && is_number(b)) {
+        double da = is_int(a) ? (double)as_int(a) : as_double(a);
+        double db = is_int(b) ? (double)as_int(b) : as_double(b);
+        return make_double(da - db);
+    }
+    
+    // Return nil for unsupported operations
+    return make_null();
+}
+
+// Forward declaration for string equality function
+extern bool string_equals(Value a, Value b);
+
+// Most critical comparison function (inlined for performance)
+static inline bool value_lt(Value a, Value b) {
+    // Handle numeric comparisons
+    if (is_number(a) && is_number(b)) {
+        double da = is_int(a) ? (double)as_int(a) : as_double(a);
+        double db = is_int(b) ? (double)as_int(b) : as_double(b);
+        return da < db;
+    }
+    
+    // Handle string comparisons (Unicode-aware)
+    if (is_string(a) && is_string(b)) {
+        return string_compare(a, b) < 0;
+    }
+    
+    // For now, return false for unsupported comparisons
+    return false;
+}
+
+// Less frequently used arithmetic operations (keep in .c file for code size)
 Value value_mult(Value a, Value b);
 Value value_div(Value a, Value b);
-bool value_lt(Value a, Value b);
 
-// Value comparison (implemented in value.c)
+// Value comparison (most critical ones inlined above, others implemented in value.c)
 bool value_equal(Value a, Value b);
-bool value_lt(Value a, Value b);
 bool value_le(Value a, Value b);
 static inline bool value_gt(Value a, Value b) { return !value_le(a, b); }
 static inline bool value_ge(Value a, Value b) { return !value_lt(a, b); }

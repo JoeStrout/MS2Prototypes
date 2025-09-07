@@ -8,6 +8,10 @@
 #include "value.h"
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 // List structure
 typedef struct {
@@ -45,5 +49,9 @@ void list_resize(Value list_val, int new_capacity);
 // Capacity management utilities
 bool list_needs_expansion(Value list_val);
 Value list_with_expanded_capacity(Value list_val);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif // LISTS_H
