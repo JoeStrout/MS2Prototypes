@@ -5,7 +5,7 @@
 
 #include "value_string.h"
 #include "StringStorage.h"
-#include "nanbox.h"
+#include "value.h"
 #include "gc.h"
 #include "unicodeUtil.h"
 #include "value_list.h"

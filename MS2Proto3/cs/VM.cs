@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-// CPP: #include "nanbox.h"
+// CPP: #include "value.h"
 // CPP: #include "Bytecode.g.h"
 // CPP: #include "IOHelper.g.h"
 

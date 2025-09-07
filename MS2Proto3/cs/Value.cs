@@ -1,5 +1,5 @@
 //*** BEGIN CS_ONLY ***
-// (This entire file is only for C#; the C++ code uses nanbox.h/.c instead.)
+// (This entire file is only for C#; the C++ code uses value.h/.c instead.)
 
 using System;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace MiniScript {
-    // NOTE: Align the TAG MASK constants below with your C nanbox.h.
+    // NOTE: Align the TAG MASK constants below with your C value.h.
     // The layout mirrors a NaN-box: 64-bit payload that is either:
     // - a real double (no matching tag), OR
     // - an encoded immediate (int, tiny string), OR
@@ -216,9 +216,9 @@ namespace MiniScript {
         }
     }
 
-    // Global helper functions to match C++ nanbox.h interface
+    // Global helper functions to match C++ value.h interface
     public static class ValueHelpers {
-        // Core value creation functions (matching nanbox.h)
+        // Core value creation functions (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Value make_null() => Value.Null();
         
@@ -231,14 +231,14 @@ namespace MiniScript {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Value make_string(string str) => Value.FromString(str);
         
-        // Core value extraction functions (matching nanbox.h)
+        // Core value extraction functions (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int as_int(Value v) => v.AsInt();
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double as_double(Value v) => v.AsDouble();
         
-        // Core type checking functions (matching nanbox.h)
+        // Core type checking functions (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool is_null(Value v) => v.IsNull;
         
@@ -254,14 +254,14 @@ namespace MiniScript {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool is_number(Value v) => v.IsInt || v.IsDouble;
         
-        // Arithmetic operations (matching nanbox.h)
+        // Arithmetic operations (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Value value_add(Value a, Value b) => Value.Add(a, b);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Value value_sub(Value a, Value b) => Value.Sub(a, b);
         
-        // Comparison operations (matching nanbox.h)
+        // Comparison operations (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool value_lt(Value a, Value b) => Value.LessThan(a, b);
     }

@@ -60,7 +60,7 @@ GC_PROTECT(&my_var);  // Pass pointer to the variable
 ## Complete Example
 
 ```c
-#include "nanbox.h"
+#include "value.h"
 #include "nanbox_gc.h"
 
 Value process_words(Value input) {

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-// CPP: #include "nanbox.h"
+// CPP: #include "value.h"
 
 namespace MiniScript {
 	// Opcodes.  Note that these must have sequential values, starting at 0.

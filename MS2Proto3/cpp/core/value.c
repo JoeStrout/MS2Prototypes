@@ -1,9 +1,9 @@
-// nanbox.c
+// value.c
 //
 // Core NaN-boxing implementation utilities
-// Most functionality is in nanbox.h as inline functions
+// Most functionality is in value.h as inline functions
 
-#include "nanbox.h"
+#include "value.h"
 #include "value_string.h"
 #include <stdio.h>
 #include <stdint.h>

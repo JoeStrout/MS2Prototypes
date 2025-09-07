@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-// CPP: #include "nanbox.h"
+// CPP: #include "value.h"
 // CPP: #include "value_string.h"
 // CPP: #include "Bytecode.g.h"
 // CPP: #include "StringUtils.g.h"

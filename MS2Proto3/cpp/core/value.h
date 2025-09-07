@@ -1,4 +1,4 @@
-// nanbox.h
+// value.h
 //
 // Purpose: this module defines the Value type, an 8-byte NaN-box representation
 // of our dynamic type.  This Value will always be either a valid Double, or
@@ -120,7 +120,7 @@ static inline double as_double(Value v) {
     #define GET_VALUE_DATA_PTR_CONST(v_ptr) (((const char*)(v_ptr)) + 2)
 #endif
 
-// Arithmetic operations (implemented in nanbox.c)
+// Arithmetic operations (implemented in value.c)
 Value value_add(Value a, Value b);
 Value value_sub(Value a, Value b);
 
@@ -128,7 +128,7 @@ Value value_mult(Value a, Value b);
 Value value_div(Value a, Value b);
 bool value_lt(Value a, Value b);
 
-// Value comparison (implemented in nanbox.c)
+// Value comparison (implemented in value.c)
 bool value_equal(Value a, Value b);
 bool value_lt(Value a, Value b);
 bool value_le(Value a, Value b);
@@ -144,7 +144,7 @@ Value value_unary(Value a);  // ~ (not)
 Value value_shr(Value v, int shift);
 Value value_shl(Value v, int shift);
 
-// Debug utility functions (implemented in nanbox.c)
+// Debug utility functions (implemented in value.c)
 void debug_print_value(Value v);
 const char* value_type_name(Value v);
 

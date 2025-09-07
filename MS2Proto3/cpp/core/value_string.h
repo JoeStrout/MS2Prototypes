@@ -5,7 +5,7 @@
 #ifndef STRINGS_H
 #define STRINGS_H
 
-#include "nanbox.h"
+#include "value.h"
 #include "StringStorage.h"
 #include <stdbool.h>
 

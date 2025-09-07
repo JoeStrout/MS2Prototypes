@@ -1,5 +1,5 @@
 #include "value_list.h"
-#include "nanbox.h"
+#include "value.h"
 #include "gc.h"
 #include "value_string.h"
 #include <stdlib.h>
