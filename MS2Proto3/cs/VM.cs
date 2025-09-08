@@ -209,6 +209,39 @@ namespace MiniScript {
 						break;
 					}
 
+					case Opcode.BRLT_rA_rB_iC: {
+						// if R[A] < R[B] then jump offset C.
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						SByte offset = BytecodeUtil.Cs(instruction);
+						if(value_lt(stack[baseIndex + a], stack[baseIndex + b])){
+							pc += offset;
+						}
+						break;
+					}
+
+					case Opcode.BRLT_rA_iB_iC: {
+						// if R[A] < B (immediate) then jump offset C.
+						Byte a = BytecodeUtil.Au(instruction);
+						SByte b = BytecodeUtil.Bs(instruction);
+						SByte offset = BytecodeUtil.Cs(instruction);
+						if(value_lt(stack[baseIndex + a], make_int(b))){
+							pc += offset;
+						}
+						break;
+					}
+
+					case Opcode.BRLT_iA_rB_iC: {
+						// if A (immediate) < R[B] then jump offset C.
+						SByte a = BytecodeUtil.As(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						SByte offset = BytecodeUtil.Cs(instruction);
+						if(value_lt(make_int(a), stack[baseIndex + b])){
+							pc += offset;
+						}
+						break;
+					}
+
 					case Opcode.IFLT_rA_rB: {
 						// if R[A] < R[B] is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);

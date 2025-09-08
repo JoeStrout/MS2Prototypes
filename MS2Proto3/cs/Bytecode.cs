@@ -15,18 +15,21 @@ namespace MiniScript {
 		DIV_rA_rB_rC = 7,
 		MOD_rA_rB_rC = 8,
 		JUMP_iABC = 9,
-		IFLT_rA_rB = 10,
-		IFLT_rA_iBC = 11,
-		IFLT_iAB_rC = 12,
-		IFLE_rA_rB = 13,
-		IFLE_rA_iBC = 14,
-		IFLE_iAB_rC = 15,
-		IFEQ_rA_rB = 16,
-		IFEQ_rA_iBC = 17,
-		IFNE_rA_rB = 18,
-		IFNE_rA_iBC = 19,
-		CALLF_iA_iBC = 20,
-		RETURN = 21
+		BRLT_rA_rB_iC = 10,
+		BRLT_rA_iB_iC = 11,
+		BRLT_iA_rB_iC = 12,
+		IFLT_rA_rB = 13,
+		IFLT_rA_iBC = 14,
+		IFLT_iAB_rC = 15,
+		IFLE_rA_rB = 16,
+		IFLE_rA_iBC = 17,
+		IFLE_iAB_rC = 18,
+		IFEQ_rA_rB = 19,
+		IFEQ_rA_iBC = 20,
+		IFNE_rA_rB = 21,
+		IFNE_rA_iBC = 22,
+		CALLF_iA_iBC = 23,
+		RETURN = 24
 	}
 
 	public static class BytecodeUtil {
@@ -78,6 +81,9 @@ namespace MiniScript {
 				case Opcode.DIV_rA_rB_rC:  return "DIV_rA_rB_rC";
 				case Opcode.MOD_rA_rB_rC:  return "MOD_rA_rB_rC";
 				case Opcode.JUMP_iABC:     return "JUMP_iABC";
+				case Opcode.BRLT_rA_rB_iC: return "BRLT_rA_rB_iC";
+				case Opcode.BRLT_rA_iB_iC: return "BRLT_rA_iB_iC";
+				case Opcode.BRLT_iA_rB_iC: return "BRLT_iA_rB_iC";
 				case Opcode.IFLT_rA_rB:    return "IFLT_rA_rB";
 				case Opcode.IFLT_rA_iBC:   return "IFLT_rA_iBC";
 				case Opcode.IFLT_iAB_rC:   return "IFLT_iAB_rC";
@@ -106,6 +112,9 @@ namespace MiniScript {
 			if (s == "DIV_rA_rB_rC")  return Opcode.DIV_rA_rB_rC;
 			if (s == "MOD_rA_rB_rC")  return Opcode.MOD_rA_rB_rC;
 			if (s == "JUMP_iABC")     return Opcode.JUMP_iABC;
+			if (s == "BRLT_rA_rB_iC") return Opcode.BRLT_rA_rB_iC;
+			if (s == "BRLT_rA_iB_iC") return Opcode.BRLT_rA_iB_iC;
+			if (s == "BRLT_iA_rB_iC") return Opcode.BRLT_iA_rB_iC;
 			if (s == "IFLT_rA_rB")    return Opcode.IFLT_rA_rB;
 			if (s == "IFLT_rA_iBC")   return Opcode.IFLT_rA_iBC;
 			if (s == "IFLT_iAB_rC")   return Opcode.IFLT_iAB_rC;
