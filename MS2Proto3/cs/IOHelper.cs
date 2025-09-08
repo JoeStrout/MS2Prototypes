@@ -7,6 +7,7 @@ using System.Collections.Generic;
 // CPP: #include <stdio.h>
 // CPP: #include <fstream>
 // CPP: #include <string>
+// CPP: #include <algorithm>
 
 public static class IOHelper {
 
@@ -56,6 +57,7 @@ public static class IOHelper {
 		
 		std::string line;
 		while (std::getline(file, line)) {
+			line.erase( std::remove(line.begin(), line.end(), '\r'), line.end() );
 			lines.Add(String(line.c_str()));
 		}
 		file.close();
