@@ -4,6 +4,7 @@ using System.Collections.Generic;
 // CPP: #include "value_string.h"
 // CPP: #include "Bytecode.g.h"
 // CPP: #include "StringUtils.g.h"
+// CPP: #include <climits>
 
 using static MiniScript.ValueHelpers;
 
@@ -206,7 +207,46 @@ namespace MiniScript {
 					offset = ParseNumber(target);
 				}
 				instruction = BytecodeUtil.INS(Opcode.JUMP_iABC) | (UInt32)(offset & 0xFFFFFF);
+
+			} else if (mnemonic == "BRLT") {
+				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+
+				String target = parts[3];
+				Int32 offset;
 				
+				// Check if target is a label or a number
+				Int32 labelAddr = FindLabelAddress(target);
+				if (labelAddr >= 0) {
+					// It's a label - calculate relative offset from next instruction
+					offset = labelAddr - (Current.Code.Count + 1);
+				} else {
+					// It's a number
+					offset = ParseNumber(target);
+				}
+
+				if ((offset < SByte.MinValue) || (offset > SByte.MaxValue)) { // CPP: if((offset < SCHAR_MIN) || (offset > SCHAR_MAX)){
+					return Error("Range error (Cannot fit branch offset into SByte)", mnemonic, line);
+				}
+
+				if (parts[2][0] == 'r') {
+					if (parts[1][0] == 'r'){
+						// BRLT r5, r3, someOffset
+						Byte reg1 = ParseRegister(parts[1]);
+						Byte reg2 = ParseRegister(parts[2]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.BRLT_rA_rB_iC, reg1, reg2, (Byte)offset);
+					} else {
+						// BRLT 5, r5, someOffset
+						Byte immediate = (Byte)ParseNumber(parts[1]);
+						Byte reg2 = ParseRegister(parts[2]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.BRLT_iA_rB_iC, immediate, reg2, (Byte)offset);		
+					}
+				} else {
+					// BRLT r5, 5, someOffset
+					Byte reg1 = ParseRegister(parts[1]);
+					Byte immediate = (Byte)ParseNumber(parts[2]);
+					instruction = BytecodeUtil.INS_ABC(Opcode.BRLT_rA_iB_iC, reg1, immediate, (Byte)offset);
+				}				
+
 			} else if (mnemonic == "IFLT") {
 				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
 				
