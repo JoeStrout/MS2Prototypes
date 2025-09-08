@@ -301,10 +301,10 @@ namespace MiniScript {
         public static Value value_add(Value a, Value b) => Value.Add(a, b);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Value value_multiply(Value a, Value b) => Value.Multiply(a, b);
+        public static Value value_mult(Value a, Value b) => Value.Multiply(a, b);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Value value_divide(Value a, Value b) => Value.Divide(a, b);
+        public static Value value_div(Value a, Value b) => Value.Divide(a, b);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Value value_sub(Value a, Value b) => Value.Sub(a, b);

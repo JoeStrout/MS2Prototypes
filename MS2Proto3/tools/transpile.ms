@@ -7,7 +7,7 @@ import "fancyMatch"  // overrides standard string.match and string.fill
 TAB = char(9)
 
 debugPrint = function(s)
-	// print s
+	//print s
 end function
 
 Context = {}
@@ -302,6 +302,15 @@ Converter.processNonmethodLine = function
 		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
 	end if
+	
+	// conversion operator declaration
+	if self.match("≤scope≥ implicit operator ≤name≥()",
+	 "≤scope≥: operator ≤name≥();", "≤className≥::operator ≤name≥()") then
+		self.context = Context.METHOD
+		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		return
+	end if
+	 
 
 	// method declaration
 	if self.match("≤scope:w≥ static ≤rtype:w≥ ≤name:w≥(≤params≥)",

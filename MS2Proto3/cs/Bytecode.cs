@@ -94,9 +94,20 @@ namespace MiniScript {
 	
 	// Function definition: code, constants, and how many registers it needs
 	public class FuncDef {
+		public String Name = "";
 		public List<UInt32> Code = new List<UInt32>();
 		public List<Value> Constants = new List<Value>();
 		public UInt16 MaxRegs = 0; // frame reservation size
+		
+		// Conversion to bool: returns true if function has a name
+		/*** BEGIN H_ONLY ***
+		public: operator bool() { return Name != ""; }
+		*** END H_ONLY ***/
+		//*** BEGIN CS_ONLY ***
+		public static implicit operator bool(FuncDef funcDef) {
+			return funcDef != null && !String.IsNullOrEmpty(funcDef.Name);
+		}
+		//*** END CS_ONLY ***
 	}
 
 }

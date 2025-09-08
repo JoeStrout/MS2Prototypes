@@ -202,6 +202,7 @@ static inline bool value_lt(Value a, Value b) {
 }
 
 // Less frequently used arithmetic operations (keep in .c file for code size)
+// ToDo: reconsider that... * and / are pretty common in real code.
 Value value_mult(Value a, Value b);
 Value value_div(Value a, Value b);
 

@@ -11,14 +11,38 @@ namespace MiniScript {
 
 	public class Assembler {
 
+		// Multiple functions support
+		public List<FuncDef> Functions; // all functions
 		public FuncDef Current; // function we are currently building
-		private List<String> _labelNames; // label names
-		private List<Int32> _labelAddresses; // corresponding instruction addresses
+		private List<String> _labelNames; // label names within current function
+		private List<Int32> _labelAddresses; // corresponding instruction addresses within current function
 
 		public Assembler() {
+			Functions = new List<FuncDef>();
 			Current = new FuncDef();
 			_labelNames = new List<String>();
 			_labelAddresses = new List<Int32>();
+		}
+
+		// Helper to find a function by name (returns -1 if not found)
+		public Int32 FindFunctionIndex(String name) {
+			for (Int32 i = 0; i < Functions.Count; i++) {
+				if (Functions[i].Name == name) return i;
+			}
+			return -1;
+		}
+
+		// Helper to find a function by name.
+		// C#: returns null if not found; C++: returns an empty FuncDef.
+		public FuncDef FindFunction(String name) {
+			Int32 index = FindFunctionIndex(name);
+			if (index >= 0) return Functions[index];			
+			return null; // CPP: FuncDef result; return result;
+		}
+
+		// Helper to check if a function exists
+		public Boolean HasFunction(String name) {
+			return FindFunctionIndex(name) >= 0;
 		}
 
 		public static List<String> GetTokens(String line) {
@@ -242,6 +266,30 @@ namespace MiniScript {
 			return token.Length > 1 && token[token.Length - 1] == ':';
 		}
 
+		// Helper to determine if a token is a function label (starts with @ and ends with colon)
+		private static Boolean IsFunctionLabel(String token) {
+			return token.Length > 2 && token[0] == '@' && token[token.Length - 1] == ':';
+		}
+		
+		// Extract just the label part, e.g. "someLabel:" --> "someLabel"
+		private static String ParseLabel(String token) {
+			return token.Substring(0, token.Length-1);
+		}
+
+		// Add a new empty function to our function list.
+		// Return true on success, false if failed (because function already exists).
+		private bool AddFunction(String functionName) {
+			if (HasFunction(functionName)) {
+				IOHelper.Print(StringUtils.Format("ERROR: Function {0} is defined multiple times", functionName));
+				return false;
+			}
+			
+			FuncDef newFunc = new FuncDef();
+			newFunc.Name = functionName;
+			Functions.Add(newFunc);
+			return true;
+		}
+
 		// Helper to find the address of a label
 		private Int32 FindLabelAddress(String labelName) {
 			for (Int32 i = 0; i < _labelNames.Count; i++) {
@@ -348,37 +396,115 @@ namespace MiniScript {
 			return result;
 		}
 
-		// Two-pass assembly: first pass collects labels, second pass assembles with label resolution
+		// Multi-function assembly with support for @function: labels
 		public void Assemble(List<String> sourceLines) {
+			IOHelper.Print(StringUtils.Format("Assembling {0} lines", sourceLines.Count));
+			
 			// Clear any previous state
+			Functions.Clear();
 			Current = new FuncDef();
 			_labelNames.Clear();
 			_labelAddresses.Clear();
+			
+			// Skim very quickly through our source lines, collecting
+			// function labels (enabling forward calls).
+			bool sawMain = false;
+			Int32 lineNum = 0;
+			for (lineNum = 0; lineNum < sourceLines.Count; lineNum++) {
+				List<String> tokens = GetTokens(sourceLines[lineNum]);
+				if (tokens.Count < 1 || !IsFunctionLabel(tokens[0])) continue;
+				String funcName = ParseLabel(tokens[0]);
+				if (!AddFunction(funcName)) return;
+				if (tokens[0] == "@main:") sawMain = true;
+				IOHelper.Print(StringUtils.Format("...Found {0} at line {1}", funcName, lineNum));
+			}
+			if (!sawMain) AddFunction("@main");
+				
+			// Now proceed through the input lines, assembling one function at a time.
+			lineNum = 0;
+			while (lineNum < sourceLines.Count) {			
+				List<String> tokens = GetTokens(sourceLines[lineNum]);
+				if (tokens.Count == 0) { // empty line or comment only
+					lineNum++;
+					continue;
+				}
+				
+				// Our first non-empty line will either be "@main:" or an instruction
+				// (to go into the implicit @main function).  After that, we will
+				// always have a function name (@someFunc) here.
+				if (IsFunctionLabel(tokens[0])) {
+					// Starting a new function.
+					Current.Name = ParseLabel(tokens[0]);
+				} else {
+					// No function name -- implicit @main.
+					Current.Name = "@main";
+				}
+				
+				// Assemble one function, starting at lineNum+1, and proceeding
+				// until the next function or end-of-input.  The result will be
+				// the line number where we should continue with the next function.	
+				lineNum = AssembleFunction(sourceLines, lineNum);
 
-			// First pass: collect label positions
+				// Then, store the just-assembled Current function in our function list.
+				Int32 slot = FindFunctionIndex(Current.Name);
+				Functions[slot] = Current;
+				IOHelper.Print(StringUtils.Format("...stored {0} in slot {1}", Current.Name, slot));
+
+				Current = new FuncDef();
+			}
+		}
+
+		// Assemble a single function from sourceLines, starting at startLine,
+		// and proceeding until we hit another function label or run out of lines.
+		// Return the line number after this function ends.
+		private Int32 AssembleFunction(List<String> sourceLines, Int32 startLine) {
+			IOHelper.Print(StringUtils.Format("AssembleFunction({0})", startLine));
+			// Prepare label names/addresses, just for this function.
+			// (So it's OK to reuse the same label in multiple functions!)
+			_labelNames.Clear();
+			_labelAddresses.Clear();
+
+			// First pass: collect label positions within this function;
+			// and also find the end line for the second pass.
 			Int32 instructionAddress = 0;
-			for (Int32 i = 0; i < sourceLines.Count; i++) {
+			Int32 endLine = sourceLines.Count;
+			for (Int32 i = startLine; i < endLine; i++) {
 				List<String> tokens = GetTokens(sourceLines[i]);
-				if (tokens.Count == 0) continue; // empty line or comment only
+				if (tokens.Count == 0) continue;
 
-				// Check if first token is a label
+				// Skip initial function label line
+				if (i == startLine && IsFunctionLabel(tokens[0])) {
+					startLine++;	// (and start assembling on the next line)
+					continue;
+				}
+
+				// Any other function label ends the function
+				if (IsFunctionLabel(tokens[0])) {
+					endLine = i;
+					break;
+				}
+
+				// Check if first token is a regular label
 				if (IsLabel(tokens[0])) {
-					String labelName = tokens[0].Substring(0, tokens[0].Length - 1);
+					String labelName = ParseLabel(tokens[0]);
 					_labelNames.Add(labelName);
 					_labelAddresses.Add(instructionAddress);
 				}
-				
+
 				// Check if there's an instruction on this line
-				// (either no label, or "NOOP", or label + instruction)
-				if (!IsLabel(tokens[0]) || tokens[0]=="NOOP" || tokens.Count > 1) {
+				if (!IsLabel(tokens[0]) || tokens[0] == "NOOP" || tokens.Count > 1) {
 					instructionAddress++;
 				}
 			}
 
 			// Second pass: assemble instructions with label resolution
-			for (Int32 i = 0; i < sourceLines.Count; i++) {
+			IOHelper.Print(StringUtils.Format("...found {0} labels in lines {1}-{2}", _labelNames.Count, startLine, endLine));
+			Current.Code.Clear(); // Clear any previous assembly
+			Current.Constants.Clear();
+			for (Int32 i = startLine; i < endLine; i++) {
 				AddLine(sourceLines[i]);
 			}
+			return endLine;
 		}
 
 

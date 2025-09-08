@@ -95,15 +95,13 @@ namespace MiniScript {
 	
 		// Disassemble the given function.  If detailed=true, include extra
 		// details for debugging, like line numbers and instruction hex code.
-		public static List<String> Disassemble(FuncDef funcDef, Boolean detailed=true) {
-			List<String> result = new List<String>();
-			
-			result.Add(StringUtils.Format("Constants ({0}):", funcDef.Constants.Count));
+		public static void Disassemble(FuncDef funcDef, List<String> output, Boolean detailed=true) {
+			output.Add(StringUtils.Format("Constants ({0}):", funcDef.Constants.Count));
 			for (Int32 i = 0; i < funcDef.Constants.Count; i++) {
-				result.Add(StringUtils.Format("   {0}. {1}", i, funcDef.Constants[i]));
+				output.Add(StringUtils.Format("   {0}. {1}", i, funcDef.Constants[i]));
 			}
 			
-			result.Add(StringUtils.Format("Instructions ({0}):", funcDef.Code.Count));
+			output.Add(StringUtils.Format("Instructions ({0}):", funcDef.Code.Count));
 			for (Int32 i = 0; i < funcDef.Code.Count; i++) {				
 				String s = ToString(funcDef.Code[i]);
 				if (detailed) {
@@ -111,7 +109,18 @@ namespace MiniScript {
 					  + StringUtils.ToHex(funcDef.Code[i]) + " | "
 					  + s;
 				}
-				result.Add(s);
+				output.Add(s);
+			}
+		}
+
+		// Disassemble the whole program (list of functions).  If detailed=true, include 
+		// extra details for debugging, like line numbers and instruction hex code.
+		public static List<String> Disassemble(List<FuncDef> functions, Boolean detailed=true) {
+			List<String> result = new List<String>();
+			for (Int32 i = 0; i < functions.Count; i++) {
+				result.Add(StringUtils.Format("{0} (function {1}):", functions[i].Name, i));
+				Disassemble(functions[i], result, detailed);
+				result.Add("");
 			}
 			return result;
 		}

@@ -91,18 +91,7 @@ Value value_mult(Value a, Value b) {
             result = string_concat(result, a);
         }
         return result;
-    }
-    if (is_int(a) && is_string(b)) {
-        int count = as_int(a);
-        if (count <= 0) return make_string("");
-        if (count == 1) return b;
-        
-        // Build repeated string
-        Value result = b;
-        for (int i = 1; i < count; i++) {
-            result = string_concat(result, b);
-        }
-        return result;
+        // ToDo: handle fractional b.
     }
     
     // For now, return nil for unsupported operations
