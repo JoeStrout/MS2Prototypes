@@ -28,4 +28,19 @@ using Single  = float;
 using Double  = double;
 using Boolean = bool;
 
+// Min/Max values for these types:
+const Byte ByteMinValue = 0;
+const Byte ByteMaxValue = 255;
+const SByte SByteMinValue = -128;
+const SByte SByteMaxValue = 127;
+const Int16 Int16MinValue = -32768;
+const Int16 Int16MaxValue = 32767;
+const UInt16 UInt16MinValue = 0;
+const UInt16 UInt16MaxValue = 65535;
+const Int32 Int32MinValue = -2147483648;
+const Int32 Int32MaxValue = 2147483647;
+const UInt32 UInt32MinValue = 0;
+const UInt32 UInt32MaxValue = 4294967295U;
+
+
 #endif // CORE_INCLUDES_H

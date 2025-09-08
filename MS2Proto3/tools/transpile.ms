@@ -385,6 +385,12 @@ Converter.tweakSyntax = function(line)
 	line = line.replace(".Count", ".Count()")
 	line = line.replace(".Length", ".Length()")
 		
+	// Integer min/max value: just remove the dot, creating constants
+	// defined in core_includes.h.
+	line = line.replace(".MinValue", "MinValue")
+	line = line.replace(".MaxValue", "MaxValue")
+	
+	
 	return line
 end function
 
