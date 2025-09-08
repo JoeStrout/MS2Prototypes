@@ -210,18 +210,78 @@ namespace MiniScript {
 			} else if (mnemonic == "IFLT") {
 				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
 				
-				Byte reg1 = ParseRegister(parts[1]);
-				
 				if (parts[2][0] == 'r') {
-					// IFLT r5, r3  -->  IFLT_rA_rB
-					Byte reg2 = ParseRegister(parts[2]);
-					instruction = BytecodeUtil.INS_ABC(Opcode.IFLT_rA_rB, reg1, reg2, 0);
+					if (parts[1][0] == 'r') {
+						// IFLT r5, r3  -->  IFLT_rA_rB
+						Byte reg1 = ParseRegister(parts[1]);
+						Byte reg2 = ParseRegister(parts[2]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.IFLT_rA_rB, reg1, reg2, 0);
+					}
+					else{
+						// IFLT 1337, r3  -->  IFLT_iAB_rc
+						Int16 immediate = ParseNumber(parts[1]);
+						Byte reg2 = ParseRegister(parts[2]);
+						instruction = BytecodeUtil.INS_BC(Opcode.IFLT_iAB_rC, immediate, reg2);
+					}
 				} else {
 					// IFLT r5, 42  -->  IFLT_rA_iBC
+					Byte reg1 = ParseRegister(parts[1]);
 					Int16 immediate = ParseNumber(parts[2]);
 					instruction = BytecodeUtil.INS_AB(Opcode.IFLT_rA_iBC, reg1, immediate);
 				}
+			
+			} else if (mnemonic == "IFLE") {
+				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
 				
+				if (parts[2][0] == 'r') {
+					if (parts[1][0] == 'r') {
+						// IFLE r5, r3  -->  IFLE_rA_rB
+						Byte reg1 = ParseRegister(parts[1]);
+						Byte reg2 = ParseRegister(parts[2]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.IFLE_rA_rB, reg1, reg2, 0);
+					} else {
+						// IFLE 1337, r3  -->  IFLE_iAB_rc
+						Int16 immediate = ParseNumber(parts[1]);
+						Byte reg2 = ParseRegister(parts[2]);
+						instruction = BytecodeUtil.INS_BC(Opcode.IFLE_iAB_rC, immediate, reg2);
+					}
+				} else {
+					// IFLE r5, 42  -->  IFLE_rA_iBC
+					Byte reg1 = ParseRegister(parts[1]);
+					Int16 immediate = ParseNumber(parts[2]);
+					instruction = BytecodeUtil.INS_AB(Opcode.IFLE_rA_iBC, reg1, immediate);
+				}
+
+			} else if (mnemonic == "IFEQ") {
+				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+
+				Byte reg1 = ParseRegister(parts[1]);
+
+				if (parts[2][0] == 'r') {
+					// IFEQ r5, r3  -->  IFLE_rA_rB
+						Byte reg2 = ParseRegister(parts[2]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.IFEQ_rA_rB, reg1, reg2, 0);
+				} else {
+					// IFEQ r5, 42  -->  IFLE_rA_iBC
+					Int16 immediate = ParseNumber(parts[2]);
+					instruction = BytecodeUtil.INS_AB(Opcode.IFEQ_rA_iBC, reg1, immediate);
+				}
+
+			} else if (mnemonic == "IFNE") {
+				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+
+				Byte reg1 = ParseRegister(parts[1]);
+
+				if (parts[2][0] == 'r') {
+					// IFEQ r5, r3  -->  IFLE_rA_rB
+						Byte reg2 = ParseRegister(parts[2]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.IFNE_rA_rB, reg1, reg2, 0);
+				} else {
+					// IFEQ r5, 42  -->  IFLE_rA_iBC
+					Int16 immediate = ParseNumber(parts[2]);
+					instruction = BytecodeUtil.INS_AB(Opcode.IFNE_rA_iBC, reg1, immediate);
+				}
+
 			} else if (mnemonic == "CALLF") {
 				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
 				Byte reserveRegs = (Byte)ParseNumber(parts[1]);
