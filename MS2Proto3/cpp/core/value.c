@@ -99,7 +99,7 @@ Value value_mult(Value a, Value b) {
 }
 
 Value value_div(Value a, Value b) {
-    // Handle integer + integer case
+    // Handle integer / integer case
     if (is_int(a) && is_int(b)) {
         // Use int64_t to detect overflow
         int64_t result = (int64_t)as_int(a) / (int64_t)as_int(b);
@@ -124,7 +124,7 @@ Value value_div(Value a, Value b) {
 }
 
 Value value_mod(Value a, Value b) {
-    // Handle integer + integer case
+    // Handle integer % integer case
     if (is_int(a) && is_int(b)) {
         // Use int64_t to detect overflow
         int64_t result = (int64_t)as_int(a) % (int64_t)as_int(b);
