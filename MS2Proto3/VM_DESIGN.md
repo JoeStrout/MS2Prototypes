@@ -26,6 +26,14 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | BRLT_rA_iB_iC | if R[A] < B then PC += C (8-bit signed) |
 | IFLT_rA_rB | if R[A] < R[B] is **false** then PC += 1 |
 | IFLT_rA_iBC | if R[A] < BC is **false** then PC += 1 |
+| IFLT_iAB_rC | if AB < R[C] is **false** then PC += 1 |
+| IFLE_rA_rB | if R[A] <= R[B] is **false** then PC += 1 |
+| IFLE_rA_iBC | if R[A] <= BC is **false** then PC += 1 |
+| IFLE_iAB_rC | if AB <= R[C] is **false** then PC += 1 |
+| IFEQ_rA_rB | if R[A] == R[B] is **false** then PC += 1 |
+| IFEQ_rA_iBC | if R[A] == BC is **false** then PC += 1 |
+| IFNE_rA_rB | if R[A] != R[B] is **false** then PC += 1 |
+| IFNE_rA_iBC | if R[A] != BC is **false** then PC += 1 |
 | CALLF_iA_iBC | call funcs[BC] reserving A registers |
 | RETURN | return with result in R[0]
 
