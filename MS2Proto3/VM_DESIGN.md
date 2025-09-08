@@ -18,6 +18,7 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | SUB_rA_rB_rC | R[A] := R[B] - R[C] |
 | MULT_rA_rB_rC | R[A] := R[B] * R[C] |
 | DIV_rA_rB_rC | R[A] := R[B] / R[C] |
+| MOD_rA_rB_rC | R[A] := R[B] % R[C] |
 | LT_rA_rB_rC | R[A] := (R[B] < R[C]) |
 | JUMP_iABC | PC += ABC (24-bit signed value) |
 | BRTRUE_rA_iBC | if R[A] is true then PC += BC (16-bit signed) |
