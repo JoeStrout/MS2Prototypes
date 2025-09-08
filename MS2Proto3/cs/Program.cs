@@ -22,18 +22,12 @@ public class Program {
 		IOHelper.Print(
 			"Build: C# version" // CPP: "Build: C++ version"
 		);
-		IOHelper.Print("Milestone 2: complete!");
-		IOHelper.Print("Milestone 3: in progress");
+		IOHelper.Print("Milestone 3: complete!");
+		IOHelper.Print("Milestone 4: about to begin");
 		
 		IOHelper.Print("Running unit tests...");
-		// TODO: Fix unit tests for function label support
-		// if (!UnitTests.RunAll()) return;
-		IOHelper.Print("Unit tests skipped (need updating for function labels).");
-		
-		IOHelper.Print(StringUtils.Format("Got {0} args", argCount));
-		for (Int32 i=0; i<argCount; i++) {
-			IOHelper.Print(StringUtils.Format("{0}: {1}", i, args[i]));
-		}
+		if (!UnitTests.RunAll()) return;
+		IOHelper.Print("Unit tests complete.");
 		
 		// Check for assembly file argument
 		if (argCount > 1) {

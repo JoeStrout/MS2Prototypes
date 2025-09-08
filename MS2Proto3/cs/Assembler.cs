@@ -504,9 +504,7 @@ namespace MiniScript {
 		}
 
 		// Multi-function assembly with support for @function: labels
-		public void Assemble(List<String> sourceLines) {
-			IOHelper.Print(StringUtils.Format("Assembling {0} lines", sourceLines.Count));
-			
+		public void Assemble(List<String> sourceLines) {			
 			// Clear any previous state
 			Functions.Clear();
 			Current = new FuncDef();
@@ -523,7 +521,6 @@ namespace MiniScript {
 				String funcName = ParseLabel(tokens[0]);
 				if (!AddFunction(funcName)) return;
 				if (tokens[0] == "@main:") sawMain = true;
-				IOHelper.Print(StringUtils.Format("...Found {0} at line {1}", funcName, lineNum));
 			}
 			if (!sawMain) AddFunction("@main");
 				
@@ -555,7 +552,6 @@ namespace MiniScript {
 				// Then, store the just-assembled Current function in our function list.
 				Int32 slot = FindFunctionIndex(Current.Name);
 				Functions[slot] = Current;
-				IOHelper.Print(StringUtils.Format("...stored {0} in slot {1}", Current.Name, slot));
 
 				Current = new FuncDef();
 			}
@@ -565,7 +561,6 @@ namespace MiniScript {
 		// and proceeding until we hit another function label or run out of lines.
 		// Return the line number after this function ends.
 		private Int32 AssembleFunction(List<String> sourceLines, Int32 startLine) {
-			IOHelper.Print(StringUtils.Format("AssembleFunction({0})", startLine));
 			// Prepare label names/addresses, just for this function.
 			// (So it's OK to reuse the same label in multiple functions!)
 			_labelNames.Clear();
@@ -605,7 +600,6 @@ namespace MiniScript {
 			}
 
 			// Second pass: assemble instructions with label resolution
-			IOHelper.Print(StringUtils.Format("...found {0} labels in lines {1}-{2}", _labelNames.Count, startLine, endLine));
 			Current.Code.Clear(); // Clear any previous assembly
 			Current.Constants.Clear();
 			for (Int32 i = startLine; i < endLine; i++) {

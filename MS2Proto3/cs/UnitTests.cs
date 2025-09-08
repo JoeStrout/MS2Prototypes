@@ -128,37 +128,57 @@ namespace MiniScript {
 			Assembler labelAssem = new Assembler();
 			labelAssem.Assemble(labelTest);
 			
+			// Find the @main function
+			FuncDef mainFunc = labelAssem.FindFunction("@main");
+			asmOk = asmOk && Assert(mainFunc, "@main function not found");
+			
 			// Verify the assembled instructions
-			asmOk = asmOk && AssertEqual(labelAssem.Current.Code.Count, 6); // 6 instructions (label doesn't count)
+			asmOk = asmOk && AssertEqual(mainFunc.Code.Count, 6); // 6 instructions (label doesn't count)
 			
 			// Check that JUMP loop resolves to correct relative offset
 			// loop is at instruction 1, JUMP is at instruction 5, so offset should be 1-5 = -4
-			UInt32 jumpInstruction = labelAssem.Current.Code[4]; // 5th instruction (0-indexed)
+			UInt32 jumpInstruction = mainFunc.Code[4]; // 5th instruction (0-indexed)
 			UInt32 expectedJump = BytecodeUtil.INS(Opcode.JUMP_iABC) | (UInt32)((-4) & 0xFFFFFF);
 			asmOk = asmOk && AssertEqual(jumpInstruction, expectedJump);
 			
 			// Test constant support
+			List<String> constantTest = new List<String> {
+				"LOAD r0, \"hello\"",    // Should use constant index 0
+				"LOAD r1, 3.14",        // Should use constant index 1  
+				"LOAD r2, 100000"       // Should use constant index 2
+			};
+			
 			Assembler constAssem = new Assembler();
+			constAssem.Assemble(constantTest);
 			
-			// Test string literal
-			asmOk = asmOk && AssertEqual(constAssem.AddLine("LOAD r0, \"hello\""),
+			FuncDef constFunc = constAssem.FindFunction("@main");
+			asmOk = asmOk && Assert(constFunc, "@main function not found in constant test");
+			
+			// Verify the assembled instructions use correct constant indices
+			asmOk = asmOk && AssertEqual(constFunc.Code[0], 
 				BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, 0, 0)); // Should use constant index 0
-			asmOk = asmOk && AssertEqual(constAssem.Current.Constants.Count, 1);
-			
-			// Test floating point number
-			asmOk = asmOk && AssertEqual(constAssem.AddLine("LOAD r1, 3.14"),
+			asmOk = asmOk && AssertEqual(constFunc.Code[1],
 				BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, 1, 1)); // Should use constant index 1
-			asmOk = asmOk && AssertEqual(constAssem.Current.Constants.Count, 2);
-			
-			// Test large integer
-			asmOk = asmOk && AssertEqual(constAssem.AddLine("LOAD r2, 100000"),
+			asmOk = asmOk && AssertEqual(constFunc.Code[2],
 				BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, 2, 2)); // Should use constant index 2
-			asmOk = asmOk && AssertEqual(constAssem.Current.Constants.Count, 3);
+			
+			// Verify we have 3 constants
+			asmOk = asmOk && AssertEqual(constFunc.Constants.Count, 3);
 			
 			// Test small integer (should use immediate form, not constant)
-			asmOk = asmOk && AssertEqual(constAssem.AddLine("LOAD r3, 42"),
+			List<String> immediateTest = new List<String> {
+				"LOAD r3, 42"  // Should use immediate, not constant
+			};
+			
+			Assembler immediateAssem = new Assembler();
+			immediateAssem.Assemble(immediateTest);
+			
+			FuncDef immediateFunc = immediateAssem.FindFunction("@main");
+			asmOk = asmOk && Assert(immediateFunc, "@main function not found in immediate test");
+			
+			asmOk = asmOk && AssertEqual(immediateFunc.Code[0],
 				BytecodeUtil.INS_AB(Opcode.LOAD_rA_iBC, 3, 42)); // Should use immediate
-			asmOk = asmOk && AssertEqual(constAssem.Current.Constants.Count, 3); // No new constant added
+			asmOk = asmOk && AssertEqual(immediateFunc.Constants.Count, 0); // No constants added
 			
 			// Test two-pass assembly with multiple constants and instructions
 			List<String> multiTest = new List<String> {
@@ -171,28 +191,31 @@ namespace MiniScript {
 			Assembler multiAssem = new Assembler();
 			multiAssem.Assemble(multiTest);
 			
+			FuncDef multiFunc = multiAssem.FindFunction("@main");
+			asmOk = asmOk && Assert(multiFunc, "@main function not found in multi test");
+			
 			// Check that we have 2 constants
-			asmOk = asmOk && AssertEqual(multiAssem.Current.Constants.Count, 2);
+			asmOk = asmOk && AssertEqual(multiFunc.Constants.Count, 2);
 			
 			// Check that we have 4 instructions
-			asmOk = asmOk && AssertEqual(multiAssem.Current.Code.Count, 4);
+			asmOk = asmOk && AssertEqual(multiFunc.Code.Count, 4);
 			
 			// Check specific instructions
-			if (multiAssem.Current.Code.Count >= 4) {
+			if (multiFunc.Code.Count >= 4) {
 				// First instruction: LOAD r1, k0 (where k0 = "Hello")
-				asmOk = asmOk && AssertEqual(multiAssem.Current.Code[0],
+				asmOk = asmOk && AssertEqual(multiFunc.Code[0],
 					BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, 1, 0));
 				
 				// Second instruction: LOAD r2, k1 (where k1 = "World")
-				asmOk = asmOk && AssertEqual(multiAssem.Current.Code[1],
+				asmOk = asmOk && AssertEqual(multiFunc.Code[1],
 					BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, 2, 1));
 				
 				// Third instruction: ADD r0, r1, r2
-				asmOk = asmOk && AssertEqual(multiAssem.Current.Code[2],
+				asmOk = asmOk && AssertEqual(multiFunc.Code[2],
 					BytecodeUtil.INS_ABC(Opcode.ADD_rA_rB_rC, 0, 1, 2));
 				
 				// Fourth instruction: RETURN
-				asmOk = asmOk && AssertEqual(multiAssem.Current.Code[3],
+				asmOk = asmOk && AssertEqual(multiFunc.Code[3],
 					BytecodeUtil.INS(Opcode.RETURN));
 			}
 			
