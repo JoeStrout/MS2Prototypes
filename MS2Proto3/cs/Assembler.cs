@@ -224,7 +224,7 @@ namespace MiniScript {
 					offset = ParseNumber(target);
 				}
 
-				if ((offset < SByte.MinValue) || (offset > SByte.MaxValue)) { // CPP: if((offset < SCHAR_MIN) || (offset > SCHAR_MAX)){
+				if (offset < SByte.MinValue || offset > SByte.MaxValue) {
 					return Error("Range error (Cannot fit branch offset into SByte)", mnemonic, line);
 				}
 
@@ -441,7 +441,7 @@ namespace MiniScript {
 			}
 			
 			Int32 finalValue = negative ? -value : value;
-			return finalValue < -32768 || finalValue > 32767;
+			return finalValue < Int16.MinValue || finalValue > Int16.MaxValue;
 		}
 
 		// Helper to create a Value from a token
