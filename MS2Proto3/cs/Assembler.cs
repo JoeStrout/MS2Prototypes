@@ -183,6 +183,13 @@ namespace MiniScript {
 				Byte src1 = ParseRegister(parts[2]);
 				Byte src2 = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.DIV_rA_rB_rC, dest, src1, src2);
+
+			} else if (mnemonic == "MOD") {
+				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				Byte dest = ParseRegister(parts[1]);
+				Byte src1 = ParseRegister(parts[2]);
+				Byte src2 = ParseRegister(parts[3]);
+				instruction = BytecodeUtil.INS_ABC(Opcode.MOD_rA_rB_rC, dest, src1, src2);
 			
 			} else if (mnemonic == "JUMP") {
 				if (parts.Count != 2) return Error("Syntax error", mnemonic, line);

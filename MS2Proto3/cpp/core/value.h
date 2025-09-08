@@ -205,6 +205,7 @@ static inline bool value_lt(Value a, Value b) {
 // ToDo: reconsider that... * and / are pretty common in real code.
 Value value_mult(Value a, Value b);
 Value value_div(Value a, Value b);
+Value value_mod(Value a, Value b);
 
 // Value comparison (most critical ones inlined above, others implemented in value.c)
 bool value_equal(Value a, Value b);

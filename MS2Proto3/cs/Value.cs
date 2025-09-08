@@ -194,6 +194,23 @@ namespace MiniScript {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Value Mod(Value a, Value b) {
+            if (a.IsInt && b.IsInt) {
+                long r = (long)a.AsInt() % b.AsInt();
+                if ((uint)r == r) return FromInt((int)r);
+                return FromDouble((double)r);
+            }
+            if ((a.IsInt || a.IsDouble) && (b.IsInt || b.IsDouble)) {
+                double da = a.IsInt ? a.AsInt() : a.AsDouble();
+                double db = b.IsInt ? b.AsInt() : b.AsDouble();
+                return FromDouble(da % db);
+            }
+            // TODO: String support not added yet!
+            // string concat, list append, etc. can be added here.
+            return Null();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Value Sub(Value a, Value b) {
             if (a.IsInt && b.IsInt) {
                 long r = (long)a.AsInt() - b.AsInt();
@@ -305,6 +322,9 @@ namespace MiniScript {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Value value_div(Value a, Value b) => Value.Divide(a, b);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Value value_mod(Value a, Value b) => Value.Mod(a, b);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Value value_sub(Value a, Value b) => Value.Sub(a, b);

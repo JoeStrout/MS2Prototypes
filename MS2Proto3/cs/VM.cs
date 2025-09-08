@@ -193,6 +193,15 @@ namespace MiniScript {
 						break;
 					}
 
+                    case Opcode.MOD_rA_rB_rC: {
+						// R[A] = R[B] % R[C]
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						Byte c = BytecodeUtil.Cu(instruction);
+						stack[baseIndex + a] = value_mod(stack[baseIndex + b], stack[baseIndex + c]);
+						break;
+					}
+
 					case Opcode.JUMP_iABC: {
 						// Jump by signed 24-bit ABC offset from current PC
 						Int32 offset = BytecodeUtil.ABCs(instruction);
