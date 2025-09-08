@@ -13,11 +13,12 @@ namespace MiniScript {
 		SUB_rA_rB_rC = 5,
 		MULT_rA_rB_rC = 6,
 		DIV_rA_rB_rC = 7,
-		JUMP_iABC = 8,
-		IFLT_rA_rB = 9,
-		IFLT_rA_iBC = 10,
-		CALLF_iA_iBC = 11,
-		RETURN = 12
+		MOD_rA_rB_rC = 8,
+		JUMP_iABC = 9,
+		IFLT_rA_rB = 10,
+		IFLT_rA_iBC = 11,
+		CALLF_iA_iBC = 12,
+		RETURN = 13
 	}
 
 	public static class BytecodeUtil {
@@ -63,7 +64,8 @@ namespace MiniScript {
 				case Opcode.ADD_rA_rB_rC:  return "ADD_rA_rB_rC";
 				case Opcode.SUB_rA_rB_rC:  return "SUB_rA_rB_rC";
 				case Opcode.MULT_rA_rB_rC: return "MULT_rA_rB_rC";
-				case Opcode.DIV_rA_rB_rC: return "DIV_rA_rB_rC";
+				case Opcode.DIV_rA_rB_rC:  return "DIV_rA_rB_rC";
+				case Opcode.MOD_rA_rB_rC:  return "MOD_rA_rB_rC";
 				case Opcode.JUMP_iABC:     return "JUMP_iABC";
 				case Opcode.IFLT_rA_rB:    return "IFLT_rA_rB";
 				case Opcode.IFLT_rA_iBC:   return "IFLT_rA_iBC";
@@ -82,7 +84,8 @@ namespace MiniScript {
 			if (s == "ADD_rA_rB_rC")  return Opcode.ADD_rA_rB_rC;
 			if (s == "SUB_rA_rB_rC")  return Opcode.SUB_rA_rB_rC;
 			if (s == "MULT_rA_rB_rC") return Opcode.MULT_rA_rB_rC;
-			if (s == "DIV_rA_rB_rC") return Opcode.MULT_rA_rB_rC;
+			if (s == "DIV_rA_rB_rC")  return Opcode.DIV_rA_rB_rC;
+			if (s == "MOD_rA_rB_rC")  return Opcode.MOD_rA_rB_rC;
 			if (s == "JUMP_iABC")     return Opcode.JUMP_iABC;
 			if (s == "IFLT_rA_rB")    return Opcode.IFLT_rA_rB;
 			if (s == "IFLT_rA_iBC")   return Opcode.IFLT_rA_iBC;

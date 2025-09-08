@@ -18,6 +18,7 @@ namespace MiniScript {
 				case Opcode.ADD_rA_rB_rC:  return "ADD";
 				case Opcode.MULT_rA_rB_rC: return "MULT";
 				case Opcode.DIV_rA_rB_rC:  return "DIV";
+				case Opcode.MOD_rA_rB_rC:  return "MOD";
 				case Opcode.SUB_rA_rB_rC:  return "SUB";
 				case Opcode.JUMP_iABC:     return "JUMP";
 				case Opcode.IFLT_rA_rB:
@@ -83,6 +84,7 @@ namespace MiniScript {
         		case Opcode.SUB_rA_rB_rC:
 				case Opcode.MULT_rA_rB_rC:
 				case Opcode.DIV_rA_rB_rC:
+				case Opcode.MOD_rA_rB_rC:
         			return StringUtils.Format("{0} r{1}, r{2}, r{3}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),
