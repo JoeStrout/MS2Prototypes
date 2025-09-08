@@ -240,6 +240,20 @@ namespace MiniScript {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool LessThanOrEqual(Value a, Value b) {
+            if ((a.IsInt || a.IsDouble) && (b.IsInt || b.IsDouble)) {
+                double da = a.IsInt ? a.AsInt() : a.AsDouble();
+                double db = b.IsInt ? b.AsInt() : b.AsDouble();
+                return da <= db;
+            }
+            // Handle string comparison
+            if (a.IsString && b.IsString) {
+                return StringOperations.StringCompare(a, b) <= 0;
+            }
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Equal(Value a, Value b)  {
             // Fast path: identical bits
             if (a._u == b._u) return true;
@@ -335,7 +349,7 @@ namespace MiniScript {
 
         // Comparison operations (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool value_le(Value a, Value b) => Value.LessThan(a, b) || Value.Equal(a, b);
+        public static bool value_le(Value a, Value b) => Value.LessThanOrEqual(a, b);
 
         // Comparison operations (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
