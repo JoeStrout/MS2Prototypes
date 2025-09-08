@@ -332,6 +332,14 @@ namespace MiniScript {
         // Comparison operations (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool value_lt(Value a, Value b) => Value.LessThan(a, b);
+
+        // Comparison operations (matching value.h)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool value_le(Value a, Value b) => Value.LessThan(a, b) || Value.Equal(a, b);
+
+        // Comparison operations (matching value.h)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool value_equal(Value a, Value b) => Value.Equal(a, b);
     }
 
     // A minimal, fast handle table. Stores actual C# objects referenced by Value.

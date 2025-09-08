@@ -17,8 +17,16 @@ namespace MiniScript {
 		JUMP_iABC = 9,
 		IFLT_rA_rB = 10,
 		IFLT_rA_iBC = 11,
-		CALLF_iA_iBC = 12,
-		RETURN = 13
+		IFLT_iAB_rC = 12,
+		IFLE_rA_rB = 13,
+		IFLE_rA_iBC = 14,
+		IFLE_iAB_rC = 15,
+		IFEQ_rA_rB = 16,
+		IFEQ_rA_iBC = 17,
+		IFNE_rA_rB = 18,
+		IFNE_rA_iBC = 19,
+		CALLF_iA_iBC = 20,
+		RETURN = 21
 	}
 
 	public static class BytecodeUtil {
@@ -35,6 +43,8 @@ namespace MiniScript {
 		public static SByte Cs(UInt32 instruction) => (SByte)Cu(instruction);
 		
 		// 16-bit field extractors
+		public static UInt16 ABu(UInt32 instruction) => (UInt16)((instruction >> 8) & 0xFFFF);
+		public static Int16 ABs(UInt32 instruction) => (Int16)ABu(instruction);
 		public static UInt16 BCu(UInt32 instruction) => (UInt16)(instruction & 0xFFFF);
 		public static Int16 BCs(UInt32 instruction) => (Int16)BCu(instruction);
 		
@@ -52,6 +62,7 @@ namespace MiniScript {
 		// Instruction encoding helpers
 		public static UInt32 INS(Opcode op) => (UInt32)((Byte)op << 24);
 		public static UInt32 INS_AB(Opcode op, Byte a, Int16 bc) => (UInt32)(((Byte)op << 24) | (a << 16) | ((UInt16)bc));
+		public static UInt32 INS_BC(Opcode op, Int16 ab, Byte c) => (UInt32)(((Byte)op << 24) | ((UInt16)ab << 8) | c); // Note: ab is casted to (UInt16) instead of (Int16) in the encoding to avoid padding with 1's which overwrites the opcode. We could also use & instead.
 		public static UInt32 INS_ABC(Opcode op, Byte a, Byte b, Byte c) => (UInt32)(((Byte)op << 24) | (a << 16) | (b << 8) | c);
 		
 		// Conversion to/from opcode mnemonics (names)
@@ -69,6 +80,14 @@ namespace MiniScript {
 				case Opcode.JUMP_iABC:     return "JUMP_iABC";
 				case Opcode.IFLT_rA_rB:    return "IFLT_rA_rB";
 				case Opcode.IFLT_rA_iBC:   return "IFLT_rA_iBC";
+				case Opcode.IFLT_iAB_rC:   return "IFLT_iAB_rC";
+				case Opcode.IFLE_rA_rB:    return "IFLE_rA_rB";
+				case Opcode.IFLE_rA_iBC:   return "IFLE_rA_iBC";
+				case Opcode.IFLE_iAB_rC:   return "IFLE_iAB_rC";
+				case Opcode.IFEQ_rA_rB:    return "IFEQ_rA_rB";
+				case Opcode.IFEQ_rA_iBC:   return "IFEQ_rA_iBC";
+				case Opcode.IFNE_rA_rB:    return "IFLT_rA_rB";
+				case Opcode.IFNE_rA_iBC:   return "IFLT_rA_iBC";
 				case Opcode.CALLF_iA_iBC:  return "CALLF_iA_iBC";
 				case Opcode.RETURN:        return "RETURN";
 				default:
@@ -89,6 +108,14 @@ namespace MiniScript {
 			if (s == "JUMP_iABC")     return Opcode.JUMP_iABC;
 			if (s == "IFLT_rA_rB")    return Opcode.IFLT_rA_rB;
 			if (s == "IFLT_rA_iBC")   return Opcode.IFLT_rA_iBC;
+			if (s == "IFLT_iAB_rC")   return Opcode.IFLT_iAB_rC;
+			if (s == "IFLE_rA_rB")    return Opcode.IFLE_rA_rB;
+			if (s == "IFLE_rA_iBC")   return Opcode.IFLE_rA_iBC;
+			if (s == "IFLE_iAB_rC")   return Opcode.IFLE_iAB_rC;
+			if (s == "IFEQ_rA_rB")    return Opcode.IFEQ_rA_rB;
+			if (s == "IFEQ_rA_iBC")   return Opcode.IFEQ_rA_iBC;
+			if (s == "IFNE_rA_rB")    return Opcode.IFNE_rA_rB;
+			if (s == "IFNE_rA_iBC")   return Opcode.IFNE_rA_iBC;
 			if (s == "CALLF_iA_iBC")  return Opcode.CALLF_iA_iBC;
 			if (s == "RETURN")        return Opcode.RETURN;
 			return Opcode.NOOP;

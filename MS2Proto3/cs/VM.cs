@@ -229,6 +229,86 @@ namespace MiniScript {
 						break;
 					}
 
+                    case Opcode.IFLT_iAB_rC: {
+						// if AB (immediate) < R[C] is false, skip next instruction
+						short ab = BytecodeUtil.ABs(instruction);
+                        Byte c = BytecodeUtil.Cu(instruction);
+						if (!value_lt(make_int(ab), stack[baseIndex + c])) {
+							pc++; // Skip next instruction
+						}
+						break;
+					}
+
+                    case Opcode.IFLE_rA_rB: {
+						// if R[A] <= R[B] is false, skip next instruction
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						if (!value_le(stack[baseIndex + a], stack[baseIndex + b])) {
+							pc++; // Skip next instruction
+						}
+						break;
+					}
+
+					case Opcode.IFLE_rA_iBC: {
+						// if R[A] <= BC (immediate) is false, skip next instruction
+						Byte a = BytecodeUtil.Au(instruction);
+						short bc = BytecodeUtil.BCs(instruction);
+						if (!value_le(stack[baseIndex + a], make_int(bc))) {
+							pc++; // Skip next instruction
+						}
+						break;
+					}
+
+                    case Opcode.IFLE_iAB_rC: {
+						// if AB (immediate) <= R[C] is false, skip next instruction
+						short ab = BytecodeUtil.ABs(instruction);
+                        Byte c = BytecodeUtil.Cu(instruction);
+						if (!value_le(make_int(ab), stack[baseIndex + c])) {
+							pc++; // Skip next instruction
+						}
+						break;
+					}
+
+                    case Opcode.IFEQ_rA_rB: {
+						// if R[A] == R[B] is false, skip next instruction
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						if (!value_equal(stack[baseIndex + a], stack[baseIndex + b])) {
+							pc++; // Skip next instruction
+						}
+						break;
+					}
+
+                    case Opcode.IFEQ_rA_iBC: {
+						// if R[A] == BC (immediate) is false, skip next instruction
+						Byte a = BytecodeUtil.Au(instruction);
+						short bc = BytecodeUtil.BCs(instruction);
+						if (!value_equal(stack[baseIndex + a], make_int(bc))) {
+							pc++; // Skip next instruction
+						}
+						break;
+					}
+
+                    case Opcode.IFNE_rA_rB: {
+						// if R[A] != R[B] is false, skip next instruction
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						if (value_equal(stack[baseIndex + a], stack[baseIndex + b])) {
+							pc++; // Skip next instruction
+						}
+						break;
+					}
+
+                    case Opcode.IFNE_rA_iBC: {
+						// if R[A] != BC (immediate) is false, skip next instruction
+						Byte a = BytecodeUtil.Au(instruction);
+						short bc = BytecodeUtil.BCs(instruction);
+						if (value_equal(stack[baseIndex + a], make_int(bc))) {
+							pc++; // Skip next instruction
+						}
+						break;
+					}
+
 					case Opcode.CALLF_iA_iBC: {
 						// A: arg window start (callee executes with base = base + A)
 						// BC: function index

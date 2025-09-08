@@ -22,7 +22,15 @@ namespace MiniScript {
 				case Opcode.SUB_rA_rB_rC:  return "SUB";
 				case Opcode.JUMP_iABC:     return "JUMP";
 				case Opcode.IFLT_rA_rB:
-				case Opcode.IFLT_rA_iBC:   return "IFLT";
+				case Opcode.IFLT_rA_iBC:
+				case Opcode.IFLT_iAB_rC:   return "IFLT";
+				case Opcode.IFLE_rA_rB:
+				case Opcode.IFLE_rA_iBC:
+				case Opcode.IFLE_iAB_rC:   return "IFLE";
+				case Opcode.IFEQ_rA_rB:
+				case Opcode.IFEQ_rA_iBC:   return "IFEQ";
+				case Opcode.IFNE_rA_rB:
+				case Opcode.IFNE_rA_iBC:   return "IFNE";
 				case Opcode.CALLF_iA_iBC:  return "CALLF";
 				case Opcode.RETURN:        return "RETURN";
 				default:
@@ -54,6 +62,9 @@ namespace MiniScript {
 				// rA, rB
 				case Opcode.LOAD_rA_rB:
         		case Opcode.IFLT_rA_rB:
+				case Opcode.IFLE_rA_rB:
+				case Opcode.IFEQ_rA_rB:
+				case Opcode.IFNE_rA_rB:
 					return StringUtils.Format("{0} r{1}, r{2}",
 						mnemonic,
 						(Int32)BytecodeUtil.Au(instruction),
@@ -67,10 +78,20 @@ namespace MiniScript {
         		// rA, iBC
         		case Opcode.LOAD_rA_iBC:
         		case Opcode.IFLT_rA_iBC:
+				case Opcode.IFLE_rA_iBC:
+				case Opcode.IFEQ_rA_iBC:
+				case Opcode.IFNE_rA_iBC:
         			return StringUtils.Format("{0} r{1}, {2}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),
         				(Int32)BytecodeUtil.BCs(instruction));
+				// iAB, rC
+        		case Opcode.IFLT_iAB_rC:
+				case Opcode.IFLE_iAB_rC:
+        			return StringUtils.Format("{0} {1}, r{2}",
+        				mnemonic,
+        				(Int32)BytecodeUtil.ABs(instruction),
+        				(Int32)BytecodeUtil.Cu(instruction));
         		// iA, iBC
 				case Opcode.CALLF_iA_iBC:
         			return StringUtils.Format("{0} {1}, {2}",
