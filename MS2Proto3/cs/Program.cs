@@ -23,7 +23,7 @@ public class Program {
 			"Build: C# version" // CPP: "Build: C++ version"
 		);
 		IOHelper.Print("Milestone 3: complete!");
-		IOHelper.Print("Milestone 4: about to begin");
+		IOHelper.Print("Milestone 4: in progress");
 		
 		IOHelper.Print("Running unit tests...");
 		if (!UnitTests.RunAll()) return;

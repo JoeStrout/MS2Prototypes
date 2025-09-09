@@ -3,8 +3,18 @@
 
 CXX = g++
 CC = gcc
-CXXFLAGS = -std=c++11 -Wall -Wextra -Icore
-CFLAGS = -std=c99 -Wall -Wextra -Icore
+
+# Handle computed-goto mode override
+ifeq ($(GOTO_MODE),on)
+    GOTO_FLAG = -DVM_USE_COMPUTED_GOTO=1
+else ifeq ($(GOTO_MODE),off)
+    GOTO_FLAG = -DVM_USE_COMPUTED_GOTO=0
+else
+    GOTO_FLAG = 
+endif
+
+CXXFLAGS = -std=gnu++11 -Wall -Wextra -Icore $(GOTO_FLAG)
+CFLAGS = -std=c99 -Wall -Wextra -Icore $(GOTO_FLAG)
 SRCDIR = core
 GENDIR = ../generated
 BUILDDIR = ../build/cpp

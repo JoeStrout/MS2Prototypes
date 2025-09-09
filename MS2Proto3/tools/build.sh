@@ -11,6 +11,7 @@ echo "Project root: $(pwd)"
 
 # Parse command line arguments
 TARGET="${1:-all}"
+GOTO_MODE="${2:-auto}"  # auto, on, off
 
 case "$TARGET" in
     "setup")
@@ -59,7 +60,20 @@ case "$TARGET" in
             echo "No transpiled C++ files found. Run 'transpile' first."
             exit 1
         fi
-        make -C cpp
+        case "$GOTO_MODE" in
+            "on")
+                echo "Forcing computed-goto ON"
+                make -C cpp GOTO_MODE=on
+                ;;
+            "off")
+                echo "Forcing computed-goto OFF"
+                make -C cpp GOTO_MODE=off
+                ;;
+            *)
+                echo "Using auto-detected computed-goto"
+                make -C cpp
+                ;;
+        esac
         echo "C++ build complete."
         ;;
     
@@ -67,7 +81,7 @@ case "$TARGET" in
         echo "Building all targets..."
         $0 cs
         $0 transpile
-        $0 cpp
+        $0 cpp "$GOTO_MODE"
         echo "All builds complete."
         ;;
     
@@ -93,7 +107,7 @@ case "$TARGET" in
         ;;
     
     *)
-        echo "Usage: $0 {setup|cs|transpile|cpp|all|clean|test}"
+        echo "Usage: $0 {setup|cs|transpile|cpp|all|clean|test} [goto_mode]"
         echo "  setup     - Set up development environment"
         echo "  cs        - Build C# version only"
         echo "  transpile - Transpile C# to C++"
@@ -101,6 +115,11 @@ case "$TARGET" in
         echo "  all       - Build everything"
         echo "  clean     - Clean build artifacts"
         echo "  test      - Build and test both versions"
+        echo ""
+        echo "Optional goto_mode for C++ builds:"
+        echo "  auto      - Auto-detect computed-goto support (default)"
+        echo "  on        - Force computed-goto ON"
+        echo "  off       - Force computed-goto OFF"
         exit 1
         ;;
 esac

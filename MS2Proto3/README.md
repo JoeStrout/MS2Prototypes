@@ -20,7 +20,7 @@ Developing and validating this dual-management strategy is an important goal of 
 
 3. ✅ **Minimal VM**: reads a .msa file, assembles it, and then executes it.  The VM at this point will support only a handful of opcodes.
 
-4. **Extended VM**: same as above, but with what we believe to be a complete set of opcodes, including calls and captures.
+4. **Extended VM**: same as above, but with what we believe to be a complete set of opcodes, including calls and captures.  It will also include the computed-goto dispatch method in the C++ version, as well as runtime maps and lists.
 
 Note that the compiler is beyond scope for this prototype -- but if we make it through milestone 4, we'll probably move all this over to its own fresh GitHub project, and start working on that.
 

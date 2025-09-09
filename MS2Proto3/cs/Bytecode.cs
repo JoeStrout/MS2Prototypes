@@ -29,7 +29,8 @@ namespace MiniScript {
 		IFNE_rA_rB = 21,
 		IFNE_rA_iBC = 22,
 		CALLF_iA_iBC = 23,
-		RETURN = 24
+		RETURN = 24,
+		OP__COUNT = 25  // Not an opcode, but rather how many opcodes we have.
 	}
 
 	public static class BytecodeUtil {
