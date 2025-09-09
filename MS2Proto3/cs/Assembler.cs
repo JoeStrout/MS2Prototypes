@@ -144,7 +144,7 @@ namespace MiniScript {
 					instruction = BytecodeUtil.INS_ABC(Opcode.LOAD_rA_rB, dest, srcReg, 0);
 				} else if (source[0] == 'k') {
 					// LOAD r3, k20  -->  LOAD_rA_kBC (explicit constant reference)
-					Int16 constIdx = ParseNumber(source.Substring(1));
+					Int16 constIdx = ParseInt16(source.Substring(1));
 					instruction = BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, dest, constIdx);
 				} else if (NeedsConstant(source)) {
 					// String literals, floats, or large integers -> add to constants table
@@ -153,7 +153,7 @@ namespace MiniScript {
 					instruction = BytecodeUtil.INS_AB(Opcode.LOAD_rA_kBC, dest, (Int16)constIdx);
 				} else {
 					// Small integer that fits in Int16 -> use immediate form
-					Int16 immediate = ParseNumber(source);
+					Int16 immediate = ParseInt16(source);
 					instruction = BytecodeUtil.INS_AB(Opcode.LOAD_rA_iBC, dest, immediate);
 				}
 				
@@ -203,8 +203,8 @@ namespace MiniScript {
 					// It's a label - calculate relative offset from next instruction
 					offset = labelAddr - (Current.Code.Count + 1);
 				} else {
-					// It's a number
-					offset = ParseNumber(target);
+					// It's a number (up to 24 bits allowed)
+					offset = ParseInt24(target);
 				}
 				instruction = BytecodeUtil.INS(Opcode.JUMP_iABC) | (UInt32)(offset & 0xFFFFFF);
 
@@ -221,9 +221,12 @@ namespace MiniScript {
 					offset = labelAddr - (Current.Code.Count + 1);
 				} else {
 					// It's a number
-					offset = ParseNumber(target);
+					offset = ParseInt32(target);
 				}
 
+				// ToDo: handle other cases similar to this, where we parse the number
+				// as a bigger Int32 but then check the range, so that we can display
+				// a better error message.
 				if (offset < SByte.MinValue || offset > SByte.MaxValue) {
 					return Error("Range error (Cannot fit branch offset into SByte)", mnemonic, line);
 				}
@@ -236,14 +239,14 @@ namespace MiniScript {
 						instruction = BytecodeUtil.INS_ABC(Opcode.BRLT_rA_rB_iC, reg1, reg2, (Byte)offset);
 					} else {
 						// BRLT 5, r5, someOffset
-						Byte immediate = (Byte)ParseNumber(parts[1]);
+						Byte immediate = (Byte)ParseInt16(parts[1]);
 						Byte reg2 = ParseRegister(parts[2]);
 						instruction = BytecodeUtil.INS_ABC(Opcode.BRLT_iA_rB_iC, immediate, reg2, (Byte)offset);		
 					}
 				} else {
 					// BRLT r5, 5, someOffset
 					Byte reg1 = ParseRegister(parts[1]);
-					Byte immediate = (Byte)ParseNumber(parts[2]);
+					Byte immediate = (Byte)ParseInt16(parts[2]);
 					instruction = BytecodeUtil.INS_ABC(Opcode.BRLT_rA_iB_iC, reg1, immediate, (Byte)offset);
 				}				
 
@@ -259,14 +262,14 @@ namespace MiniScript {
 					}
 					else{
 						// IFLT 1337, r3  -->  IFLT_iAB_rc
-						Int16 immediate = ParseNumber(parts[1]);
+						Int16 immediate = ParseInt16(parts[1]);
 						Byte reg2 = ParseRegister(parts[2]);
 						instruction = BytecodeUtil.INS_BC(Opcode.IFLT_iAB_rC, immediate, reg2);
 					}
 				} else {
 					// IFLT r5, 42  -->  IFLT_rA_iBC
 					Byte reg1 = ParseRegister(parts[1]);
-					Int16 immediate = ParseNumber(parts[2]);
+					Int16 immediate = ParseInt16(parts[2]);
 					instruction = BytecodeUtil.INS_AB(Opcode.IFLT_rA_iBC, reg1, immediate);
 				}
 			
@@ -281,14 +284,14 @@ namespace MiniScript {
 						instruction = BytecodeUtil.INS_ABC(Opcode.IFLE_rA_rB, reg1, reg2, 0);
 					} else {
 						// IFLE 1337, r3  -->  IFLE_iAB_rc
-						Int16 immediate = ParseNumber(parts[1]);
+						Int16 immediate = ParseInt16(parts[1]);
 						Byte reg2 = ParseRegister(parts[2]);
 						instruction = BytecodeUtil.INS_BC(Opcode.IFLE_iAB_rC, immediate, reg2);
 					}
 				} else {
 					// IFLE r5, 42  -->  IFLE_rA_iBC
 					Byte reg1 = ParseRegister(parts[1]);
-					Int16 immediate = ParseNumber(parts[2]);
+					Int16 immediate = ParseInt16(parts[2]);
 					instruction = BytecodeUtil.INS_AB(Opcode.IFLE_rA_iBC, reg1, immediate);
 				}
 
@@ -303,7 +306,7 @@ namespace MiniScript {
 						instruction = BytecodeUtil.INS_ABC(Opcode.IFEQ_rA_rB, reg1, reg2, 0);
 				} else {
 					// IFEQ r5, 42  -->  IFLE_rA_iBC
-					Int16 immediate = ParseNumber(parts[2]);
+					Int16 immediate = ParseInt16(parts[2]);
 					instruction = BytecodeUtil.INS_AB(Opcode.IFEQ_rA_iBC, reg1, immediate);
 				}
 
@@ -318,14 +321,14 @@ namespace MiniScript {
 						instruction = BytecodeUtil.INS_ABC(Opcode.IFNE_rA_rB, reg1, reg2, 0);
 				} else {
 					// IFEQ r5, 42  -->  IFLE_rA_iBC
-					Int16 immediate = ParseNumber(parts[2]);
+					Int16 immediate = ParseInt16(parts[2]);
 					instruction = BytecodeUtil.INS_AB(Opcode.IFNE_rA_iBC, reg1, immediate);
 				}
 
 			} else if (mnemonic == "CALLF") {
 				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
-				Byte reserveRegs = (Byte)ParseNumber(parts[1]);
-				Int16 funcIdx = ParseNumber(parts[2]);
+				Byte reserveRegs = (Byte)ParseInt16(parts[1]);	// ToDo: check range before typecast
+				Int16 funcIdx = ParseInt16(parts[2]);
 				instruction = BytecodeUtil.INS_AB(Opcode.CALLF_iA_iBC, reserveRegs, funcIdx);
 				
 			} else if (mnemonic == "RETURN") {
@@ -344,13 +347,13 @@ namespace MiniScript {
 		// Helper to parse register like "r5" -> 5
 		private static Byte ParseRegister(String reg) {
 			if (reg.Length < 2 || reg[0] != 'r') return 0;
-			return (Byte)ParseNumber(reg.Substring(1));
+			return (Byte)ParseInt16(reg.Substring(1));
 		}
 		
-		// Helper to parse number (handles negative numbers)
-		private static Int16 ParseNumber(String num) {
+		// Helper to parse an Int16 number (handles negative numbers)
+		private static Int16 ParseInt16(String num) {
 			// Simple number parsing - could be enhanced
-			Int32 result = 0;
+			Int64 result = 0;
 			Boolean negative = false;
 			Int32 start = 0;
 			
@@ -363,9 +366,72 @@ namespace MiniScript {
 				if (num[i] >= '0' && num[i] <= '9') {
 					result = result * 10 + (num[i] - '0');
 				}
+				// ToDo: if we encounter a decimal point or other unexpected character,
+				// print an error.
 			}
 			
-			return (Int16)(negative ? -result : result);
+			if (negative) result = -result;
+			if (result < Int16.MinValue || result > Int16.MaxValue) {
+				// ToDo: better error handling.
+				return 0;
+			}
+			return (Int16)result;
+		}
+
+		// Helper to parse a 24-bit int number (handles negative numbers)
+		private static Int32 ParseInt24(String num) {
+			// Simple number parsing - could be enhanced
+			Int64 result = 0;
+			Boolean negative = false;
+			Int32 start = 0;
+			
+			if (num.Length > 0 && num[0] == '-') {
+				negative = true;
+				start = 1;
+			}
+			
+			for (Int32 i = start; i < num.Length; i++) {
+				if (num[i] >= '0' && num[i] <= '9') {
+					result = result * 10 + (num[i] - '0');
+				}
+				// ToDo: if we encounter a decimal point or other unexpected character,
+				// print an error.
+			}
+			
+			if (negative) result = -result;
+			if (result < -16777215 || result > 16777215) {
+				// ToDo: better error handling.
+				return 0;
+			}
+			return (Int32)result;
+		}
+
+		// Helper to parse a 32-bit int number (handles negative numbers)
+		private static Int32 ParseInt32(String num) {
+			// Simple number parsing - could be enhanced
+			Int64 result = 0;
+			Boolean negative = false;
+			Int32 start = 0;
+			
+			if (num.Length > 0 && num[0] == '-') {
+				negative = true;
+				start = 1;
+			}
+			
+			for (Int32 i = start; i < num.Length; i++) {
+				if (num[i] >= '0' && num[i] <= '9') {
+					result = result * 10 + (num[i] - '0');
+				}
+				// ToDo: if we encounter a decimal point or other unexpected character,
+				// print an error.
+			}
+			
+			if (negative) result = -result;
+			if (result < Int32.MinValue || result > Int32.MaxValue) {
+				// ToDo: better error handling.
+				return 0;
+			}
+			return (Int32)result;
 		}
 
 		// Helper to determine if a token is a label (ends with colon)
@@ -452,7 +518,7 @@ namespace MiniScript {
 				return make_string(content); // CPP: return make_string(content.c_str());
 			}
 			
-			// Check if it contains a decimal point (floating point number)
+			// Check if it contains a decimal point (floating point number).
 			if (token.Contains(".")) {
 				// Simple double parsing (basic implementation)
 				Double doubleValue = ParseDouble(token);
@@ -460,7 +526,7 @@ namespace MiniScript {
 			}
 			
 			// Parse as integer
-			Int32 intValue = ParseNumber(token);
+			Int32 intValue = ParseInt32(token);
 			return make_int(intValue);
 		}
 
@@ -477,17 +543,17 @@ namespace MiniScript {
 			
 			if (dotPos == -1) {
 				// No decimal point, parse as integer
-				return (Double)ParseNumber(str);
+				return (Double)ParseInt16(str);
 			}
 			
 			// Parse integer part
 			String intPart = str.Substring(0, dotPos);
-			Double result = (Double)ParseNumber(intPart);
+			Double result = (Double)ParseInt16(intPart);
 			
 			// Parse fractional part
 			String fracPart = str.Substring(dotPos + 1);
 			if (fracPart.Length > 0) {
-				Double fracValue = (Double)ParseNumber(fracPart);
+				Double fracValue = (Double)ParseInt16(fracPart);
 				Double divisor = 1.0;
 				for (Int32 i = 0; i < fracPart.Length; i++) {
 					divisor *= 10.0;
