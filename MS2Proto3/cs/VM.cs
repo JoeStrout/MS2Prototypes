@@ -221,6 +221,24 @@ namespace MiniScript {
 						break; // CPP: VM_NEXT();
 					}
 
+					case Opcode.BRTRUE_rA_iBC: { // CPP: VM_CASE(BRTRUE_rA_iBC) {
+						Byte a = BytecodeUtil.Au(instruction);
+						Int32 offset = BytecodeUtil.BCs(instruction);
+						if(is_truthy(stack[baseIndex + a])){
+							pc += offset;
+						}
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.BRFALSE_rA_iBC: { // CPP: VM_CASE(BRFALSE_rA_iBC) {
+						Byte a = BytecodeUtil.Au(instruction);
+						Int32 offset = BytecodeUtil.BCs(instruction);
+						if(!is_truthy(stack[baseIndex + a])){
+							pc += offset;
+						}
+						break; // CPP: VM_NEXT();
+					}
+
 					case Opcode.BRLT_rA_rB_iC: { // CPP: VM_CASE(BRLT_rA_rB_iC) {
 						// if R[A] < R[B] then jump offset C.
 						Byte a = BytecodeUtil.Au(instruction);

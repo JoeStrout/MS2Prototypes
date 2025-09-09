@@ -281,6 +281,12 @@ namespace MiniScript {
             return false;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsTruthy(Value a)  {
+            // TODO: Finish implementation for maps, lists, and strings!
+            return !a.IsNull && ((a.IsInt && (a.AsInt() != 0)) || (a.IsDouble && a.AsDouble() != 0.0));
+        }
+
         // ==== HELPERS =========================================================
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsAllAscii(string s) {
@@ -326,6 +332,9 @@ namespace MiniScript {
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool is_number(Value v) => v.IsInt || v.IsDouble;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool is_truthy(Value v) => Value.IsTruthy(v);
         
         // Arithmetic operations (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -353,7 +362,7 @@ namespace MiniScript {
 
         // Comparison operations (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool value_equal(Value a, Value b) => Value.Equal(a, b);
+        public static bool value_equal(Value a, Value b) => Value.Equal(a, b);        
     }
 
     // A minimal, fast handle table. Stores actual C# objects referenced by Value.

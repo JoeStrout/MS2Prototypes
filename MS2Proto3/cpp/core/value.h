@@ -109,6 +109,14 @@ static inline double as_double(Value v) {
     return d;
 }
 
+// Evaluation function -- needs to be below as_int and as_double or implemented in value.c
+
+static inline bool is_truthy(Value v) {
+    // TODO: Finish implementation for maps, lists, and strings!
+    return !is_null(v) && ((is_int(v) && (as_int(v) != 0)) || (is_double(v) && (as_double(v) != 0)));
+}
+
+
 // Note: as_map() will be implemented in the maps module
 
 // Utility functions for accessing tiny string data within Value

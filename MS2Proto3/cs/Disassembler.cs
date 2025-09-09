@@ -21,6 +21,8 @@ namespace MiniScript {
 				case Opcode.MOD_rA_rB_rC:  return "MOD";
 				case Opcode.SUB_rA_rB_rC:  return "SUB";
 				case Opcode.JUMP_iABC:     return "JUMP";
+				case Opcode.BRTRUE_rA_iBC: return "BCTRUE";
+				case Opcode.BRFALSE_rA_iBC:return "BCFALSE";
 				case Opcode.BRLT_rA_rB_iC:
 				case Opcode.BRLT_rA_iB_iC:
 				case Opcode.BRLT_iA_rB_iC: return "BRLT";
@@ -91,6 +93,8 @@ namespace MiniScript {
 				case Opcode.IFLE_rA_iBC:
 				case Opcode.IFEQ_rA_iBC:
 				case Opcode.IFNE_rA_iBC:
+				case Opcode.BRTRUE_rA_iBC:
+				case Opcode.BRFALSE_rA_iBC:
         			return StringUtils.Format("{0} r{1}, {2}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),

@@ -19,14 +19,6 @@
 #  endif
 #endif
 
-
-//	X(LT_rA_rB_rC) \
-//	X(LE_rA_rB_rC) \
-//	X(EQ_rA_rB_rC) \
-//	X(NE_rA_rB_rC) \
-//	X(BRTRUE_rA_iBC) \
-//	X(BRFALSE_rA_iBC) \
-
 // X-macro defining all opcodes - must match the C# Opcode enum exactly
 #define VM_OPCODES(X) \
 	X(NOOP) \
@@ -39,6 +31,8 @@
 	X(DIV_rA_rB_rC) \
 	X(MOD_rA_rB_rC) \
 	X(JUMP_iABC) \
+	X(BRTRUE_rA_iBC) \
+	X(BRFALSE_rA_iBC) \
 	X(BRLT_rA_rB_iC) \
 	X(BRLT_rA_iB_iC) \
 	X(BRLT_iA_rB_iC) \

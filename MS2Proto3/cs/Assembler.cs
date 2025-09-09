@@ -207,6 +207,58 @@ namespace MiniScript {
 					offset = ParseInt24(target);
 				}
 				instruction = BytecodeUtil.INS(Opcode.JUMP_iABC) | (UInt32)(offset & 0xFFFFFF);
+			
+			} else if (mnemonic == "BRTRUE") {
+				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+
+				Byte reg1 = ParseRegister(parts[1]);
+				String target = parts[2];
+				Int32 offset;
+				
+				// Check if target is a label or a number
+				Int32 labelAddr = FindLabelAddress(target);
+				if (labelAddr >= 0) {
+					// It's a label - calculate relative offset from next instruction
+					offset = labelAddr - (Current.Code.Count + 1);
+				} else {
+					// It's a number
+					offset = ParseInt32(target);
+				}
+
+				// ToDo: handle other cases similar to this, where we parse the number
+				// as a bigger Int32 but then check the range, so that we can display
+				// a better error message.
+				if (offset < Int16.MinValue || offset > Int16.MaxValue) {
+					return Error("Range error (Cannot fit branch offset into Int16)", mnemonic, line);
+				}
+
+				instruction = BytecodeUtil.INS_AB(Opcode.BRTRUE_rA_iBC, reg1, (Int16)offset);
+
+			} else if (mnemonic == "BRFALSE") {
+				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+
+				Byte reg1 = ParseRegister(parts[1]);
+				String target = parts[2];
+				Int32 offset;
+				
+				// Check if target is a label or a number
+				Int32 labelAddr = FindLabelAddress(target);
+				if (labelAddr >= 0) {
+					// It's a label - calculate relative offset from next instruction
+					offset = labelAddr - (Current.Code.Count + 1);
+				} else {
+					// It's a number
+					offset = ParseInt32(target);
+				}
+
+				// ToDo: handle other cases similar to this, where we parse the number
+				// as a bigger Int32 but then check the range, so that we can display
+				// a better error message.
+				if (offset < Int16.MinValue || offset > Int16.MaxValue) {
+					return Error("Range error (Cannot fit branch offset into Int16)", mnemonic, line);
+				}
+
+				instruction = BytecodeUtil.INS_AB(Opcode.BRFALSE_rA_iBC, reg1, (Int16)offset);
 
 			} else if (mnemonic == "BRLT") {
 				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);

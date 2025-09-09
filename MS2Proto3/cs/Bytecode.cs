@@ -15,16 +15,16 @@ namespace MiniScript {
 		DIV_rA_rB_rC,
 		MOD_rA_rB_rC,
 		JUMP_iABC,
-		LT_rA_rB_rC,
-		LT_rA_rB_iC,
-		LT_rA_iB_rC,
-		LE_rA_rB_rC,
-		LE_rA_rB_iC,
-		LE_rA_iB_rC,
-		EQ_rA_rB_rC,
-		EQ_rA_rB_iC,
-		NE_rA_rB_rC,
-		NE_rA_rB_iC,
+	//	LT_rA_rB_rC,
+	//	LT_rA_rB_iC,
+	//	LT_rA_iB_rC,
+	//	LE_rA_rB_rC,
+	//	LE_rA_rB_iC,
+	//	LE_rA_iB_rC,
+	//	EQ_rA_rB_rC,
+	//	EQ_rA_rB_iC,
+	//	NE_rA_rB_rC,
+	//	NE_rA_rB_iC,
 		BRTRUE_rA_iBC,
 		BRFALSE_rA_iBC,
 		BRLT_rA_rB_iC,
@@ -101,9 +101,18 @@ namespace MiniScript {
 				case Opcode.DIV_rA_rB_rC:  return "DIV_rA_rB_rC";
 				case Opcode.MOD_rA_rB_rC:  return "MOD_rA_rB_rC";
 				case Opcode.JUMP_iABC:     return "JUMP_iABC";
+				case Opcode.BRTRUE_rA_iBC: return "BRTRUE_rA_iBC";
+				case Opcode.BRFALSE_rA_iBC:return "BRFALSE_rA_iBC";
 				case Opcode.BRLT_rA_rB_iC: return "BRLT_rA_rB_iC";
 				case Opcode.BRLT_rA_iB_iC: return "BRLT_rA_iB_iC";
 				case Opcode.BRLT_iA_rB_iC: return "BRLT_iA_rB_iC";
+				case Opcode.BRLE_rA_rB_iC: return "BRLE_rA_rB_iC";
+				case Opcode.BRLE_rA_iB_iC: return "BRLE_rA_iB_iC";
+				case Opcode.BRLE_iA_rB_iC: return "BRLE_iA_rB_iC";
+				case Opcode.BREQ_rA_rB_iC: return "BREQ_rA_rB_iC";
+				case Opcode.BREQ_rA_iB_iC: return "BREQ_rA_iB_iC";
+				case Opcode.BRNE_rA_rB_iC: return "BRNE_rA_rB_iC";
+				case Opcode.BRNE_rA_iB_iC: return "BRNE_rA_iB_iC";
 				case Opcode.IFLT_rA_rB:    return "IFLT_rA_rB";
 				case Opcode.IFLT_rA_iBC:   return "IFLT_rA_iBC";
 				case Opcode.IFLT_iAB_rC:   return "IFLT_iAB_rC";
@@ -132,9 +141,18 @@ namespace MiniScript {
 			if (s == "DIV_rA_rB_rC")  return Opcode.DIV_rA_rB_rC;
 			if (s == "MOD_rA_rB_rC")  return Opcode.MOD_rA_rB_rC;
 			if (s == "JUMP_iABC")     return Opcode.JUMP_iABC;
+			if (s == "BRTRUE_rA_iBC") return Opcode.BRTRUE_rA_iBC;
+			if (s == "BRFALSE_rA_iBC")return Opcode.BRFALSE_rA_iBC;
 			if (s == "BRLT_rA_rB_iC") return Opcode.BRLT_rA_rB_iC;
 			if (s == "BRLT_rA_iB_iC") return Opcode.BRLT_rA_iB_iC;
 			if (s == "BRLT_iA_rB_iC") return Opcode.BRLT_iA_rB_iC;
+			if (s == "BRLE_rA_rB_iC") return Opcode.BRLE_rA_rB_iC;
+			if (s == "BRLE_rA_iB_iC") return Opcode.BRLE_rA_iB_iC;
+			if (s == "BRLE_iA_rB_iC") return Opcode.BRLE_iA_rB_iC;
+			if (s == "BREQ_rA_rB_iC") return Opcode.BREQ_rA_rB_iC;
+			if (s == "BREQ_rA_iB_iC") return Opcode.BREQ_rA_iB_iC;
+			if (s == "BRNE_rA_rB_iC") return Opcode.BRNE_rA_rB_iC;
+			if (s == "BRNE_rA_iB_iC") return Opcode.BRNE_rA_iB_iC;
 			if (s == "IFLT_rA_rB")    return Opcode.IFLT_rA_rB;
 			if (s == "IFLT_rA_iBC")   return Opcode.IFLT_rA_iBC;
 			if (s == "IFLT_iAB_rC")   return Opcode.IFLT_iAB_rC;
