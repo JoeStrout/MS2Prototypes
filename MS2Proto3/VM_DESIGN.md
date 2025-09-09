@@ -26,6 +26,9 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | BRLT_rA_rB_iC | if R[A] < R[B] then PC += C (8-bit signed) |
 | BRLT_rA_iB_iC | if R[A] < B then PC += C (8-bit signed) |
 | BRLT_iA_rB_iC | if A < R[B] then PC += C (8-bit signed) |
+| BRLE_rA_rB_iC | if R[A] <= R[B] then PC += C (8-bit signed) |
+| BRLE_rA_iB_iC | if R[A] <= B then PC += C (8-bit signed) |
+| BRLE_iA_rB_iC | if A <= R[B] then PC += C (8-bit signed) |
 | IFLT_rA_rB | if R[A] < R[B] is **false** then PC += 1 |
 | IFLT_rA_iBC | if R[A] < BC is **false** then PC += 1 |
 | IFLT_iAB_rC | if AB < R[C] is **false** then PC += 1 |

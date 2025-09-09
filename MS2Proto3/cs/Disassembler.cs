@@ -24,6 +24,13 @@ namespace MiniScript {
 				case Opcode.BRLT_rA_rB_iC:
 				case Opcode.BRLT_rA_iB_iC:
 				case Opcode.BRLT_iA_rB_iC: return "BRLT";
+				case Opcode.BRLE_rA_rB_iC:
+				case Opcode.BRLE_rA_iB_iC:
+				case Opcode.BRLE_iA_rB_iC: return "BRLE";
+				case Opcode.BREQ_rA_rB_iC:
+				case Opcode.BREQ_rA_iB_iC: return "BREQ";
+				case Opcode.BRNE_rA_rB_iC:
+				case Opcode.BRNE_rA_iB_iC: return "BRNE";
 				case Opcode.IFLT_rA_rB:
 				case Opcode.IFLT_rA_iBC:
 				case Opcode.IFLT_iAB_rC:   return "IFLT";
@@ -116,6 +123,9 @@ namespace MiniScript {
         				(Int32)BytecodeUtil.Cu(instruction));
 				// rA, rB, iC
 				case Opcode.BRLT_rA_rB_iC:
+				case Opcode.BRLE_rA_rB_iC:
+				case Opcode.BREQ_rA_rB_iC:
+				case Opcode.BRNE_rA_rB_iC:
 					return StringUtils.Format("{0} r{1}, r{2}, {3}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),
@@ -123,6 +133,9 @@ namespace MiniScript {
         				(Int32)BytecodeUtil.Cu(instruction));
 				// rA, iB, iC
 				case Opcode.BRLT_rA_iB_iC:
+				case Opcode.BRLE_rA_iB_iC:
+				case Opcode.BREQ_rA_iB_iC:
+				case Opcode.BRNE_rA_iB_iC:
 					return StringUtils.Format("{0} r{1}, {2}, {3}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),
@@ -130,6 +143,7 @@ namespace MiniScript {
         				(Int32)BytecodeUtil.Cu(instruction));
 				// iA, rB, iC
 				case Opcode.BRLT_iA_rB_iC:
+				case Opcode.BRLE_iA_rB_iC:
 					return StringUtils.Format("{0} {1}, r{2}, {3}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),
