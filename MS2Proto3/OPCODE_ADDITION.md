@@ -6,7 +6,7 @@ For MS2Proto3, opcodes must be added very specifically so that all operations wo
 
 To add a new opcode, the following must be implemented:
 
-1. cs/Bytecode.cs: New opcodes must be added to `Opcode` enum. They must follow the existing format, with `r` indicating a register, `k` a constant table lookup, and `i` an immediate value.
+1. cs/Bytecode.cs: New opcodes must be added to `Opcode` enum. They must follow the existing format, with `r` indicating a register, `k` a constant table lookup, and `i` an immediate value. Also, matching entries must be placed in `BytecodeUtil.ToMnemonic()` and `BytecodeUtil.FromMnemonic()`.
 2. cpp/core/dispatch_macros.h: The raw opcodes must be added to the list of macros in `VM_OpCodes(X)`.
 3. cs/Assembler.cs: The assembly version of the opcodes must be implemented in `Assembler.AddLine()`.
 4. cs/Disassembler.cs: The raw opcodes and assembly opcodes must be matched together in both `Disassembler.AssemOp()` and `Disassembler.ToString()`.
@@ -39,6 +39,18 @@ Inside `Opcode`, we would add `INC_rA` somewhere near the math opcodes, perhaps 
 		MOD_rA_rB_rC,
         INC_rA, // Our added opcode
         JUMP_iABC,
+```
+
+Inside `BytecodeUtil.ToMnemonic()`, we add the following:
+
+```cs
+case Opcode.INC_rA:     return "INC_rA";
+```
+
+Inside `BytecodeUtil.FromMnemonic()`, we add the following:
+
+```cs
+if (s == "INC_rA")     return Opcode.INC_rA;
 ```
 
 ### cs/Assembler.cs:
