@@ -78,6 +78,8 @@ static inline bool is_number(Value v) {
     return is_int(v) || is_double(v);
 }
 
+bool is_truthy(Value v);
+
 // Core value creation functions
 static inline Value make_null(void) {
     return NULL_VALUE;

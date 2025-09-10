@@ -207,6 +207,58 @@ namespace MiniScript {
 					offset = ParseInt24(target);
 				}
 				instruction = BytecodeUtil.INS(Opcode.JUMP_iABC) | (UInt32)(offset & 0xFFFFFF);
+			
+			} else if (mnemonic == "BRTRUE") {
+				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+
+				Byte reg1 = ParseRegister(parts[1]);
+				String target = parts[2];
+				Int32 offset;
+				
+				// Check if target is a label or a number
+				Int32 labelAddr = FindLabelAddress(target);
+				if (labelAddr >= 0) {
+					// It's a label - calculate relative offset from next instruction
+					offset = labelAddr - (Current.Code.Count + 1);
+				} else {
+					// It's a number
+					offset = ParseInt32(target);
+				}
+
+				// ToDo: handle other cases similar to this, where we parse the number
+				// as a bigger Int32 but then check the range, so that we can display
+				// a better error message.
+				if (offset < Int16.MinValue || offset > Int16.MaxValue) {
+					return Error("Range error (Cannot fit branch offset into Int16)", mnemonic, line);
+				}
+
+				instruction = BytecodeUtil.INS_AB(Opcode.BRTRUE_rA_iBC, reg1, (Int16)offset);
+
+			} else if (mnemonic == "BRFALSE") {
+				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+
+				Byte reg1 = ParseRegister(parts[1]);
+				String target = parts[2];
+				Int32 offset;
+				
+				// Check if target is a label or a number
+				Int32 labelAddr = FindLabelAddress(target);
+				if (labelAddr >= 0) {
+					// It's a label - calculate relative offset from next instruction
+					offset = labelAddr - (Current.Code.Count + 1);
+				} else {
+					// It's a number
+					offset = ParseInt32(target);
+				}
+
+				// ToDo: handle other cases similar to this, where we parse the number
+				// as a bigger Int32 but then check the range, so that we can display
+				// a better error message.
+				if (offset < Int16.MinValue || offset > Int16.MaxValue) {
+					return Error("Range error (Cannot fit branch offset into Int16)", mnemonic, line);
+				}
+
+				instruction = BytecodeUtil.INS_AB(Opcode.BRFALSE_rA_iBC, reg1, (Int16)offset);
 
 			} else if (mnemonic == "BRLT") {
 				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
@@ -248,7 +300,116 @@ namespace MiniScript {
 					Byte reg1 = ParseRegister(parts[1]);
 					Byte immediate = (Byte)ParseInt16(parts[2]);
 					instruction = BytecodeUtil.INS_ABC(Opcode.BRLT_rA_iB_iC, reg1, immediate, (Byte)offset);
-				}				
+				}
+			} else if (mnemonic == "BRLE") {
+				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+
+				String target = parts[3];
+				Int32 offset;
+				
+				// Check if target is a label or a number
+				Int32 labelAddr = FindLabelAddress(target);
+				if (labelAddr >= 0) {
+					// It's a label - calculate relative offset from next instruction
+					offset = labelAddr - (Current.Code.Count + 1);
+				} else {
+					// It's a number
+					offset = ParseInt32(target);
+				}
+
+				// ToDo: handle other cases similar to this, where we parse the number
+				// as a bigger Int32 but then check the range, so that we can display
+				// a better error message.
+				if (offset < SByte.MinValue || offset > SByte.MaxValue) {
+					return Error("Range error (Cannot fit branch offset into SByte)", mnemonic, line);
+				}
+
+				if (parts[2][0] == 'r') {
+					if (parts[1][0] == 'r'){
+						// BRLE r5, r3, someOffset
+						Byte reg1 = ParseRegister(parts[1]);
+						Byte reg2 = ParseRegister(parts[2]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.BRLE_rA_rB_iC, reg1, reg2, (Byte)offset);
+					} else {
+						// BRLE 5, r5, someOffset
+						Byte immediate = (Byte)ParseInt16(parts[1]);
+						Byte reg2 = ParseRegister(parts[2]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.BRLE_iA_rB_iC, immediate, reg2, (Byte)offset);		
+					}
+				} else {
+					// BRLE r5, 5, someOffset
+					Byte reg1 = ParseRegister(parts[1]);
+					Byte immediate = (Byte)ParseInt16(parts[2]);
+					instruction = BytecodeUtil.INS_ABC(Opcode.BRLE_rA_iB_iC, reg1, immediate, (Byte)offset);
+				}			
+
+			} else if (mnemonic == "BREQ") {
+				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+
+				String target = parts[3];
+				Int32 offset;
+				
+				// Check if target is a label or a number
+				Int32 labelAddr = FindLabelAddress(target);
+				if (labelAddr >= 0) {
+					// It's a label - calculate relative offset from next instruction
+					offset = labelAddr - (Current.Code.Count + 1);
+				} else {
+					// It's a number
+					offset = ParseInt32(target);
+				}
+
+				// ToDo: handle other cases similar to this, where we parse the number
+				// as a bigger Int32 but then check the range, so that we can display
+				// a better error message.
+				if (offset < SByte.MinValue || offset > SByte.MaxValue) {
+					return Error("Range error (Cannot fit branch offset into SByte)", mnemonic, line);
+				}
+
+				Byte reg1 = ParseRegister(parts[1]);
+				if (parts[2][0] == 'r'){
+					// BREQ r5, r3, someOffset
+					Byte reg2 = ParseRegister(parts[2]);
+					instruction = BytecodeUtil.INS_ABC(Opcode.BREQ_rA_rB_iC, reg1, reg2, (Byte)offset);
+				} else {
+					// BREQ r5, 5, someOffset
+					Byte immediate = (Byte)ParseInt16(parts[2]);
+					instruction = BytecodeUtil.INS_ABC(Opcode.BREQ_rA_iB_iC, reg1, immediate, (Byte)offset);
+				}
+		
+			} else if (mnemonic == "BRNE") {
+				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+
+				String target = parts[3];
+				Int32 offset;
+				
+				// Check if target is a label or a number
+				Int32 labelAddr = FindLabelAddress(target);
+				if (labelAddr >= 0) {
+					// It's a label - calculate relative offset from next instruction
+					offset = labelAddr - (Current.Code.Count + 1);
+				} else {
+					// It's a number
+					offset = ParseInt32(target);
+				}
+
+				// ToDo: handle other cases similar to this, where we parse the number
+				// as a bigger Int32 but then check the range, so that we can display
+				// a better error message.
+				if (offset < SByte.MinValue || offset > SByte.MaxValue) {
+					return Error("Range error (Cannot fit branch offset into SByte)", mnemonic, line);
+				}
+
+				Byte reg1 = ParseRegister(parts[1]);
+				if (parts[2][0] == 'r') {
+					// BRNE r5, r3, someOffset
+					Byte reg2 = ParseRegister(parts[2]);
+					instruction = BytecodeUtil.INS_ABC(Opcode.BRNE_rA_rB_iC, reg1, reg2, (Byte)offset);
+				} else {
+					// BRNE r5, 5, someOffset
+					Byte immediate = (Byte)ParseInt16(parts[2]);
+					instruction = BytecodeUtil.INS_ABC(Opcode.BRNE_rA_iB_iC, reg1, immediate, (Byte)offset);
+				}
 
 			} else if (mnemonic == "IFLT") {
 				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);

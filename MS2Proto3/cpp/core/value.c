@@ -252,3 +252,13 @@ Value value_shl(Value v, int shift) {
         return make_double((double)result);
     }
 }
+
+// Inspection
+
+bool is_truthy(Value v){
+    return (!is_null(v) &&
+                ((is_int(v) && as_int(v) != 0) ||
+                (is_double(v) && as_double(v) != 0.0) ||
+                (is_string(v) && string_length(v) != 0)
+                ));
+    }

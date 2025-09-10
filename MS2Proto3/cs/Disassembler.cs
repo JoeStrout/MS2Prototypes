@@ -21,9 +21,18 @@ namespace MiniScript {
 				case Opcode.MOD_rA_rB_rC:  return "MOD";
 				case Opcode.SUB_rA_rB_rC:  return "SUB";
 				case Opcode.JUMP_iABC:     return "JUMP";
+				case Opcode.BRTRUE_rA_iBC: return "BCTRUE";
+				case Opcode.BRFALSE_rA_iBC:return "BCFALSE";
 				case Opcode.BRLT_rA_rB_iC:
 				case Opcode.BRLT_rA_iB_iC:
 				case Opcode.BRLT_iA_rB_iC: return "BRLT";
+				case Opcode.BRLE_rA_rB_iC:
+				case Opcode.BRLE_rA_iB_iC:
+				case Opcode.BRLE_iA_rB_iC: return "BRLE";
+				case Opcode.BREQ_rA_rB_iC:
+				case Opcode.BREQ_rA_iB_iC: return "BREQ";
+				case Opcode.BRNE_rA_rB_iC:
+				case Opcode.BRNE_rA_iB_iC: return "BRNE";
 				case Opcode.IFLT_rA_rB:
 				case Opcode.IFLT_rA_iBC:
 				case Opcode.IFLT_iAB_rC:   return "IFLT";
@@ -84,6 +93,8 @@ namespace MiniScript {
 				case Opcode.IFLE_rA_iBC:
 				case Opcode.IFEQ_rA_iBC:
 				case Opcode.IFNE_rA_iBC:
+				case Opcode.BRTRUE_rA_iBC:
+				case Opcode.BRFALSE_rA_iBC:
         			return StringUtils.Format("{0} r{1}, {2}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),
@@ -116,6 +127,9 @@ namespace MiniScript {
         				(Int32)BytecodeUtil.Cu(instruction));
 				// rA, rB, iC
 				case Opcode.BRLT_rA_rB_iC:
+				case Opcode.BRLE_rA_rB_iC:
+				case Opcode.BREQ_rA_rB_iC:
+				case Opcode.BRNE_rA_rB_iC:
 					return StringUtils.Format("{0} r{1}, r{2}, {3}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),
@@ -123,6 +137,9 @@ namespace MiniScript {
         				(Int32)BytecodeUtil.Cu(instruction));
 				// rA, iB, iC
 				case Opcode.BRLT_rA_iB_iC:
+				case Opcode.BRLE_rA_iB_iC:
+				case Opcode.BREQ_rA_iB_iC:
+				case Opcode.BRNE_rA_iB_iC:
 					return StringUtils.Format("{0} r{1}, {2}, {3}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),
@@ -130,6 +147,7 @@ namespace MiniScript {
         				(Int32)BytecodeUtil.Cu(instruction));
 				// iA, rB, iC
 				case Opcode.BRLT_iA_rB_iC:
+				case Opcode.BRLE_iA_rB_iC:
 					return StringUtils.Format("{0} {1}, r{2}, {3}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),

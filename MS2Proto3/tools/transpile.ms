@@ -258,7 +258,9 @@ Converter.processNonmethodLine = function
 	
 	// enum value
 	if self.match("≤name:w≥ = ≤value≥,", "≤name≥ = ≤value≥,", "") or
-	   self.match("≤name:w≥ = ≤value≥",  "≤name≥ = ≤value≥", "") then
+	   self.match("≤name:w≥ = ≤value≥",  "≤name≥ = ≤value≥", "") or
+	   self.match("≤name:w≥,", "≤name≥,", "") or
+	   self.match("≤name:w≥",  "≤name≥", "") then
 		return
 	end if
 	

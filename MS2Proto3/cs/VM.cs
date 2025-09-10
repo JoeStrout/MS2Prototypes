@@ -221,6 +221,24 @@ namespace MiniScript {
 						break; // CPP: VM_NEXT();
 					}
 
+					case Opcode.BRTRUE_rA_iBC: { // CPP: VM_CASE(BRTRUE_rA_iBC) {
+						Byte a = BytecodeUtil.Au(instruction);
+						Int32 offset = BytecodeUtil.BCs(instruction);
+						if(is_truthy(stack[baseIndex + a])){
+							pc += offset;
+						}
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.BRFALSE_rA_iBC: { // CPP: VM_CASE(BRFALSE_rA_iBC) {
+						Byte a = BytecodeUtil.Au(instruction);
+						Int32 offset = BytecodeUtil.BCs(instruction);
+						if(!is_truthy(stack[baseIndex + a])){
+							pc += offset;
+						}
+						break; // CPP: VM_NEXT();
+					}
+
 					case Opcode.BRLT_rA_rB_iC: { // CPP: VM_CASE(BRLT_rA_rB_iC) {
 						// if R[A] < R[B] then jump offset C.
 						Byte a = BytecodeUtil.Au(instruction);
@@ -249,6 +267,83 @@ namespace MiniScript {
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte offset = BytecodeUtil.Cs(instruction);
 						if(value_lt(make_int(a), stack[baseIndex + b])){
+							pc += offset;
+						}
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.BRLE_rA_rB_iC: { // CPP: VM_CASE(BRLE_rA_rB_iC) {
+						// if R[A] <= R[B] then jump offset C.
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						SByte offset = BytecodeUtil.Cs(instruction);
+						if(value_le(stack[baseIndex + a], stack[baseIndex + b])){
+							pc += offset;
+						}
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.BRLE_rA_iB_iC: { // CPP: VM_CASE(BRLE_rA_iB_iC) {
+						// if R[A] <= B (immediate) then jump offset C.
+						Byte a = BytecodeUtil.Au(instruction);
+						SByte b = BytecodeUtil.Bs(instruction);
+						SByte offset = BytecodeUtil.Cs(instruction);
+						if(value_le(stack[baseIndex + a], make_int(b))){
+							pc += offset;
+						}
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.BRLE_iA_rB_iC: { // CPP: VM_CASE(BRLE_iA_rB_iC) {
+						// if A (immediate) <= R[B] then jump offset C.
+						SByte a = BytecodeUtil.As(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						SByte offset = BytecodeUtil.Cs(instruction);
+						if(value_le(make_int(a), stack[baseIndex + b])){
+							pc += offset;
+						}
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.BREQ_rA_rB_iC: { // CPP: VM_CASE(BREQ_rA_rB_iC) {
+						// if R[A] == R[B] then jump offset C.
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						SByte offset = BytecodeUtil.Cs(instruction);
+						if(value_equal(stack[baseIndex + a], stack[baseIndex + b])){
+							pc += offset;
+						}
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.BREQ_rA_iB_iC: { // CPP: VM_CASE(BREQ_rA_iB_iC) {
+						// if R[A] == B (immediate) then jump offset C.
+						Byte a = BytecodeUtil.Au(instruction);
+						SByte b = BytecodeUtil.Bs(instruction);
+						SByte offset = BytecodeUtil.Cs(instruction);
+						if(value_equal(stack[baseIndex + a], make_int(b))){
+							pc += offset;
+						}
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.BRNE_rA_rB_iC: { // CPP: VM_CASE(BRNE_rA_rB_iC) {
+						// if R[A] != R[B] then jump offset C.
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						SByte offset = BytecodeUtil.Cs(instruction);
+						if(!value_equal(stack[baseIndex + a], stack[baseIndex + b])){
+							pc += offset;
+						}
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.BRNE_rA_iB_iC: { // CPP: VM_CASE(BRNE_rA_iB_iC) {
+						// if R[A] != B (immediate) then jump offset C.
+						Byte a = BytecodeUtil.Au(instruction);
+						SByte b = BytecodeUtil.Bs(instruction);
+						SByte offset = BytecodeUtil.Cs(instruction);
+						if(!value_equal(stack[baseIndex + a], make_int(b))){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();

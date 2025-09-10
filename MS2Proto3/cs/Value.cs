@@ -323,9 +323,19 @@ namespace MiniScript {
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool is_string(Value v) => v.IsString;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool is_tiny_string(Value v) => v.IsTiny;
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool is_number(Value v) => v.IsInt || v.IsDouble;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool is_truthy(Value v) => (!is_null(v) &&
+                ((is_int(v) && as_int(v) != 0) ||
+                (is_double(v) && as_double(v) != 0.0) ||
+                (is_string(v) && StringOperations.StringLength(v) != 0)
+                ));
         
         // Arithmetic operations (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -353,7 +363,7 @@ namespace MiniScript {
 
         // Comparison operations (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool value_equal(Value a, Value b) => Value.Equal(a, b);
+        public static bool value_equal(Value a, Value b) => Value.Equal(a, b);        
     }
 
     // A minimal, fast handle table. Stores actual C# objects referenced by Value.
