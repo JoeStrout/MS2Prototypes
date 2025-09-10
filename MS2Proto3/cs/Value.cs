@@ -281,12 +281,6 @@ namespace MiniScript {
             return false;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsTruthy(Value a)  {
-            // TODO: Finish implementation for maps, lists, and strings!
-            return !a.IsNull && ((a.IsInt && (a.AsInt() != 0)) || (a.IsDouble && a.AsDouble() != 0.0));
-        }
-
         // ==== HELPERS =========================================================
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsAllAscii(string s) {
@@ -329,12 +323,19 @@ namespace MiniScript {
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool is_string(Value v) => v.IsString;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool is_tiny_string(Value v) => v.IsTiny;
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool is_number(Value v) => v.IsInt || v.IsDouble;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool is_truthy(Value v) => Value.IsTruthy(v);
+        public static bool is_truthy(Value v) => (!is_null(v) &&
+                ((is_int(v) && as_int(v) != 0) ||
+                (is_double(v) && as_double(v) != 0.0) ||
+                (is_string(v) && StringOperations.StringLength(v) != 0)
+                ));
         
         // Arithmetic operations (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
