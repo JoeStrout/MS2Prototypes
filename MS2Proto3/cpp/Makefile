@@ -13,8 +13,8 @@ else
     GOTO_FLAG = 
 endif
 
-CXXFLAGS = -std=gnu++11 -Wall -Wextra -Icore $(GOTO_FLAG)
-CFLAGS = -std=c99 -Wall -Wextra -Icore $(GOTO_FLAG)
+CXXFLAGS = -std=gnu++11 -Wall -Wextra -O3 -DNDEBUG -Icore $(GOTO_FLAG)
+CFLAGS = -std=c99 -Wall -Wextra -O3 -DNDEBUG -Icore $(GOTO_FLAG)
 SRCDIR = core
 GENDIR = ../generated
 BUILDDIR = ../build/cpp

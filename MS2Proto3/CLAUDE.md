@@ -13,10 +13,12 @@ This is **MiniScript 2.0 Prototype 3** - a dual-language (C#/C++) VM implementat
 ✅ **Completed Features:**
 - Assembler/Disassembler for .msa (MiniScript Assembly) files
 - Basic VM with arithmetic, comparison, branching, and function call support
-- **Computed-goto dispatch** system (key recent achievement)
+- **Computed-goto dispatch** system with optimization flags
 - **Function calls (CALLF/RETURN)** working correctly with proper context restoration
 - NaN-boxed Value type system with garbage collection
 - Dual memory management (GC for runtime values, MemPool for host app values)
+- **Command-line interface** with `-debug` flag support
+- **Comprehensive benchmark suite** for performance testing
 
 🎯 **Current Milestone:** Extended VM (Milestone 4) - adding complete opcode set, maps, lists, closures
 
@@ -36,14 +38,17 @@ This is **MiniScript 2.0 Prototype 3** - a dual-language (C#/C++) VM implementat
 - **RETURN:** restores caller function using `functions[callInfo.ReturnFuncIndex]`
 - **VM state:** tracks `currentFuncIndex` and `FuncDef& curFunc` (C++ uses reference to avoid copying)
 
-### 3. Build System
+### 3. Build System & Performance
 **Main command:** `tools/build.sh {setup|cs|transpile|cpp|all|clean|test}`
 - **Computed-goto control:** `tools/build.sh cpp {auto|on|off}` 
 - **Auto-detection:** Uses GNU C extensions test, requires `-std=gnu++11` (not `-std=c++11`)
+- **Optimization:** C++ builds with `-O3 -DNDEBUG` for production performance
+- **Benchmark suite:** `tools/benchmark.sh` for performance comparison
 
 ## Important Files to Know
 
 ### Core Implementation
+- **`cs/App.cs`** - Main host application (renamed from Program.cs)
 - **`cs/VM.cs`** - Main VM implementation (C# source)
 - **`generated/VM.g.cpp`** - Transpiled VM (auto-generated from C#)
 - **`cpp/core/dispatch_macros.h`** - Computed-goto macros and opcode definitions
@@ -51,8 +56,9 @@ This is **MiniScript 2.0 Prototype 3** - a dual-language (C#/C++) VM implementat
 
 ### Build & Test
 - **`tools/build.sh`** - Main build orchestration script
-- **`cpp/Makefile`** - C++ build configuration with computed-goto support
-- **`examples/*.msa`** - Assembly test programs
+- **`tools/benchmark.sh`** - Performance benchmarking suite
+- **`cpp/Makefile`** - C++ build configuration with optimization flags
+- **`examples/*.msa`** - Assembly test programs (tuned for benchmarking)
 
 ## Recent Major Fixes & Optimizations
 
@@ -66,9 +72,16 @@ This is **MiniScript 2.0 Prototype 3** - a dual-language (C#/C++) VM implementat
    - **Solution:** X-macro pattern `VM_OPCODES(X)` mirrors C# enum structure
    - **Build fix:** Changed from `-std=c++11` to `-std=gnu++11` for GNU extensions
 
-3. **Performance Optimization:**
+3. **Performance Optimization (Critical Fix):**
+   - **Problem:** C++ was slower than C# due to missing optimization flags
+   - **Solution:** Added `-O3 -DNDEBUG` to Makefile, now C++ significantly outperforms C#
    - **C++ version:** Uses `FuncDef& curFunc` reference instead of copying objects
    - **Function switching:** Minimal overhead with index-based lookups
+
+4. **Command-Line Interface:**
+   - **`-debug` flag:** Controls verbose output for development vs. clean benchmarking
+   - **App class:** Renamed from Program to avoid naming conflicts with entry point
+   - **Result highlighting:** Bold bright yellow output for benchmark results
 
 ## Common Commands
 
@@ -76,12 +89,16 @@ This is **MiniScript 2.0 Prototype 3** - a dual-language (C#/C++) VM implementat
 # Full build and test
 tools/build.sh all && tools/build.sh test
 
+# Performance benchmarking
+tools/benchmark.sh                    # Compare C#, C++ (switch), C++ (goto)
+
 # Test specific dispatch method
 tools/build.sh cpp on   # Force computed-goto
 tools/build.sh cpp off  # Force switch-based
 
-# Run specific assembly program  
-./build/cpp/MS2Proto3 examples/test_calls.msa
+# Run programs with different output modes
+./build/cpp/MS2Proto3 examples/test_calls.msa           # Clean output
+./build/cpp/MS2Proto3 -debug examples/test_calls.msa    # Verbose debug output
 ```
 
 ## Development Notes
