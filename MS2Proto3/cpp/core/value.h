@@ -39,6 +39,10 @@ typedef uint64_t Value;
 
 #define NULL_VALUE         0x7ffe000000000000ULL
 
+static inline bool value_identical(Value a, Value b) {
+	return a == b;
+}
+
 // Core type checking functions
 static inline bool is_null(Value v) {
     return v == NULL_VALUE;

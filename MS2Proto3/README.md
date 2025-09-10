@@ -38,5 +38,26 @@ All the management is done by the `tools/build.sh` shell script.  (You will need
 2. `tools/build.sh setup` to set up your folders (you only need to do this once)
 3. `tools/build.sh cs` to compile the C# code
 4. `tools/build.sh transpile` to convert C# to C++ code
-5. `tools/build.sh cpp` to compile the C++ code
+5. `tools/build.sh cpp` to compile the C++ code (add `auto`, `on`, or `off` to control computed-goto feature)
 6. `tools/build.sh test` to run both projects; or you can manually run `build/cs/MS2Proto3` or `build/cpp/MS2Proto3`
+
+## To-Do List
+
+Here are some of the things we'll need to solve, implement, or clean up as we wrap up Milestone 4 and move to production code.
+
+- Implement maps, lists, and the opcodes needed for them.
+- Implement a dictionary data structure for use in the host code (analogous to C# Dictionary).
+- Get all performance-critical code in the VM execution loop inlined.
+- See how much we can unify (transpile) the Value code from C# to C, since their memory layout should be the same.  (Without sacrificing the C rather than C++ interface!)
+- Ensure that all our type operations behave the same as in MiniScript 1.0: proper fuzzy-logic operators, multiplication of strings/lists by fractional values, etc.
+- Audit and/or measure use of the two heap managers (MemPool and GC), and ensure that these are being used correctly & consistently.
+- Fix our string interning.  For example, if the constant "abcdef" appears in a function twice, it should appear in the constants table only once, because it gets interned and wrapped up as the exact same Value.  But that's not currently happening.
+- Measure performance of all three VMs (C#, and C++ with/without computed goto) on benchmarks, and ensure we're still in the target zone (100X - 500X faster than MiniScript 1.0).
+- Figure out if we really want/need Value to be able to contain Int32's, or if we can do everything with doubles as in MS1.
+- Improve and standardize error handling in the assembler (particularly with regard to out-of-bounds numeric literals).
+- Figure out tail call optimization.
+- Figure out closures.
+- Maybe create a debugger that lets us single-step (or Step Over, etc.) the VM, displaying machine state on each pause.
+
+
+

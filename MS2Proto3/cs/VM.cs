@@ -16,10 +16,12 @@ namespace MiniScript {
 	public struct CallInfo {
 		public Int32 ReturnPC;		   // where to continue in caller (PC index)
 		public Int32 ReturnBase;		 // caller's base pointer (stack index)
+		public Int32 ReturnFuncIndex;  // caller's function index in functions list
 
-		public CallInfo(Int32 returnPC, Int32 returnBase) {
+		public CallInfo(Int32 returnPC, Int32 returnBase, Int32 returnFuncIndex) {
 			ReturnPC = returnPC;
 			ReturnBase = returnBase;
+			ReturnFuncIndex = returnFuncIndex;
 		}
 	}
 
@@ -54,7 +56,7 @@ namespace MiniScript {
 			
 			// Pre-allocate call stack capacity
 			for (Int32 i = 0; i < callSlots; i++) {
-				callStack.Add(new CallInfo(0, 0));
+				callStack.Add(new CallInfo(0, 0, -1)); // -1 = invalid function index
 			}
 		}
 
@@ -86,11 +88,20 @@ namespace MiniScript {
 			return Execute(entry, 0);
 		}
 		
-		public Value Execute(FuncDef entry, UInt32 maxCycles) {
+		public Value Execute(FuncDef entry, UInt32 maxCycles) {  // OFI: pass FuncDef byref
 			// Basic validation - simplified for C++ transpilation
 			if (entry.Code.Count == 0) {
 				IOHelper.Print("Entry function has no code");
 				return make_null();
+			}
+
+			// Find the entry function index
+			Int32 currentFuncIndex = -1;
+			for (Int32 i = 0; i < functions.Count; i++) {
+				if (functions[i].Name == entry.Name) {
+					currentFuncIndex = i;
+					break;
+				}
 			}
 
 			// Current frame state
@@ -98,8 +109,9 @@ namespace MiniScript {
 			Int32 pc = 0;					 // start at entry code
 			UInt32 cycleCount = 0;
 			bool debug = true;			 // Set to true for debug output
+			FuncDef curFunc = entry; // CPP: FuncDef& curFunc = entry;
 
-			EnsureFrame(baseIndex, entry.MaxRegs);
+			EnsureFrame(baseIndex, curFunc.MaxRegs);
 
 /*** BEGIN CPP_ONLY ***
 #if VM_USE_COMPUTED_GOTO
@@ -118,16 +130,18 @@ namespace MiniScript {
 					return make_null();
 				}
 
-				if (pc >= entry.Code.Count) {
+				if (pc >= curFunc.Code.Count) {
 					IOHelper.Print("VM: PC out of bounds");
 					return make_null();
 				}
 
-				UInt32 instruction = entry.Code[pc++];
+				UInt32 instruction = curFunc.Code[pc++];
 				
 				if (debug) {
 					// Debug output disabled for C++ transpilation
-					IOHelper.Print(StringUtils.Format("VM instruction: {0}; r0:{1}, r1:{2}, r2:{3}",
+					IOHelper.Print(StringUtils.Format("{0} {1}: {2}     r0:{3}, r1:{4}, r2:{5}",
+						curFunc.Name,
+						StringUtils.ZeroPad(pc-1, 4),
 						Disassembler.ToString(instruction), 
 						stack[baseIndex+0], stack[baseIndex+1], stack[baseIndex+2]));
 				}
@@ -161,11 +175,11 @@ namespace MiniScript {
 						// R[A] = constants[BC]
 						Byte a = BytecodeUtil.Au(instruction);
 						UInt16 constIdx = BytecodeUtil.BCu(instruction);
-						if (constIdx >= entry.Constants.Count) {
+						if (constIdx >= curFunc.Constants.Count) {
 							IOHelper.Print("LOAD_rA_kBC: invalid constant index");
 							return make_null();
 						}
-						stack[baseIndex + a] = entry.Constants[constIdx];
+						stack[baseIndex + a] = curFunc.Constants[constIdx];
 						break; // CPP: VM_NEXT();
 					}
 
@@ -467,13 +481,14 @@ namespace MiniScript {
 							IOHelper.Print("Call stack overflow");
 							return make_null();
 						}
-						callStack[callStackTop] = new CallInfo(pc, baseIndex);
+						callStack[callStackTop] = new CallInfo(pc, baseIndex, currentFuncIndex);
 						callStackTop++;
 
 						// Switch to callee frame: base slides to argument window
 						baseIndex = baseIndex + a;
 						pc = 0; // Start at beginning of callee code
-						entry = callee; // Switch to callee function
+						curFunc = callee; // Switch to callee function
+						currentFuncIndex = funcIndex; // Switch to callee function index
 						
 						EnsureFrame(baseIndex, callee.MaxRegs);
 						break; // CPP: VM_NEXT();
@@ -482,7 +497,7 @@ namespace MiniScript {
 					case Opcode.RETURN: { // CPP: VM_CASE(RETURN) {
 						// Return value convention: value is in base[0]
 						if (callStackTop == 0) {
-							// Returning from entry: produce the final result from base[0]
+							// Returning from curFunc: produce the final result from base[0]
 							return stack[baseIndex];
 						}
 						
@@ -491,10 +506,8 @@ namespace MiniScript {
 						CallInfo callInfo = callStack[callStackTop];
 						pc = callInfo.ReturnPC;
 						baseIndex = callInfo.ReturnBase;
-						
-						// Need to restore the caller's function - this is a limitation of this simple approach
-						// In a more complete implementation, we'd need to track the function in CallInfo
-						// For now, we assume single-function execution
+						currentFuncIndex = callInfo.ReturnFuncIndex; // Restore the caller's function index
+						curFunc = functions[currentFuncIndex]; // Restore the caller's function
 						break; // CPP: VM_NEXT();
 					}
 

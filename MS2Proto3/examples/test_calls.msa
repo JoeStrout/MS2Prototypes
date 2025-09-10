@@ -1,0 +1,14 @@
+# Test program with function calls
+# Tests CALLF and RETURN instructions
+
+@add:
+	ADD r0, r0, r1   # return r0 + r1
+	RETURN
+
+@main:
+	LOAD r0, 4
+	LOAD r1, 3
+	CALLF 0, @add   # should get 7 in r0
+	LOAD r1, 6
+	MULT r0, r0, r1  # multiply by 6 to get 42
+	RETURN

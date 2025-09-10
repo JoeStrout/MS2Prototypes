@@ -634,6 +634,12 @@ namespace MiniScript {
 
 		// Helper to add a constant to the constants table and return its index
 		private Int32 AddConstant(Value value) {
+			// First look for an existing content that is the same value
+			for (Int32 i = 0; i < Current.Constants.Count; i++) {
+				if (value_identical(Current.Constants[i], value)) return i;
+			}
+			
+			// Failing that, add it to the table
 			Current.Constants.Add(value);
 			return Current.Constants.Count - 1;
 		}

@@ -193,7 +193,7 @@ bool value_equal(Value a, Value b) {
     return false;
 }
 
-
+// ToDo: make all the bitwise ops work with doubles, too (as in MiniScript)
 // Bitwise AND
 Value value_and(Value a, Value b) {
     if (is_int(a) && is_int(b)) {
@@ -254,8 +254,8 @@ Value value_shl(Value v, int shift) {
 }
 
 // Inspection
-
-bool is_truthy(Value v){
+// ToDo: get this into a header somewhere, so it can be inlined
+bool is_truthy(Value v) {
     return (!is_null(v) &&
                 ((is_int(v) && as_int(v) != 0) ||
                 (is_double(v) && as_double(v) != 0.0) ||

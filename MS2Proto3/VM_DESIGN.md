@@ -39,7 +39,7 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | IFEQ_rA_iBC | if R[A] == BC is **false** then PC += 1 |
 | IFNE_rA_rB | if R[A] != R[B] is **false** then PC += 1 |
 | IFNE_rA_iBC | if R[A] != BC is **false** then PC += 1 |
-| CALLF_iA_iBC | call funcs[BC] reserving A registers |
+| CALLF_iA_iBC | call funcs[BC] with parameters/return value at register A |
 | RETURN | return with result in R[0]
 
 (More opcodes will be added as the prototype develops.)
