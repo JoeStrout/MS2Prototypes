@@ -27,6 +27,7 @@ namespace MiniScript {
 
 	// VM state
 	public class VM {
+		public Boolean DebugMode = false;
 		private List<Value> stack;
 		
 		private List<CallInfo> callStack;
@@ -80,7 +81,9 @@ namespace MiniScript {
 			}
 			
 			// Execute @main
-			IOHelper.Print(StringUtils.Format("Executing {0} out of {1} functions", mainFunc.Name, functions.Count));
+			if (DebugMode) {
+				IOHelper.Print(StringUtils.Format("Executing {0} out of {1} functions", mainFunc.Name, functions.Count));
+			}
 			return Execute(mainFunc);
 		}
 
@@ -108,7 +111,6 @@ namespace MiniScript {
 			Int32 baseIndex = 0;			  // entry executes at stack base
 			Int32 pc = 0;					 // start at entry code
 			UInt32 cycleCount = 0;
-			bool debug = true;			 // Set to true for debug output
 			FuncDef curFunc = entry; // CPP: FuncDef& curFunc = entry;
 
 			EnsureFrame(baseIndex, curFunc.MaxRegs);
@@ -116,9 +118,9 @@ namespace MiniScript {
 /*** BEGIN CPP_ONLY ***
 #if VM_USE_COMPUTED_GOTO
 			static void* const vm_labels[(int)Opcode::OP__COUNT] = { VM_OPCODES(VM_LABEL_LIST) };
-			IOHelper::Print("(Running with computed-goto dispatch)");
+			if (DebugMode) IOHelper::Print("(Running with computed-goto dispatch)");
 #else
-			IOHelper::Print("(Running with switch-based dispatch)");
+			if (DebugMode) IOHelper::Print("(Running with switch-based dispatch)");
 #endif
 *** END CPP_ONLY ***/
 
@@ -137,7 +139,7 @@ namespace MiniScript {
 
 				UInt32 instruction = curFunc.Code[pc++];
 				
-				if (debug) {
+				if (DebugMode) {
 					// Debug output disabled for C++ transpilation
 					IOHelper.Print(StringUtils.Format("{0} {1}: {2}     r0:{3}, r1:{4}, r2:{5}",
 						curFunc.Name,

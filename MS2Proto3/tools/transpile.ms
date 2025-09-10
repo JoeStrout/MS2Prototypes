@@ -271,6 +271,12 @@ Converter.processNonmethodLine = function
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ = ≤value≥;",
 	  "≤scope≥: ≤type≥ ≤name≥ = ≤value≥;", "") then return self.checkType
 
+	// static class field, with and without default value
+	if self.context == Context.CLASS and self.match("≤scope:w≥ static ≤type:w≥ ≤name:w≥;",
+	  "≤scope≥: static ≤type≥ ≤name≥;", "") then return self.checkType
+	if self.context == Context.CLASS and self.match("≤scope:w≥ static ≤type:w≥ ≤name:w≥ = ≤value≥;",
+	  "≤scope≥: static ≤type≥ ≤name≥;", "≤type≥ ≤className≥::≤name≥ = ≤value≥;") then return self.checkType
+
 	// (static) const class field with default value
 	if self.context == Context.CLASS and 
 	  self.match("≤scope:w≥ const ≤type:w≥ ≤name:w≥ = ≤value≥;",

@@ -56,8 +56,8 @@ case "$TARGET" in
     
     "cpp")
         echo "Building C++ version..."
-        if [ ! -f "generated/Program.g.cpp" ]; then
-            echo "No transpiled C++ files found. Run 'transpile' first."
+        if [ ! -f "generated/App.g.cpp" ]; then
+            echo "Transpiled C++ files found. Run 'transpile' first."
             exit 1
         fi
         case "$GOTO_MODE" in
