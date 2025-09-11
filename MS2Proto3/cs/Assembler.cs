@@ -724,7 +724,7 @@ namespace MiniScript {
 
 		// Helper to check if a token is a string literal (surrounded by quotes)
 		private static Boolean IsStringLiteral(String token) {
-			return token.Length >= 2 && token[0] == '"' && token[token.Length - 1] == '"';
+			return token.Length >= 2 && token[0] == '"' && token[token.Length - 1] == '"'; // CPP: return token.lengthB() >= 2 && token[0] == '"' && token[token.lengthB() - 1] == '"'; // C++ indexes into the bytes, so we need to use lengthB() or change indexing to be character-based.
 		}
 
 		// Helper to check if a token needs to be stored as a constant
