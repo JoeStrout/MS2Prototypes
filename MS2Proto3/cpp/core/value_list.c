@@ -8,7 +8,7 @@
 // List creation and management
 Value make_list(int initial_capacity) {
     if (initial_capacity <= 0) initial_capacity = 8; // Default capacity
-    List* list = (List*)gc_allocate(sizeof(List) + initial_capacity * sizeof(Value));
+    ValueList* list = (ValueList*)gc_allocate(sizeof(ValueList) + initial_capacity * sizeof(Value));
     list->count = 0;
     list->capacity = initial_capacity;
     return LIST_MASK | ((uintptr_t)list & 0xFFFFFFFFFFFFULL);
@@ -19,24 +19,24 @@ Value make_empty_list(void) {
 }
 
 // List access
-List* as_list(Value v) {
+ValueList* as_list(Value v) {
     if (!is_list(v)) return NULL;
-    return (List*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
+    return (ValueList*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
 }
 
 int list_count(Value list_val) {
-    List* list = as_list(list_val);
+    ValueList* list = as_list(list_val);
     return list ? list->count : 0;
 }
 
 int list_capacity(Value list_val) {
-    List* list = as_list(list_val);
+    ValueList* list = as_list(list_val);
     return list ? list->capacity : 0;
 }
 
 // List element operations
 Value list_get(Value list_val, int index) {
-    List* list = as_list(list_val);
+    ValueList* list = as_list(list_val);
     if (list && index >= 0 && index < list->count) {
         return list->items[index];
     }
@@ -44,14 +44,14 @@ Value list_get(Value list_val, int index) {
 }
 
 void list_set(Value list_val, int index, Value item) {
-    List* list = as_list(list_val);
+    ValueList* list = as_list(list_val);
     if (list && index >= 0 && index < list->count) {
         list->items[index] = item;
     }
 }
 
 void list_push(Value list_val, Value item) {
-    List* list = as_list(list_val);
+    ValueList* list = as_list(list_val);
     if (!list) return;
     
     // Add item if there's space
@@ -64,14 +64,14 @@ void list_push(Value list_val, Value item) {
 }
 
 Value list_pop(Value list_val) {
-    List* list = as_list(list_val);
+    ValueList* list = as_list(list_val);
     if (!list || list->count <= 0) return make_null();
     
     return list->items[--list->count];
 }
 
 void list_insert(Value list_val, int index, Value item) {
-    List* list = as_list(list_val);
+    ValueList* list = as_list(list_val);
     if (!list || index < 0 || index > list->count) return;
     
     // Insert item if there's space
@@ -87,7 +87,7 @@ void list_insert(Value list_val, int index, Value item) {
 }
 
 void list_remove(Value list_val, int index) {
-    List* list = as_list(list_val);
+    ValueList* list = as_list(list_val);
     if (!list || index < 0 || index >= list->count) return;
     
     // Shift elements to the left
@@ -100,7 +100,7 @@ void list_remove(Value list_val, int index) {
 
 // List searching
 int list_indexOf(Value list_val, Value item, int start_pos) {
-    List* list = as_list(list_val);
+    ValueList* list = as_list(list_val);
     if (!list) return -1;
     
     if (start_pos < 0) start_pos = 0;
@@ -119,18 +119,18 @@ bool list_contains(Value list_val, Value item) {
 
 // List utilities
 void list_clear(Value list_val) {
-    List* list = as_list(list_val);
+    ValueList* list = as_list(list_val);
     if (list) {
         list->count = 0;
     }
 }
 
 Value list_copy(Value list_val) {
-    List* src = as_list(list_val);
+    ValueList* src = as_list(list_val);
     if (!src) return make_null();
     
     Value new_list = make_list(src->capacity);
-    List* dst = as_list(new_list);
+    ValueList* dst = as_list(new_list);
     
     dst->count = src->count;
     for (int i = 0; i < src->count; i++) {
@@ -143,13 +143,13 @@ Value list_copy(Value list_val) {
 
 // Check if list needs capacity expansion
 bool list_needs_expansion(Value list_val) {
-    List* list = as_list(list_val);
+    ValueList* list = as_list(list_val);
     return list && (list->count >= list->capacity);
 }
 
 // Create a new list with expanded capacity, copying all elements
 Value list_with_expanded_capacity(Value list_val) {
-    List* old_list = as_list(list_val);
+    ValueList* old_list = as_list(list_val);
     if (!old_list) return make_null();
     
     // Double the capacity (minimum of 2)
@@ -157,7 +157,7 @@ Value list_with_expanded_capacity(Value list_val) {
     if (new_capacity < 2) new_capacity = 2;
     
     // Allocate new list directly to avoid make_list's minimum capacity constraint
-    List* new_list = (List*)gc_allocate(sizeof(List) + new_capacity * sizeof(Value));
+    ValueList* new_list = (ValueList*)gc_allocate(sizeof(ValueList) + new_capacity * sizeof(Value));
     new_list->count = old_list->count;
     new_list->capacity = new_capacity;
     

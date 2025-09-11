@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 // CPP: #include "IOHelper.g.h"
 // CPP: #include "value_string.h"
+// CPP: #include "value_list.h"
 // CPP: #include <sstream>
 // CPP: #include <cctype>
 
@@ -123,6 +124,15 @@ namespace MiniScript {
 			if (is_string(v)) {
 				const char* str = as_cstring(v);
 				return str ? String(str, pool) : String("<str?>", pool);
+			}
+			if (is_list(v)) {
+				std::ostringstream oss;
+				oss << "[";
+				for(int i = 0; i < list_count(v); i++) {
+					oss << (i != 0 ? ", " : "") << makeString(pool, list_get(v, i)).c_str();
+				}
+				oss << "]";
+				return String(oss.str().c_str(), pool);
 			}
 			std::ostringstream oss;
 			oss << "<value:0x" << std::hex << v << ">";
