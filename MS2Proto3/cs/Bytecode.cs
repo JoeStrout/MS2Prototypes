@@ -14,6 +14,9 @@ namespace MiniScript {
 		MULT_rA_rB_rC,
 		DIV_rA_rB_rC,
 		MOD_rA_rB_rC,
+		LIST_rA_iBC,
+		PUSH_rA_rB,
+		INDEX_rA_rB_rC,
 		JUMP_iABC,
 	//	LT_rA_rB,
 	//	LT_rA_iBC,
@@ -100,6 +103,9 @@ namespace MiniScript {
 				case Opcode.MULT_rA_rB_rC: return "MULT_rA_rB_rC";
 				case Opcode.DIV_rA_rB_rC:  return "DIV_rA_rB_rC";
 				case Opcode.MOD_rA_rB_rC:  return "MOD_rA_rB_rC";
+				case Opcode.LIST_rA_iBC:   return "LIST_rA_iBC";
+				case Opcode.PUSH_rA_rB:    return "PUSH_rA_rB";
+				case Opcode.INDEX_rA_rB_rC: return "INDEX_rA_rB_rC";
 				case Opcode.JUMP_iABC:     return "JUMP_iABC";
 				case Opcode.BRTRUE_rA_iBC: return "BRTRUE_rA_iBC";
 				case Opcode.BRFALSE_rA_iBC:return "BRFALSE_rA_iBC";
@@ -140,6 +146,9 @@ namespace MiniScript {
 			if (s == "MULT_rA_rB_rC") return Opcode.MULT_rA_rB_rC;
 			if (s == "DIV_rA_rB_rC")  return Opcode.DIV_rA_rB_rC;
 			if (s == "MOD_rA_rB_rC")  return Opcode.MOD_rA_rB_rC;
+			if (s == "LIST_rA_iBC")   return Opcode.LIST_rA_iBC;
+			if (s == "PUSH_rA_rB")    return Opcode.PUSH_rA_rB;
+			if (s == "INDEX_rA_rB_rC") return Opcode.INDEX_rA_rB_rC;
 			if (s == "JUMP_iABC")     return Opcode.JUMP_iABC;
 			if (s == "BRTRUE_rA_iBC") return Opcode.BRTRUE_rA_iBC;
 			if (s == "BRFALSE_rA_iBC")return Opcode.BRFALSE_rA_iBC;

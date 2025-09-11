@@ -230,6 +230,31 @@ namespace MiniScript {
 						break; // CPP: VM_NEXT();
 					}
 
+					case Opcode.LIST_rA_iBC: { // CPP: VM_CASE(LIST_rA_iBC) {
+						// R[A] = make_list(BC)
+						Byte a = BytecodeUtil.Au(instruction);
+						Int16 capacity = BytecodeUtil.BCs(instruction);
+						stack[baseIndex + a] = make_list(capacity);
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.PUSH_rA_rB: { // CPP: VM_CASE(PUSH_rA_rB) {
+						// list_push(R[A], R[B])
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						list_push(stack[baseIndex + a], stack[baseIndex + b]);
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.INDEX_rA_rB_rC: { // CPP: VM_CASE(INDEX_rA_rB_rC) {
+						// R[A] = list_get(R[B], as_int(R[C]))
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						Byte c = BytecodeUtil.Cu(instruction);
+						stack[baseIndex + a] = list_get(stack[baseIndex + b], as_int(stack[baseIndex + c]));
+						break; // CPP: VM_NEXT();
+					}
+
 					case Opcode.JUMP_iABC: { // CPP: VM_CASE(JUMP_iABC) {
 						// Jump by signed 24-bit ABC offset from current PC
 						Int32 offset = BytecodeUtil.ABCs(instruction);

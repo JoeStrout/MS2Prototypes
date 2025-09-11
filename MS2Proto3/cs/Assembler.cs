@@ -192,6 +192,25 @@ namespace MiniScript {
 				Byte src2 = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.MOD_rA_rB_rC, dest, src1, src2);
 			
+			} else if (mnemonic == "LIST") {
+				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+				Byte dest = ParseRegister(parts[1]);
+				Int16 capacity = ParseInt16(parts[2]);
+				instruction = BytecodeUtil.INS_AB(Opcode.LIST_rA_iBC, dest, capacity);
+			
+			} else if (mnemonic == "PUSH") {
+				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+				Byte listReg = ParseRegister(parts[1]);
+				Byte valueReg = ParseRegister(parts[2]);
+				instruction = BytecodeUtil.INS_ABC(Opcode.PUSH_rA_rB, listReg, valueReg, 0);
+			
+			} else if (mnemonic == "INDEX") {
+				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				Byte dest = ParseRegister(parts[1]);
+				Byte listReg = ParseRegister(parts[2]);
+				Byte indexReg = ParseRegister(parts[3]);
+				instruction = BytecodeUtil.INS_ABC(Opcode.INDEX_rA_rB_rC, dest, listReg, indexReg);
+			
 			} else if (mnemonic == "JUMP") {
 				if (parts.Count != 2) return Error("Syntax error", mnemonic, line);
 				String target = parts[1];

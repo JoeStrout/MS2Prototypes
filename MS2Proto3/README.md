@@ -46,18 +46,21 @@ All the management is done by the `tools/build.sh` shell script.  (You will need
 Here are some of the things we'll need to solve, implement, or clean up as we wrap up Milestone 4 and move to production code.
 
 - Implement maps, lists, and the opcodes needed for them.
+- Find a way to invoke intrinsics -- possibly a temporary method for now -- to give us a `print` functionality, plus a handful of numerics that might be useful for benchmarking.
 - Implement a dictionary data structure for use in the host code (analogous to C# Dictionary).
 - Get all performance-critical code in the VM execution loop inlined.
 - See how much we can unify (transpile) the Value code from C# to C, since their memory layout should be the same.  (Without sacrificing the C rather than C++ interface!)
 - Ensure that all our type operations behave the same as in MiniScript 1.0: proper fuzzy-logic operators, multiplication of strings/lists by fractional values, etc.
 - Audit and/or measure use of the two heap managers (MemPool and GC), and ensure that these are being used correctly & consistently.
 - Fix our string interning.  For example, if the constant "abcdef" appears in a function twice, it should appear in the constants table only once, because it gets interned and wrapped up as the exact same Value.  But that's not currently happening.
-- Measure performance of all three VMs (C#, and C++ with/without computed goto) on benchmarks, and ensure we're still in the target zone (100X - 500X faster than MiniScript 1.0).
+- Compare performance of all three VMs (C#, and C++ with/without computed goto) to equivalent MiniScript programs, and ensure we're still in the target zone (100X - 500X faster than MiniScript 1.0).
 - Figure out if we really want/need Value to be able to contain Int32's, or if we can do everything with doubles as in MS1.
 - Improve and standardize error handling in the assembler (particularly with regard to out-of-bounds numeric literals).
+- Figure out how to map registers to local variables, and how to make `locals` work.
+- Add lookup-by-name and assign-by-name opcodes.
+- Figure out closures (i.e. `outer`).
 - Figure out tail call optimization.
-- Figure out closures.
-- Maybe create a debugger that lets us single-step (or Step Over, etc.) the VM, displaying machine state on each pause.
+- Maybe create a debugger that lets us single-step (or Step Over, etc.) the VM, displaying machine state on each pause.  Or maybe that's overkill.
 
 
 

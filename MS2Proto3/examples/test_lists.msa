@@ -1,0 +1,21 @@
+# Program to test various list functionality
+
+@main:
+	LIST r0, 5    # create empty list with internal capacity = 5
+	LOAD r1, 1
+	PUSH r0, r1    # push 1
+	LOAD r1, 2
+	PUSH r0, r1    # push 2
+	LOAD r1, 4
+	PUSH r0, r1    # push 4
+	LOAD r1, 1
+	INDEX r2, r0, r1   # r2 = r0[1], which should be 2
+	PUSH r0, r2	       # push that onto r0
+	RETURN
+
+error:
+	LOAD r1, "Test failure: "
+	ADD r0, r1, r0
+	RETURN
+	
+	

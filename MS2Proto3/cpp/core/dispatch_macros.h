@@ -30,6 +30,9 @@
 	X(MULT_rA_rB_rC) \
 	X(DIV_rA_rB_rC) \
 	X(MOD_rA_rB_rC) \
+	X(LIST_rA_iBC) \
+	X(PUSH_rA_rB) \
+	X(INDEX_rA_rB_rC) \
 	X(JUMP_iABC) \
 	X(BRTRUE_rA_iBC) \
 	X(BRFALSE_rA_iBC) \

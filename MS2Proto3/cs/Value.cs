@@ -54,8 +54,9 @@ namespace MiniScript {
 			int len = s.Length;
 			if ((uint)len > 5u) throw new ArgumentOutOfRangeException(nameof(s), "Tiny string max 5 bytes");
 			ulong u = TINY_MASK | (ulong)((uint)len & 0xFFU);
-			for (int i = 0; i < len; i++)
+			for (int i = 0; i < len; i++) {
 				u |= (ulong)((byte)s[i]) << (8 * (i + 1));
+			}
 			return new(u);
 		}
 
@@ -131,7 +132,22 @@ namespace MiniScript {
 				}
 				return HandlePool.Get(Handle()) as string ?? "<str?>";
 			}
-			if (IsList) return "<list>";
+			if (IsList) {
+				var valueList = HandlePool.Get(Handle()) as ValueList;
+				if (valueList == null) return "<list?>";
+				
+				var items = new string[valueList.Count];
+				for (int i = 0; i < valueList.Count; i++) {
+					Value item = valueList.Get(i);
+					// Prevent infinite recursion for nested structures
+					if (item.IsList || item.IsMap) {
+						items[i] = item.IsList ? "<list>" : "<map>";
+					} else {
+						items[i] = item.ToString();
+					}
+				}
+				return "[" + string.Join(", ", items) + "]";
+			}
 			if (IsMap) return "<map>";
 			return "<value>";
 		}
@@ -309,6 +325,44 @@ namespace MiniScript {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value make_string(string str) => Value.FromString(str);
 		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Value make_list(int initial_capacity) {
+			var list = new ValueList();
+			return Value.FromList(list);
+		}
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Value make_empty_list() => make_list(0);
+		
+		// List operations (matching value_list.h)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static int list_count(Value list_val) {
+			if (!list_val.IsList) return 0;
+			var valueList = HandlePool.Get(list_val.Handle()) as ValueList;
+			return valueList?.Count ?? 0;
+		}
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Value list_get(Value list_val, int index) {
+			if (!list_val.IsList) return make_null();
+			var valueList = HandlePool.Get(list_val.Handle()) as ValueList;
+			return valueList?.Get(index) ?? make_null();
+		}
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static void list_set(Value list_val, int index, Value item) {
+			if (!list_val.IsList) return;
+			var valueList = HandlePool.Get(list_val.Handle()) as ValueList;
+			valueList?.Set(index, item);
+		}
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static void list_push(Value list_val, Value item) {
+			if (!list_val.IsList) return;
+			var valueList = HandlePool.Get(list_val.Handle()) as ValueList;
+			valueList?.Add(item);
+		}
+		
 		// Core value extraction functions (matching value.h)
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int as_int(Value v) => v.AsInt();
@@ -434,18 +488,19 @@ namespace MiniScript {
 			if (delim == "") {
 				// Split into characters
 				parts = new string[s.Length];
-				for (int i = 0; i < s.Length; i++)
+				for (int i = 0; i < s.Length; i++) {
 					parts[i] = s[i].ToString();
+				}
 			} else {
 				parts = s.Split(new string[] { delim }, StringSplitOptions.None);
 			}
 			
-			var list = new ValueList();
+			Value list = ValueHelpers.make_list(parts.Length);
 			foreach (string part in parts) {
-				list.Add(Value.FromString(part)); // Include all parts, even empty ones
+				ValueHelpers.list_push(list, Value.FromString(part)); // Include all parts, even empty ones
 			}
 			
-			return Value.FromList(list);
+			return list;
 		}
 		
 		public static Value StringReplace(Value str, Value from, Value to) {
@@ -511,46 +566,4 @@ namespace MiniScript {
 		}
 	}
 	
-	// List operations
-	public static class ListOperations {
-		public static Value ListGet(Value list, int index) {
-			if (!list.IsList) return Value.Null();
-			
-			var valueList = HandlePool.Get(list.Handle()) as ValueList;
-			return valueList?.Get(index) ?? Value.Null();
-		}
-		
-		public static void ListSet(Value list, int index, Value value) {
-			if (!list.IsList) return;
-			
-			var valueList = HandlePool.Get(list.Handle()) as ValueList;
-			valueList?.Set(index, value);
-		}
-		
-		public static void ListAdd(Value list, Value item) {
-			if (!list.IsList)  return;
-			
-			var valueList = HandlePool.Get(list.Handle()) as ValueList;
-			valueList?.Add(item);
-		}
-		
-		public static int ListCount(Value list) {
-			if (!list.IsList) return 0;
-			
-			var valueList = HandlePool.Get(list.Handle()) as ValueList;
-			return valueList?.Count ?? 0;
-		}
-		
-		public static int ListIndexOf(Value list, Value item) {
-			if (!list.IsList) return -1;
-			
-			var valueList = HandlePool.Get(list.Handle()) as ValueList;
-			return valueList?.IndexOf(item) ?? -1;
-		}
-		
-		public static Value MakeList(int initialCapacity = 0) {
-			var list = new ValueList();
-			return Value.FromList(list);
-		}
-	}
 }
