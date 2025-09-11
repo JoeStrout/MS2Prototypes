@@ -8,6 +8,8 @@ The VM in this prototype is register (rather than stack) based.  Instructions ar
 
 Our internal opcode names include a verb/mnemonic, and a description of how the three operand bytes (A, B, and C) are used.  This allows us to overload the same verb with different variants that use the operands in different ways, and make it easy to remember what's going on with each one.
 
+### Basic loading, data, and math
+
 | Mnemonic | Description |
 | --- | --- |
 | NOOP | do nothing (but do it very quickly) |
@@ -23,7 +25,26 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | PUSH_rA_rB | push R[B] onto list R[A] |
 | INDEX_rA_rB_rC | R[A] := R[B][R[C]] (get element R[C] from list R[B]) |
 | IDXSET_rA_rB_rC | R[A][R[B]] := R[C] (set element R[B] of list R[A] to R[C]) |
+
+### Boolean Storage
+
+| Mnemonic | Description |
+| --- | --- |
 | LT_rA_rB_rC | R[A] := (R[B] < R[C]) |
+| LT_rA_rB_iC | R[A] := (R[B] < C (8-bit signed)) |
+| LT_rA_iB_rC | R[A] := (B (8-bit signed) < R[C]) |
+| LE_rA_rB_rC | R[A] := (R[B] <= R[C]) |
+| LE_rA_rB_iC | R[A] := (R[B] <= C (8-bit signed)) |
+| LE_rA_iB_rC | R[A] := (B (8-bit signed) <= R[C]) |
+| EQ_rA_rB_rC | R[A] := (R[B] == R[C]) |
+| EQ_rA_rB_iC | R[A] := (R[B] == C (8-bit signed)) |
+| NE_rA_rB_rC | R[A] := (R[B] != R[C]) |
+| NE_rA_rB_iC | R[A] := (R[B] != C (8-bit signed)) |
+
+### Flow Control
+
+| Mnemonic | Description |
+| --- | --- |
 | JUMP_iABC | PC += ABC (24-bit signed value) |
 | BRTRUE_rA_iBC | if R[A] is true then PC += BC (16-bit signed) |
 | BRFALSE_rA_iBC | if R[A] is false then PC += BC (16-bit signed) |

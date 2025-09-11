@@ -19,16 +19,16 @@ namespace MiniScript {
 		INDEX_rA_rB_rC,
 		IDXSET_rA_rB_rC,
 		JUMP_iABC,
-	//	LT_rA_rB,
-	//	LT_rA_iBC,
-	//	LT_iAB_rC,
-	//	LE_rA_rB,
-	//	LE_rA_iBC,
-	//	LE_iAB_rC,
-	//	EQ_rA_rB,
-	//	EQ_rA_iBC,
-	//	NE_rA_rB,
-	//	NE_rA_iBC,
+		LT_rA_rB_rC,
+		LT_rA_rB_iC,
+		LT_rA_iB_rC,
+		LE_rA_rB_rC,
+		LE_rA_rB_iC,
+		LE_rA_iB_rC,
+		EQ_rA_rB_rC,
+		EQ_rA_rB_iC,
+		NE_rA_rB_rC,
+		NE_rA_rB_iC,
 		BRTRUE_rA_iBC,
 		BRFALSE_rA_iBC,
 		BRLT_rA_rB_iC,
@@ -109,6 +109,16 @@ namespace MiniScript {
 				case Opcode.INDEX_rA_rB_rC: return "INDEX_rA_rB_rC";
 				case Opcode.IDXSET_rA_rB_rC:return "IDXSET_rA_rB_rC";
 				case Opcode.JUMP_iABC:      return "JUMP_iABC";
+				case Opcode.LT_rA_rB_rC:    return "LT_rA_rB_rC";
+				case Opcode.LT_rA_rB_iC:    return "LT_rA_rB_iC";
+				case Opcode.LT_rA_iB_rC:    return "LT_rA_iB_rC";
+				case Opcode.LE_rA_rB_rC:    return "LE_rA_rB_rC";
+				case Opcode.LE_rA_rB_iC:    return "LE_rA_rB_iC";
+				case Opcode.LE_rA_iB_rC:    return "LE_rA_iB_rC";
+				case Opcode.EQ_rA_rB_rC:    return "EQ_rA_rB_rC";
+				case Opcode.EQ_rA_rB_iC:    return "EQ_rA_rB_iC";
+				case Opcode.NE_rA_rB_rC:    return "NE_rA_rB_rC";
+				case Opcode.NE_rA_rB_iC:    return "NE_rA_rB_iC";
 				case Opcode.BRTRUE_rA_iBC:  return "BRTRUE_rA_iBC";
 				case Opcode.BRFALSE_rA_iBC: return "BRFALSE_rA_iBC";
 				case Opcode.BRLT_rA_rB_iC:  return "BRLT_rA_rB_iC";
@@ -153,6 +163,16 @@ namespace MiniScript {
 			if (s == "INDEX_rA_rB_rC")  return Opcode.INDEX_rA_rB_rC;
 			if (s == "IDXSET_rA_rB_rC") return Opcode.IDXSET_rA_rB_rC;
 			if (s == "JUMP_iABC")       return Opcode.JUMP_iABC;
+			if (s == "LT_rA_rB_rC")     return Opcode.LT_rA_rB_rC;
+			if (s == "LT_rA_rB_iC")     return Opcode.LT_rA_rB_iC;
+			if (s == "LT_rA_iB_rC")     return Opcode.LT_rA_iB_rC;
+			if (s == "LE_rA_rB_rC")     return Opcode.LE_rA_rB_rC;
+			if (s == "LE_rA_rB_iC")     return Opcode.LE_rA_rB_iC;
+			if (s == "LE_rA_iB_rC")     return Opcode.LE_rA_iB_rC;
+			if (s == "EQ_rA_rB_rC")     return Opcode.EQ_rA_rB_rC;
+			if (s == "EQ_rA_rB_iC")     return Opcode.EQ_rA_rB_iC;
+			if (s == "NE_rA_rB_rC")     return Opcode.NE_rA_rB_rC;
+			if (s == "NE_rA_rB_iC")     return Opcode.NE_rA_rB_iC;
 			if (s == "BRTRUE_rA_iBC")   return Opcode.BRTRUE_rA_iBC;
 			if (s == "BRFALSE_rA_iBC")  return Opcode.BRFALSE_rA_iBC;
 			if (s == "BRLT_rA_rB_iC")   return Opcode.BRLT_rA_rB_iC;
