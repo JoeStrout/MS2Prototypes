@@ -18,14 +18,14 @@ typedef struct {
     int count;       // Number of elements
     int capacity;    // Allocated capacity
     Value items[];   // Array of Values
-} List;
+} ValueList;
 
 // List creation and management
 Value make_list(int initial_capacity);
 Value make_empty_list(void);
 
 // List access
-List* as_list(Value v);
+ValueList* as_list(Value v);
 int list_count(Value list_val);
 int list_capacity(Value list_val);
 

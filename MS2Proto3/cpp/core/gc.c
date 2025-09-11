@@ -46,7 +46,7 @@ GC gc = {0};
 
 // Forward declarations for marking functions
 void gc_mark_string(StringStorage* str);
-void gc_mark_list(List* list);
+void gc_mark_list(ValueList* list);
 
 void gc_init(void) {
     gc.all_objects = NULL;
@@ -162,7 +162,7 @@ void gc_mark_value(Value v) {
         StringStorage* str = as_string(v);
         if (str) gc_mark_string(str);
     } else if (is_list(v)) {
-        List* list = as_list(v);
+        ValueList* list = as_list(v);
         if (list) gc_mark_list(list);
     }
     // Numbers, ints, nil don't need marking
@@ -180,7 +180,7 @@ void gc_mark_string(StringStorage* str) {
     // Strings don't contain other Values, so we're done
 }
 
-void gc_mark_list(List* list) {
+void gc_mark_list(ValueList* list) {
     if (!list) return;
     
     // Get GC object header

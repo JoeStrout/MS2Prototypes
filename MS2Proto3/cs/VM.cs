@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 // CPP: #include "value.h"
+// CPP: #include "value_list.h"
 // CPP: #include "Bytecode.g.h"
 // CPP: #include "IOHelper.g.h"
 // CPP: #include "Disassembler.g.h"
