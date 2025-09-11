@@ -35,6 +35,16 @@
 	X(INDEX_rA_rB_rC) \
 	X(IDXSET_rA_rB_rC) \
 	X(JUMP_iABC) \
+	X(LT_rA_rB_rC) \
+	X(LT_rA_rB_iC) \
+	X(LT_rA_iB_rC) \
+	X(LE_rA_rB_rC) \
+	X(LE_rA_rB_iC) \
+	X(LE_rA_iB_rC) \
+	X(EQ_rA_rB_rC) \
+	X(EQ_rA_rB_iC) \
+	X(NE_rA_rB_rC) \
+	X(NE_rA_rB_iC) \
 	X(BRTRUE_rA_iBC) \
 	X(BRFALSE_rA_iBC) \
 	X(BRLT_rA_rB_iC) \

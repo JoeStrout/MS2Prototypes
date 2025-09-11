@@ -316,6 +316,9 @@ namespace MiniScript {
 		
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value make_int(int i) => Value.FromInt(i);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Value make_int(bool b) => Value.FromInt(b ? 1 : 0);
 		
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value make_double(double d) => Value.FromDouble(d);

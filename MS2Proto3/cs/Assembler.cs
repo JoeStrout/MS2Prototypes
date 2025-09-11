@@ -274,6 +274,90 @@ namespace MiniScript {
 					offset = ParseInt24(target);
 				}
 				instruction = BytecodeUtil.INS(Opcode.JUMP_iABC) | (UInt32)(offset & 0xFFFFFF);
+
+			} else if (mnemonic == "LT") {
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
+				
+				if (parts[3][0] == 'r') {
+					if (parts[2][0] == 'r') {
+						// LT r5, r3, r2  -->  LT_rA_rB_rC
+						Byte reg1 = ParseRegister(parts[1]);
+						Byte reg2 = ParseRegister(parts[2]);
+						Byte reg3 = ParseRegister(parts[3]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.LT_rA_rB_rC, reg1, reg2, reg3);
+					}
+					else{
+						// LT r5, 15, r2  -->  LT_rA_iB_rC
+						Byte reg1 = ParseRegister(parts[1]);
+						Byte immediate = ParseByte(parts[2]);
+						Byte reg3 = ParseRegister(parts[3]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.LT_rA_iB_rC, reg1, immediate, reg3);
+					}
+				} else {
+					// LT r5, r3, 15  -->  LT_rA_rB_iC
+					Byte reg1 = ParseRegister(parts[1]);
+					Byte reg2 = ParseRegister(parts[2]);
+					Byte immediate = ParseByte(parts[3]);
+					instruction = BytecodeUtil.INS_ABC(Opcode.LT_rA_rB_iC, reg1, reg2, immediate);
+				}
+
+			} else if (mnemonic == "LE") {
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
+				
+				if (parts[3][0] == 'r') {
+					if (parts[2][0] == 'r') {
+						// LT r5, r3, r2  -->  LT_rA_rB_rC
+						Byte reg1 = ParseRegister(parts[1]);
+						Byte reg2 = ParseRegister(parts[2]);
+						Byte reg3 = ParseRegister(parts[3]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.LE_rA_rB_rC, reg1, reg2, reg3);
+					}
+					else{
+						// LT r5, 15, r2  -->  LT_rA_iB_rC
+						Byte reg1 = ParseRegister(parts[1]);
+						Byte immediate = ParseByte(parts[2]);
+						Byte reg3 = ParseRegister(parts[3]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.LE_rA_iB_rC, reg1, immediate, reg3);
+					}
+				} else {
+					// LT r5, r3, 15  -->  LT_rA_rB_iC
+					Byte reg1 = ParseRegister(parts[1]);
+					Byte reg2 = ParseRegister(parts[2]);
+					Byte immediate = ParseByte(parts[3]);
+					instruction = BytecodeUtil.INS_ABC(Opcode.LE_rA_rB_iC, reg1, reg2, immediate);
+				}
+
+			} else if (mnemonic == "EQ") {
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
+
+				Byte reg1 = ParseRegister(parts[1]);
+				Byte reg2 = ParseRegister(parts[2]);
+
+				if (parts[3][0] == 'r') {
+					// EQ r5, r3, r2  -->  EQ_rA_rB_rC
+						Byte reg3 = ParseRegister(parts[3]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.EQ_rA_rB_rC, reg1, reg2, reg3);
+				} else {
+					// EQ r5, r3, 15  -->  EQ_rA_rB_iC
+					Byte immediate = ParseByte(parts[3]);
+					instruction = BytecodeUtil.INS_ABC(Opcode.EQ_rA_rB_iC, reg1, reg2, immediate);
+				}
+
+			} else if (mnemonic == "NE") {
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
+
+				Byte reg1 = ParseRegister(parts[1]);
+				Byte reg2 = ParseRegister(parts[2]);
+
+				if (parts[3][0] == 'r') {
+					// NE r5, r3, r2  -->  NE_rA_rB_rC
+						Byte reg3 = ParseRegister(parts[3]);
+						instruction = BytecodeUtil.INS_ABC(Opcode.NE_rA_rB_rC, reg1, reg2, reg3);
+				} else {
+					// NE r5, r3, 15  -->  NE_rA_rB_iC
+					Byte immediate = ParseByte(parts[3]);
+					instruction = BytecodeUtil.INS_ABC(Opcode.NE_rA_rB_iC, reg1, reg2, immediate);
+				}
 			
 			} else if (mnemonic == "BRTRUE") {
 				if (parts.Count != 3) { Error("Syntax error"); return 0; }
@@ -529,11 +613,11 @@ namespace MiniScript {
 				Byte reg1 = ParseRegister(parts[1]);
 
 				if (parts[2][0] == 'r') {
-					// IFEQ r5, r3  -->  IFLE_rA_rB
+					// IFEQ r5, r3  -->  IFEQ_rA_rB
 						Byte reg2 = ParseRegister(parts[2]);
 						instruction = BytecodeUtil.INS_ABC(Opcode.IFEQ_rA_rB, reg1, reg2, 0);
 				} else {
-					// IFEQ r5, 42  -->  IFLE_rA_iBC
+					// IFEQ r5, 42  -->  IFEQ_rA_iBC
 					Int16 immediate = ParseInt16(parts[2]);
 					instruction = BytecodeUtil.INS_AB(Opcode.IFEQ_rA_iBC, reg1, immediate);
 				}
@@ -544,11 +628,11 @@ namespace MiniScript {
 				Byte reg1 = ParseRegister(parts[1]);
 
 				if (parts[2][0] == 'r') {
-					// IFEQ r5, r3  -->  IFLE_rA_rB
+					// IFNE r5, r3  -->  IFNE_rA_rB
 						Byte reg2 = ParseRegister(parts[2]);
 						instruction = BytecodeUtil.INS_ABC(Opcode.IFNE_rA_rB, reg1, reg2, 0);
 				} else {
-					// IFEQ r5, 42  -->  IFLE_rA_iBC
+					// IFNE r5, 42  -->  IFNE_rA_iBC
 					Int16 immediate = ParseInt16(parts[2]);
 					instruction = BytecodeUtil.INS_AB(Opcode.IFNE_rA_iBC, reg1, immediate);
 				}
@@ -584,6 +668,35 @@ namespace MiniScript {
 				return 0;
 			}
 			return (Byte)ParseInt16(reg.Substring(1));
+		}
+
+		// Helper to parse a Byte number (handles negative numbers)
+		private Byte ParseByte(String num) {
+			// Simple number parsing - could be enhanced
+			Int64 result = 0;
+			Boolean negative = false;
+			Int32 start = 0;
+			
+			if (num.Length > 0 && num[0] == '-') {
+				negative = true;
+				start = 1;
+			}
+			
+			for (Int32 i = start; i < num.Length; i++) {
+				if (num[i] >= '0' && num[i] <= '9') {
+					result = result * 10 + (num[i] - '0');
+				} else {
+					Error(StringUtils.Format("Invalid number format: '{0}' (unexpected character '{1}')", num, num[i]));
+					return 0;
+				}
+			}
+			
+			if (negative) result = -result;
+			if (result < Byte.MinValue || result > Byte.MaxValue) {
+				Error(StringUtils.Format("Number '{0}' is out of range for Int16 ({1} to {2})", num, Byte.MinValue, Byte.MaxValue));
+				return 0;
+			}
+			return (Byte)result;
 		}
 		
 		// Helper to parse an Int16 number (handles negative numbers)
