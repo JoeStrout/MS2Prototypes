@@ -291,6 +291,14 @@ Converter.processNonmethodLine = function
 		return
 	end if
 	
+	// public-get, private-set properties: we turn these into ordinary fields,
+	// which loses the set protection, but it's fine
+	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ { get; private set; }",
+	  "≤scope≥: ≤type≥ ≤name≥;", "") then
+		self.checkType
+		return
+	end if
+	
 	// expression-bodied method
 	if self.match("≤scope:w≥ static ≤rtype:w≥ ≤name:w≥(≤params≥) => ≤expr≥;",
 	  "≤scope≥: static ≤rtype≥ ≤name≥(≤params≥) { return ≤expr≥; }", "") then

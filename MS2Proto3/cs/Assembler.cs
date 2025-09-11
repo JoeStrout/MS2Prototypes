@@ -17,12 +17,24 @@ namespace MiniScript {
 		public FuncDef Current; // function we are currently building
 		private List<String> _labelNames; // label names within current function
 		private List<Int32> _labelAddresses; // corresponding instruction addresses within current function
+		
+		// Error handling state
+		public Boolean HasError { get; private set; }
+		public String ErrorMessage { get; private set; }
+		public Int32 CurrentLineNumber { get; private set; }
+		public String CurrentLine { get; private set; }
 
 		public Assembler() {
 			Functions = new List<FuncDef>();
 			Current = new FuncDef();
 			_labelNames = new List<String>();
 			_labelAddresses = new List<Int32>();
+			
+			// Initialize error state
+			HasError = false;
+			ErrorMessage = "";
+			CurrentLineNumber = 0;
+			CurrentLine = "";
 		}
 
 		// Helper to find a function by name (returns -1 if not found)
@@ -105,16 +117,36 @@ namespace MiniScript {
 			return tokens;
 		}
 		
-		private UInt32 Error(String errMsg, String mnemonic, String line) {
+		private void SetCurrentLine(Int32 lineNumber, String line) {
+			CurrentLineNumber = lineNumber;
+			CurrentLine = line;
+		}
+		
+		public void ClearError() {
+			HasError = false;
+			ErrorMessage = "";
+			CurrentLineNumber = 0;
+			CurrentLine = "";
+		}
+		
+		private void Error(String errMsg) {
+			if (HasError) return; // Don't overwrite first error
+			
+			HasError = true;
+			ErrorMessage = errMsg;
 			IOHelper.Print(StringUtils.Format("ERROR: {0}", errMsg));
-			IOHelper.Print(StringUtils.Format("on {0} instruction (source line: {1})",
-					mnemonic, line));
-			return 0;
+			IOHelper.Print(StringUtils.Format("Line {0}: {1}", CurrentLineNumber, CurrentLine));
 		}
 		
 		// Assemble a single source line, add to our current function,
 		// and also return its value (mainly for unit testing).
 		public UInt32 AddLine(String line) {
+			return AddLine(line, 0);  // Default line number
+		}
+		
+		public UInt32 AddLine(String line, Int32 lineNumber) {
+			SetCurrentLine(lineNumber, line);
+			if (HasError) return 0;  // Don't process more lines if we already have an error
 			// Break into tokens (stripping whitespace, commas, and comments)
 			List<String> parts = GetTokens(line);
 			
@@ -131,7 +163,10 @@ namespace MiniScript {
 				instruction = BytecodeUtil.INS(Opcode.NOOP);
 				
 			} else if (mnemonic == "LOAD") {
-				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 3) {
+					Error("Syntax error: LOAD requires exactly 2 operands");
+					return 0;
+				}
 				
 				String destReg = parts[1];  // should be "r5" etc.
 				String source = parts[2];   // "r6", "42", "3.14", "hello", or "k20" 
@@ -158,61 +193,74 @@ namespace MiniScript {
 				}
 				
 			} else if (mnemonic == "ADD") {
-				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 4) {
+					Error("Syntax error: ADD requires exactly 3 operands");
+					return 0;
+				}
 				Byte dest = ParseRegister(parts[1]);
+				if (HasError) return 0;
 				Byte src1 = ParseRegister(parts[2]);
+				if (HasError) return 0;
 				Byte src2 = ParseRegister(parts[3]);
+				if (HasError) return 0;
 				instruction = BytecodeUtil.INS_ABC(Opcode.ADD_rA_rB_rC, dest, src1, src2);
 				
 			} else if (mnemonic == "SUB") {
-				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
 				Byte src1 = ParseRegister(parts[2]);
 				Byte src2 = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.SUB_rA_rB_rC, dest, src1, src2);
 				
 			} else if (mnemonic == "MULT") {
-				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
 				Byte src1 = ParseRegister(parts[2]);
 				Byte src2 = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.MULT_rA_rB_rC, dest, src1, src2);
 			
 			} else if (mnemonic == "DIV") {
-				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
 				Byte src1 = ParseRegister(parts[2]);
 				Byte src2 = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.DIV_rA_rB_rC, dest, src1, src2);
 
 			} else if (mnemonic == "MOD") {
-				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
 				Byte src1 = ParseRegister(parts[2]);
 				Byte src2 = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.MOD_rA_rB_rC, dest, src1, src2);
 			
 			} else if (mnemonic == "LIST") {
-				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
 				Int16 capacity = ParseInt16(parts[2]);
 				instruction = BytecodeUtil.INS_AB(Opcode.LIST_rA_iBC, dest, capacity);
 			
 			} else if (mnemonic == "PUSH") {
-				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 				Byte listReg = ParseRegister(parts[1]);
 				Byte valueReg = ParseRegister(parts[2]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.PUSH_rA_rB, listReg, valueReg, 0);
 			
 			} else if (mnemonic == "INDEX") {
-				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
 				Byte listReg = ParseRegister(parts[2]);
 				Byte indexReg = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.INDEX_rA_rB_rC, dest, listReg, indexReg);
 			
+			} else if (mnemonic == "IDXSET") {
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
+				Byte listReg = ParseRegister(parts[1]);
+				Byte indexReg = ParseRegister(parts[2]);
+				Byte valueReg = ParseRegister(parts[3]);
+				instruction = BytecodeUtil.INS_ABC(Opcode.IDXSET_rA_rB_rC, listReg, indexReg, valueReg);
+			
 			} else if (mnemonic == "JUMP") {
-				if (parts.Count != 2) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 2) { Error("Syntax error"); return 0; }
 				String target = parts[1];
 				Int32 offset;
 				
@@ -228,7 +276,7 @@ namespace MiniScript {
 				instruction = BytecodeUtil.INS(Opcode.JUMP_iABC) | (UInt32)(offset & 0xFFFFFF);
 			
 			} else if (mnemonic == "BRTRUE") {
-				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 
 				Byte reg1 = ParseRegister(parts[1]);
 				String target = parts[2];
@@ -248,13 +296,13 @@ namespace MiniScript {
 				// as a bigger Int32 but then check the range, so that we can display
 				// a better error message.
 				if (offset < Int16.MinValue || offset > Int16.MaxValue) {
-					return Error("Range error (Cannot fit branch offset into Int16)", mnemonic, line);
+					Error("Range error (Cannot fit branch offset into Int16)"); return 0;
 				}
 
 				instruction = BytecodeUtil.INS_AB(Opcode.BRTRUE_rA_iBC, reg1, (Int16)offset);
 
 			} else if (mnemonic == "BRFALSE") {
-				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 
 				Byte reg1 = ParseRegister(parts[1]);
 				String target = parts[2];
@@ -274,13 +322,13 @@ namespace MiniScript {
 				// as a bigger Int32 but then check the range, so that we can display
 				// a better error message.
 				if (offset < Int16.MinValue || offset > Int16.MaxValue) {
-					return Error("Range error (Cannot fit branch offset into Int16)", mnemonic, line);
+					Error("Range error (Cannot fit branch offset into Int16)"); return 0;
 				}
 
 				instruction = BytecodeUtil.INS_AB(Opcode.BRFALSE_rA_iBC, reg1, (Int16)offset);
 
 			} else if (mnemonic == "BRLT") {
-				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 
 				String target = parts[3];
 				Int32 offset;
@@ -299,7 +347,7 @@ namespace MiniScript {
 				// as a bigger Int32 but then check the range, so that we can display
 				// a better error message.
 				if (offset < SByte.MinValue || offset > SByte.MaxValue) {
-					return Error("Range error (Cannot fit branch offset into SByte)", mnemonic, line);
+					Error("Range error (Cannot fit branch offset into SByte)"); return 0;
 				}
 
 				if (parts[2][0] == 'r') {
@@ -321,7 +369,7 @@ namespace MiniScript {
 					instruction = BytecodeUtil.INS_ABC(Opcode.BRLT_rA_iB_iC, reg1, immediate, (Byte)offset);
 				}
 			} else if (mnemonic == "BRLE") {
-				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 
 				String target = parts[3];
 				Int32 offset;
@@ -340,7 +388,7 @@ namespace MiniScript {
 				// as a bigger Int32 but then check the range, so that we can display
 				// a better error message.
 				if (offset < SByte.MinValue || offset > SByte.MaxValue) {
-					return Error("Range error (Cannot fit branch offset into SByte)", mnemonic, line);
+					Error("Range error (Cannot fit branch offset into SByte)"); return 0;
 				}
 
 				if (parts[2][0] == 'r') {
@@ -363,7 +411,7 @@ namespace MiniScript {
 				}			
 
 			} else if (mnemonic == "BREQ") {
-				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 
 				String target = parts[3];
 				Int32 offset;
@@ -382,7 +430,7 @@ namespace MiniScript {
 				// as a bigger Int32 but then check the range, so that we can display
 				// a better error message.
 				if (offset < SByte.MinValue || offset > SByte.MaxValue) {
-					return Error("Range error (Cannot fit branch offset into SByte)", mnemonic, line);
+					Error("Range error (Cannot fit branch offset into SByte)"); return 0;
 				}
 
 				Byte reg1 = ParseRegister(parts[1]);
@@ -397,7 +445,7 @@ namespace MiniScript {
 				}
 		
 			} else if (mnemonic == "BRNE") {
-				if (parts.Count != 4) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 
 				String target = parts[3];
 				Int32 offset;
@@ -416,7 +464,7 @@ namespace MiniScript {
 				// as a bigger Int32 but then check the range, so that we can display
 				// a better error message.
 				if (offset < SByte.MinValue || offset > SByte.MaxValue) {
-					return Error("Range error (Cannot fit branch offset into SByte)", mnemonic, line);
+					Error("Range error (Cannot fit branch offset into SByte)"); return 0;
 				}
 
 				Byte reg1 = ParseRegister(parts[1]);
@@ -431,7 +479,7 @@ namespace MiniScript {
 				}
 
 			} else if (mnemonic == "IFLT") {
-				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 				
 				if (parts[2][0] == 'r') {
 					if (parts[1][0] == 'r') {
@@ -454,7 +502,7 @@ namespace MiniScript {
 				}
 			
 			} else if (mnemonic == "IFLE") {
-				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 				
 				if (parts[2][0] == 'r') {
 					if (parts[1][0] == 'r') {
@@ -476,7 +524,7 @@ namespace MiniScript {
 				}
 
 			} else if (mnemonic == "IFEQ") {
-				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 
 				Byte reg1 = ParseRegister(parts[1]);
 
@@ -491,7 +539,7 @@ namespace MiniScript {
 				}
 
 			} else if (mnemonic == "IFNE") {
-				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 
 				Byte reg1 = ParseRegister(parts[1]);
 
@@ -506,32 +554,40 @@ namespace MiniScript {
 				}
 
 			} else if (mnemonic == "CALLF") {
-				if (parts.Count != 3) return Error("Syntax error", mnemonic, line);
+				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 				Byte reserveRegs = (Byte)ParseInt16(parts[1]);	// ToDo: check range before typecast
-				Int16 funcIdx = ParseInt16(parts[2]);
+				Int16 funcIdx = (Int16)FindFunctionIndex(parts[2]);
+				if (funcIdx < 0) {
+					Error(StringUtils.Format("Unknown function: '{0}'", parts[2]));
+					return 0;
+				}
 				instruction = BytecodeUtil.INS_AB(Opcode.CALLF_iA_iBC, reserveRegs, funcIdx);
 				
 			} else if (mnemonic == "RETURN") {
 				instruction = BytecodeUtil.INS(Opcode.RETURN);
 			
 			} else {
-				return Error("Unknown opcode", mnemonic, line);
+				Error(StringUtils.Format("Unknown opcode: '{0}'", mnemonic));
+				return 0;
 			}
 			
-			// Add instruction to current function
-			Current.Code.Add(instruction);
+			// Add instruction to current function (only if no error occurred)
+			if (!HasError) Current.Code.Add(instruction);
 			
 			return instruction;
 		}
 		
 		// Helper to parse register like "r5" -> 5
-		private static Byte ParseRegister(String reg) {
-			if (reg.Length < 2 || reg[0] != 'r') return 0;
+		private Byte ParseRegister(String reg) {
+			if (reg.Length < 2 || reg[0] != 'r') {
+				Error(StringUtils.Format("Invalid register format: '{0}' (expected format: r0, r1, etc.)", reg));
+				return 0;
+			}
 			return (Byte)ParseInt16(reg.Substring(1));
 		}
 		
 		// Helper to parse an Int16 number (handles negative numbers)
-		private static Int16 ParseInt16(String num) {
+		private Int16 ParseInt16(String num) {
 			// Simple number parsing - could be enhanced
 			Int64 result = 0;
 			Boolean negative = false;
@@ -545,21 +601,22 @@ namespace MiniScript {
 			for (Int32 i = start; i < num.Length; i++) {
 				if (num[i] >= '0' && num[i] <= '9') {
 					result = result * 10 + (num[i] - '0');
+				} else {
+					Error(StringUtils.Format("Invalid number format: '{0}' (unexpected character '{1}')", num, num[i]));
+					return 0;
 				}
-				// ToDo: if we encounter a decimal point or other unexpected character,
-				// print an error.
 			}
 			
 			if (negative) result = -result;
 			if (result < Int16.MinValue || result > Int16.MaxValue) {
-				// ToDo: better error handling.
+				Error(StringUtils.Format("Number '{0}' is out of range for Int16 ({1} to {2})", num, Int16.MinValue, Int16.MaxValue));
 				return 0;
 			}
 			return (Int16)result;
 		}
 
 		// Helper to parse a 24-bit int number (handles negative numbers)
-		private static Int32 ParseInt24(String num) {
+		private Int32 ParseInt24(String num) {
 			// Simple number parsing - could be enhanced
 			Int64 result = 0;
 			Boolean negative = false;
@@ -573,21 +630,22 @@ namespace MiniScript {
 			for (Int32 i = start; i < num.Length; i++) {
 				if (num[i] >= '0' && num[i] <= '9') {
 					result = result * 10 + (num[i] - '0');
+				} else {
+					Error(StringUtils.Format("Invalid number format: '{0}' (unexpected character '{1}')", num, num[i]));
+					return 0;
 				}
-				// ToDo: if we encounter a decimal point or other unexpected character,
-				// print an error.
 			}
 			
 			if (negative) result = -result;
 			if (result < -16777215 || result > 16777215) {
-				// ToDo: better error handling.
+				Error(StringUtils.Format("Number '{0}' is out of range for 24-bit signed integer (-16777215 to 16777215)", num));
 				return 0;
 			}
 			return (Int32)result;
 		}
 
 		// Helper to parse a 32-bit int number (handles negative numbers)
-		private static Int32 ParseInt32(String num) {
+		private Int32 ParseInt32(String num) {
 			// Simple number parsing - could be enhanced
 			Int64 result = 0;
 			Boolean negative = false;
@@ -601,14 +659,15 @@ namespace MiniScript {
 			for (Int32 i = start; i < num.Length; i++) {
 				if (num[i] >= '0' && num[i] <= '9') {
 					result = result * 10 + (num[i] - '0');
+				} else {
+					Error(StringUtils.Format("Invalid number format: '{0}' (unexpected character '{1}')", num, num[i]));
+					return 0;
 				}
-				// ToDo: if we encounter a decimal point or other unexpected character,
-				// print an error.
 			}
 			
 			if (negative) result = -result;
 			if (result < Int32.MinValue || result > Int32.MaxValue) {
-				// ToDo: better error handling.
+				Error(StringUtils.Format("Number '{0}' is out of range for Int32 ({1} to {2})", num, Int32.MinValue, Int32.MaxValue));
 				return 0;
 			}
 			return (Int32)result;
@@ -697,7 +756,7 @@ namespace MiniScript {
 		}
 
 		// Helper to create a Value from a token
-		private static Value ParseAsConstant(String token) {
+		private Value ParseAsConstant(String token) {
 			if (IsStringLiteral(token)) {
 				// Remove quotes and create string value
 				String content = token.Substring(1, token.Length - 2);
@@ -717,7 +776,7 @@ namespace MiniScript {
 		}
 
 		// Helper to parse a double from a string (basic implementation)
-		private static Double ParseDouble(String str) {
+		private Double ParseDouble(String str) {
 			// Find the decimal point
 			Int32 dotPos = -1;
 			for (Int32 i = 0; i < str.Length; i++) {
@@ -768,6 +827,7 @@ namespace MiniScript {
 			bool sawMain = false;
 			Int32 lineNum = 0;
 			for (lineNum = 0; lineNum < sourceLines.Count; lineNum++) {
+				if (HasError) return; // Bail out if error occurred
 				List<String> tokens = GetTokens(sourceLines[lineNum]);
 				if (tokens.Count < 1 || !IsFunctionLabel(tokens[0])) continue;
 				String funcName = ParseLabel(tokens[0]);
@@ -778,7 +838,7 @@ namespace MiniScript {
 				
 			// Now proceed through the input lines, assembling one function at a time.
 			lineNum = 0;
-			while (lineNum < sourceLines.Count) {			
+			while (lineNum < sourceLines.Count && !HasError) {			
 				List<String> tokens = GetTokens(sourceLines[lineNum]);
 				if (tokens.Count == 0) { // empty line or comment only
 					lineNum++;
@@ -801,6 +861,9 @@ namespace MiniScript {
 				// the line number where we should continue with the next function.	
 				lineNum = AssembleFunction(sourceLines, lineNum);
 
+				// Bail out if error occurred during function assembly
+				if (HasError) break;
+
 				// Then, store the just-assembled Current function in our function list.
 				Int32 slot = FindFunctionIndex(Current.Name);
 				Functions[slot] = Current;
@@ -822,7 +885,7 @@ namespace MiniScript {
 			// and also find the end line for the second pass.
 			Int32 instructionAddress = 0;
 			Int32 endLine = sourceLines.Count;
-			for (Int32 i = startLine; i < endLine; i++) {
+			for (Int32 i = startLine; i < endLine && !HasError; i++) {
 				List<String> tokens = GetTokens(sourceLines[i]);
 				if (tokens.Count == 0) continue;
 
@@ -854,7 +917,9 @@ namespace MiniScript {
 			// Second pass: assemble instructions with label resolution
 			Current.Code.Clear(); // Clear any previous assembly
 			Current.Constants.Clear();
-			for (Int32 i = startLine; i < endLine; i++) {
+			for (Int32 i = startLine; i < endLine && !HasError; i++) {
+				CurrentLineNumber = i + 1; // Set line number for error reporting (1-based)
+				CurrentLine = sourceLines[i]; // Set current line for error reporting
 				AddLine(sourceLines[i]);
 			}
 			return endLine;

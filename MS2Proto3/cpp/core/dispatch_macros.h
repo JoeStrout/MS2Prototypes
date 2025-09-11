@@ -33,6 +33,7 @@
 	X(LIST_rA_iBC) \
 	X(PUSH_rA_rB) \
 	X(INDEX_rA_rB_rC) \
+	X(IDXSET_rA_rB_rC) \
 	X(JUMP_iABC) \
 	X(BRTRUE_rA_iBC) \
 	X(BRFALSE_rA_iBC) \

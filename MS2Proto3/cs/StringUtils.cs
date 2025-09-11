@@ -128,6 +128,9 @@ namespace MiniScript {
 			if (is_list(v)) {
 				std::ostringstream oss;
 				oss << "[";
+				// ToDo: watch out for recursion, or maybe just limit our depth in
+				// general.  I think MS1.0 limits nesting to 16 levels deep.  But
+				// whatever we do, we shouldn't just crash with a stack overflow.
 				for(int i = 0; i < list_count(v); i++) {
 					oss << (i != 0 ? ", " : "") << makeString(pool, list_get(v, i)).c_str();
 				}

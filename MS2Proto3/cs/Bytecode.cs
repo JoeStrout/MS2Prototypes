@@ -17,6 +17,7 @@ namespace MiniScript {
 		LIST_rA_iBC,
 		PUSH_rA_rB,
 		INDEX_rA_rB_rC,
+		IDXSET_rA_rB_rC,
 		JUMP_iABC,
 	//	LT_rA_rB,
 	//	LT_rA_iBC,
@@ -94,86 +95,88 @@ namespace MiniScript {
 		// Conversion to/from opcode mnemonics (names)
 		public static String ToMnemonic(Opcode opcode) {
 			switch (opcode) {
-				case Opcode.NOOP:          return "NOOP";
-				case Opcode.LOAD_rA_rB:    return "LOAD_rA_rB";
-				case Opcode.LOAD_rA_iBC:   return "LOAD_rA_iBC";
-				case Opcode.LOAD_rA_kBC:   return "LOAD_rA_kBC";
-				case Opcode.ADD_rA_rB_rC:  return "ADD_rA_rB_rC";
-				case Opcode.SUB_rA_rB_rC:  return "SUB_rA_rB_rC";
-				case Opcode.MULT_rA_rB_rC: return "MULT_rA_rB_rC";
-				case Opcode.DIV_rA_rB_rC:  return "DIV_rA_rB_rC";
-				case Opcode.MOD_rA_rB_rC:  return "MOD_rA_rB_rC";
-				case Opcode.LIST_rA_iBC:   return "LIST_rA_iBC";
-				case Opcode.PUSH_rA_rB:    return "PUSH_rA_rB";
+				case Opcode.NOOP:           return "NOOP";
+				case Opcode.LOAD_rA_rB:     return "LOAD_rA_rB";
+				case Opcode.LOAD_rA_iBC:    return "LOAD_rA_iBC";
+				case Opcode.LOAD_rA_kBC:    return "LOAD_rA_kBC";
+				case Opcode.ADD_rA_rB_rC:   return "ADD_rA_rB_rC";
+				case Opcode.SUB_rA_rB_rC:   return "SUB_rA_rB_rC";
+				case Opcode.MULT_rA_rB_rC:  return "MULT_rA_rB_rC";
+				case Opcode.DIV_rA_rB_rC:   return "DIV_rA_rB_rC";
+				case Opcode.MOD_rA_rB_rC:   return "MOD_rA_rB_rC";
+				case Opcode.LIST_rA_iBC:    return "LIST_rA_iBC";
+				case Opcode.PUSH_rA_rB:     return "PUSH_rA_rB";
 				case Opcode.INDEX_rA_rB_rC: return "INDEX_rA_rB_rC";
-				case Opcode.JUMP_iABC:     return "JUMP_iABC";
-				case Opcode.BRTRUE_rA_iBC: return "BRTRUE_rA_iBC";
-				case Opcode.BRFALSE_rA_iBC:return "BRFALSE_rA_iBC";
-				case Opcode.BRLT_rA_rB_iC: return "BRLT_rA_rB_iC";
-				case Opcode.BRLT_rA_iB_iC: return "BRLT_rA_iB_iC";
-				case Opcode.BRLT_iA_rB_iC: return "BRLT_iA_rB_iC";
-				case Opcode.BRLE_rA_rB_iC: return "BRLE_rA_rB_iC";
-				case Opcode.BRLE_rA_iB_iC: return "BRLE_rA_iB_iC";
-				case Opcode.BRLE_iA_rB_iC: return "BRLE_iA_rB_iC";
-				case Opcode.BREQ_rA_rB_iC: return "BREQ_rA_rB_iC";
-				case Opcode.BREQ_rA_iB_iC: return "BREQ_rA_iB_iC";
-				case Opcode.BRNE_rA_rB_iC: return "BRNE_rA_rB_iC";
-				case Opcode.BRNE_rA_iB_iC: return "BRNE_rA_iB_iC";
-				case Opcode.IFLT_rA_rB:    return "IFLT_rA_rB";
-				case Opcode.IFLT_rA_iBC:   return "IFLT_rA_iBC";
-				case Opcode.IFLT_iAB_rC:   return "IFLT_iAB_rC";
-				case Opcode.IFLE_rA_rB:    return "IFLE_rA_rB";
-				case Opcode.IFLE_rA_iBC:   return "IFLE_rA_iBC";
-				case Opcode.IFLE_iAB_rC:   return "IFLE_iAB_rC";
-				case Opcode.IFEQ_rA_rB:    return "IFEQ_rA_rB";
-				case Opcode.IFEQ_rA_iBC:   return "IFEQ_rA_iBC";
-				case Opcode.IFNE_rA_rB:    return "IFLT_rA_rB";
-				case Opcode.IFNE_rA_iBC:   return "IFLT_rA_iBC";
-				case Opcode.CALLF_iA_iBC:  return "CALLF_iA_iBC";
-				case Opcode.RETURN:        return "RETURN";
+				case Opcode.IDXSET_rA_rB_rC:return "IDXSET_rA_rB_rC";
+				case Opcode.JUMP_iABC:      return "JUMP_iABC";
+				case Opcode.BRTRUE_rA_iBC:  return "BRTRUE_rA_iBC";
+				case Opcode.BRFALSE_rA_iBC: return "BRFALSE_rA_iBC";
+				case Opcode.BRLT_rA_rB_iC:  return "BRLT_rA_rB_iC";
+				case Opcode.BRLT_rA_iB_iC:  return "BRLT_rA_iB_iC";
+				case Opcode.BRLT_iA_rB_iC:  return "BRLT_iA_rB_iC";
+				case Opcode.BRLE_rA_rB_iC:  return "BRLE_rA_rB_iC";
+				case Opcode.BRLE_rA_iB_iC:  return "BRLE_rA_iB_iC";
+				case Opcode.BRLE_iA_rB_iC:  return "BRLE_iA_rB_iC";
+				case Opcode.BREQ_rA_rB_iC:  return "BREQ_rA_rB_iC";
+				case Opcode.BREQ_rA_iB_iC:  return "BREQ_rA_iB_iC";
+				case Opcode.BRNE_rA_rB_iC:  return "BRNE_rA_rB_iC";
+				case Opcode.BRNE_rA_iB_iC:  return "BRNE_rA_iB_iC";
+				case Opcode.IFLT_rA_rB:     return "IFLT_rA_rB";
+				case Opcode.IFLT_rA_iBC:    return "IFLT_rA_iBC";
+				case Opcode.IFLT_iAB_rC:    return "IFLT_iAB_rC";
+				case Opcode.IFLE_rA_rB:     return "IFLE_rA_rB";
+				case Opcode.IFLE_rA_iBC:    return "IFLE_rA_iBC";
+				case Opcode.IFLE_iAB_rC:    return "IFLE_iAB_rC";
+				case Opcode.IFEQ_rA_rB:     return "IFEQ_rA_rB";
+				case Opcode.IFEQ_rA_iBC:    return "IFEQ_rA_iBC";
+				case Opcode.IFNE_rA_rB:     return "IFLT_rA_rB";
+				case Opcode.IFNE_rA_iBC:    return "IFLT_rA_iBC";
+				case Opcode.CALLF_iA_iBC:   return "CALLF_iA_iBC";
+				case Opcode.RETURN:         return "RETURN";
 				default:
 					return "Unknown opcode";
 			}
 		}
 		
 		public static Opcode FromMnemonic(String s) {
-			if (s == "NOOP")          return Opcode.NOOP;
-			if (s == "LOAD_rA_rB")    return Opcode.LOAD_rA_rB;
-			if (s == "LOAD_rA_iBC")   return Opcode.LOAD_rA_iBC;
-			if (s == "LOAD_rA_kBC")   return Opcode.LOAD_rA_kBC;
-			if (s == "ADD_rA_rB_rC")  return Opcode.ADD_rA_rB_rC;
-			if (s == "SUB_rA_rB_rC")  return Opcode.SUB_rA_rB_rC;
-			if (s == "MULT_rA_rB_rC") return Opcode.MULT_rA_rB_rC;
-			if (s == "DIV_rA_rB_rC")  return Opcode.DIV_rA_rB_rC;
-			if (s == "MOD_rA_rB_rC")  return Opcode.MOD_rA_rB_rC;
-			if (s == "LIST_rA_iBC")   return Opcode.LIST_rA_iBC;
-			if (s == "PUSH_rA_rB")    return Opcode.PUSH_rA_rB;
-			if (s == "INDEX_rA_rB_rC") return Opcode.INDEX_rA_rB_rC;
-			if (s == "JUMP_iABC")     return Opcode.JUMP_iABC;
-			if (s == "BRTRUE_rA_iBC") return Opcode.BRTRUE_rA_iBC;
-			if (s == "BRFALSE_rA_iBC")return Opcode.BRFALSE_rA_iBC;
-			if (s == "BRLT_rA_rB_iC") return Opcode.BRLT_rA_rB_iC;
-			if (s == "BRLT_rA_iB_iC") return Opcode.BRLT_rA_iB_iC;
-			if (s == "BRLT_iA_rB_iC") return Opcode.BRLT_iA_rB_iC;
-			if (s == "BRLE_rA_rB_iC") return Opcode.BRLE_rA_rB_iC;
-			if (s == "BRLE_rA_iB_iC") return Opcode.BRLE_rA_iB_iC;
-			if (s == "BRLE_iA_rB_iC") return Opcode.BRLE_iA_rB_iC;
-			if (s == "BREQ_rA_rB_iC") return Opcode.BREQ_rA_rB_iC;
-			if (s == "BREQ_rA_iB_iC") return Opcode.BREQ_rA_iB_iC;
-			if (s == "BRNE_rA_rB_iC") return Opcode.BRNE_rA_rB_iC;
-			if (s == "BRNE_rA_iB_iC") return Opcode.BRNE_rA_iB_iC;
-			if (s == "IFLT_rA_rB")    return Opcode.IFLT_rA_rB;
-			if (s == "IFLT_rA_iBC")   return Opcode.IFLT_rA_iBC;
-			if (s == "IFLT_iAB_rC")   return Opcode.IFLT_iAB_rC;
-			if (s == "IFLE_rA_rB")    return Opcode.IFLE_rA_rB;
-			if (s == "IFLE_rA_iBC")   return Opcode.IFLE_rA_iBC;
-			if (s == "IFLE_iAB_rC")   return Opcode.IFLE_iAB_rC;
-			if (s == "IFEQ_rA_rB")    return Opcode.IFEQ_rA_rB;
-			if (s == "IFEQ_rA_iBC")   return Opcode.IFEQ_rA_iBC;
-			if (s == "IFNE_rA_rB")    return Opcode.IFNE_rA_rB;
-			if (s == "IFNE_rA_iBC")   return Opcode.IFNE_rA_iBC;
-			if (s == "CALLF_iA_iBC")  return Opcode.CALLF_iA_iBC;
-			if (s == "RETURN")        return Opcode.RETURN;
+			if (s == "NOOP")            return Opcode.NOOP;
+			if (s == "LOAD_rA_rB")      return Opcode.LOAD_rA_rB;
+			if (s == "LOAD_rA_iBC")     return Opcode.LOAD_rA_iBC;
+			if (s == "LOAD_rA_kBC")     return Opcode.LOAD_rA_kBC;
+			if (s == "ADD_rA_rB_rC")    return Opcode.ADD_rA_rB_rC;
+			if (s == "SUB_rA_rB_rC")    return Opcode.SUB_rA_rB_rC;
+			if (s == "MULT_rA_rB_rC")   return Opcode.MULT_rA_rB_rC;
+			if (s == "DIV_rA_rB_rC")    return Opcode.DIV_rA_rB_rC;
+			if (s == "MOD_rA_rB_rC")    return Opcode.MOD_rA_rB_rC;
+			if (s == "LIST_rA_iBC")     return Opcode.LIST_rA_iBC;
+			if (s == "PUSH_rA_rB")      return Opcode.PUSH_rA_rB;
+			if (s == "INDEX_rA_rB_rC")  return Opcode.INDEX_rA_rB_rC;
+			if (s == "IDXSET_rA_rB_rC") return Opcode.IDXSET_rA_rB_rC;
+			if (s == "JUMP_iABC")       return Opcode.JUMP_iABC;
+			if (s == "BRTRUE_rA_iBC")   return Opcode.BRTRUE_rA_iBC;
+			if (s == "BRFALSE_rA_iBC")  return Opcode.BRFALSE_rA_iBC;
+			if (s == "BRLT_rA_rB_iC")   return Opcode.BRLT_rA_rB_iC;
+			if (s == "BRLT_rA_iB_iC")   return Opcode.BRLT_rA_iB_iC;
+			if (s == "BRLT_iA_rB_iC")   return Opcode.BRLT_iA_rB_iC;
+			if (s == "BRLE_rA_rB_iC")   return Opcode.BRLE_rA_rB_iC;
+			if (s == "BRLE_rA_iB_iC")   return Opcode.BRLE_rA_iB_iC;
+			if (s == "BRLE_iA_rB_iC")   return Opcode.BRLE_iA_rB_iC;
+			if (s == "BREQ_rA_rB_iC")   return Opcode.BREQ_rA_rB_iC;
+			if (s == "BREQ_rA_iB_iC")   return Opcode.BREQ_rA_iB_iC;
+			if (s == "BRNE_rA_rB_iC")   return Opcode.BRNE_rA_rB_iC;
+			if (s == "BRNE_rA_iB_iC")   return Opcode.BRNE_rA_iB_iC;
+			if (s == "IFLT_rA_rB")      return Opcode.IFLT_rA_rB;
+			if (s == "IFLT_rA_iBC")     return Opcode.IFLT_rA_iBC;
+			if (s == "IFLT_iAB_rC")     return Opcode.IFLT_iAB_rC;
+			if (s == "IFLE_rA_rB")      return Opcode.IFLE_rA_rB;
+			if (s == "IFLE_rA_iBC")     return Opcode.IFLE_rA_iBC;
+			if (s == "IFLE_iAB_rC")     return Opcode.IFLE_iAB_rC;
+			if (s == "IFEQ_rA_rB")      return Opcode.IFEQ_rA_rB;
+			if (s == "IFEQ_rA_iBC")     return Opcode.IFEQ_rA_iBC;
+			if (s == "IFNE_rA_rB")      return Opcode.IFNE_rA_rB;
+			if (s == "IFNE_rA_iBC")     return Opcode.IFNE_rA_iBC;
+			if (s == "CALLF_iA_iBC")    return Opcode.CALLF_iA_iBC;
+			if (s == "RETURN")          return Opcode.RETURN;
 			return Opcode.NOOP;
 		}
 	}

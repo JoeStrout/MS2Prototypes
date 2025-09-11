@@ -256,6 +256,15 @@ namespace MiniScript {
 						break; // CPP: VM_NEXT();
 					}
 
+					case Opcode.IDXSET_rA_rB_rC: { // CPP: VM_CASE(IDXSET_rA_rB_rC) {
+						// list_set(R[A], as_int(R[B]), R[C])
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						Byte c = BytecodeUtil.Cu(instruction);
+						list_set(stack[baseIndex + a], as_int(stack[baseIndex + b]), stack[baseIndex + c]);
+						break; // CPP: VM_NEXT();
+					}
+
 					case Opcode.JUMP_iABC: { // CPP: VM_CASE(JUMP_iABC) {
 						// Jump by signed 24-bit ABC offset from current PC
 						Int32 offset = BytecodeUtil.ABCs(instruction);

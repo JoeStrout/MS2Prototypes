@@ -1,7 +1,7 @@
 # Program to test various string functionality
 
 
-@testMult:
+@testConcat:
 	# "abc" + "def" == "abcdef"
 	LOAD r0, "String concatenation"
 	LOAD r1, "abc"
@@ -10,7 +10,12 @@
 	LOAD r3, "abcdef"
 	IFNE r1, r3
 	RETURN
+	
+	LOAD r0, 0  # all good!
+	RETURN
 
+
+@testMult:
 	# "abc" * 2 == "abcabc"
 	LOAD r0, "String * 2"
 	LOAD r1, "abc"
@@ -30,10 +35,12 @@
 	RETURN
 	
 	# All good!
-	LOAD 0, null
+	LOAD r0, 0
 	RETURN
 
 @main:
+	CALLF 0, @testConcat
+	BRTRUE r0, error
 	CALLF 0, @testMult
 	BRTRUE r0, error
 	LOAD r0, "✅ All tests passed!"

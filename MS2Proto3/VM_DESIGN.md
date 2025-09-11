@@ -22,6 +22,7 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | LIST_rA_iBC | R[A] := new list with capacity BC |
 | PUSH_rA_rB | push R[B] onto list R[A] |
 | INDEX_rA_rB_rC | R[A] := R[B][R[C]] (get element R[C] from list R[B]) |
+| IDXSET_rA_rB_rC | R[A][R[B]] := R[C] (set element R[B] of list R[A] to R[C]) |
 | LT_rA_rB_rC | R[A] := (R[B] < R[C]) |
 | JUMP_iABC | PC += ABC (24-bit signed value) |
 | BRTRUE_rA_iBC | if R[A] is true then PC += BC (16-bit signed) |

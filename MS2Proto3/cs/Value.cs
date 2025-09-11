@@ -139,12 +139,10 @@ namespace MiniScript {
 				var items = new string[valueList.Count];
 				for (int i = 0; i < valueList.Count; i++) {
 					Value item = valueList.Get(i);
-					// Prevent infinite recursion for nested structures
-					if (item.IsList || item.IsMap) {
-						items[i] = item.IsList ? "<list>" : "<map>";
-					} else {
-						items[i] = item.ToString();
-					}
+					// ToDo: watch out for recursion, or maybe just limit our depth in
+					// general.  I think MS1.0 limits nesting to 16 levels deep.  But
+					// whatever we do, we shouldn't just crash with a stack overflow.
+					items[i] = item.ToString();
 				}
 				return "[" + string.Join(", ", items) + "]";
 			}

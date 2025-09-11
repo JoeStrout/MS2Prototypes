@@ -22,6 +22,7 @@ namespace MiniScript {
 				case Opcode.LIST_rA_iBC:   return "LIST";
 				case Opcode.PUSH_rA_rB:    return "PUSH";
 				case Opcode.INDEX_rA_rB_rC: return "INDEX";
+				case Opcode.IDXSET_rA_rB_rC: return "IDXSET";
 				case Opcode.SUB_rA_rB_rC:  return "SUB";
 				case Opcode.JUMP_iABC:     return "JUMP";
 				case Opcode.BRTRUE_rA_iBC: return "BCTRUE";
@@ -126,6 +127,7 @@ namespace MiniScript {
 				case Opcode.DIV_rA_rB_rC:
 				case Opcode.MOD_rA_rB_rC:
 				case Opcode.INDEX_rA_rB_rC:
+				case Opcode.IDXSET_rA_rB_rC:
         			return StringUtils.Format("{0} r{1}, r{2}, r{3}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),

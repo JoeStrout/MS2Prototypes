@@ -5,6 +5,7 @@ using MiniScript;
 // CPP: #include "UnitTests.g.h"
 // CPP: #include "VM.g.h"
 // CPP: #include "gc.h"
+// CPP: #include "dispatch_macros.h"
 // CPP: using namespace MiniScript;
 
 public class App {
@@ -32,8 +33,15 @@ public class App {
 		}
 		
 		IOHelper.Print("MiniScript 2.0 Prototype 3");
+		/*** BEGIN CPP_ONLY ***
+		#if VM_USE_COMPUTED_GOTO
+		#define VARIANT "(goto)"
+		#else
+		#define VARIANT "(switch)"
+		#endif
+		*** END CPP_ONLY ***/
 		IOHelper.Print(
-			"Build: C# version" // CPP: "Build: C++ version"
+			"Build: C# version" // CPP: "Build: C++ " VARIANT " version"
 		);
 		IOHelper.Print("Milestone 3: complete!");
 		IOHelper.Print("Milestone 4: in progress");
@@ -60,6 +68,13 @@ public class App {
 			
 			// Use multi-function assembly with @function: label support
 			assembler.Assemble(lines);
+			
+			// Check for assembly errors
+			if (assembler.HasError) {
+				IOHelper.Print("Assembly failed with errors.");
+				return; // Bail out rather than trying to run a half-assembled program
+			}
+			
 			if (debugMode) IOHelper.Print("Assembly complete.");
 			
 			// Disassemble and print program (debug only)
