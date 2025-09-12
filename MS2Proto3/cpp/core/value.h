@@ -132,6 +132,11 @@ extern Value make_string(const char* str);
 extern const char* get_string_data_zerocopy(const Value* v_ptr, int* out_len);
 extern int string_compare(Value a, Value b);
 
+// Conversion functions
+
+Value to_string(Value v);
+Value to_number(Value v); // TODO: implement this
+
 // Arithmetic operations (inlined for performance)
 static inline Value value_add(Value a, Value b) {
     // Handle integer + integer case
@@ -154,8 +159,12 @@ static inline Value value_add(Value a, Value b) {
     }
     
     // Handle string concatenation
-    if (is_string(a) && is_string(b)) {
-        return string_concat(a, b);
+
+    if (is_string(a)) {
+        if (is_string(b)) return string_concat(a, b);
+        if (is_int(b) || is_double(b)) return string_concat(a, to_string(b));
+	} else if (is_string(b)) {
+        if (is_int(a) || is_double(a)) return string_concat(to_string(a), b);
     }
     
     // For now, return nil for unsupported operations
