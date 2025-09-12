@@ -1,0 +1,159 @@
+# Variables in the MiniScript VM
+
+Variables in MiniScript are a bit tricky, because:
+
+1. They can also be accessed via maps (`locals`, `outer`, and `globals`)
+2. Those maps can be passed around, assigned other references, etc.
+3. Any read of a variable without `@` will invoke the function, if the variable happens to refer to one.
+
+MiniScript 2.0 uses a register-based VM, so we want to map variables to registers (i.e. fixed locations on the VM's value stack) and use them with simple, fast opcodes wherever possible.  But we need to maintain the above observable behavior.
+
+This document attempts to develop an approach to making all this work, while maintaining good performance.
+
+## Register Metadata
+
+The VM maintains a stack of Values.  Each call frame gets a section of this stack, which maps to its Register 0, Register 1, ... Register N.  Assembly instructions like `LOAD r1, 42` load a value (42) into a particular slot in this stack (the slot which is Register 1 for the current call frame).
+
+We will need to extend this stack with some extra data for each slot:
+
+1. The **name** of the local variable associated with that slot, if any;
+2. An **assigned flag** indicating whether that variable currently has a value assigned.
+
+When a function is entered, this metadata will be set up according to details in the FuncDef.  Note that every local variable used in the function will get a slot, and thos slots will be named; but initially only the parameters will have their assigned flag set to true.  When an assignment to a local variable is done, the assigned flag will be set (this might be an extra opcode emitted for the assignment statement).
+
+
+## VarMaps
+
+Ordinary maps map (arbitrary) keys to values.  A **VarMap** will be a specialized kind of map (perhaps a subclass) which does that, but also maps some (string) keys to slots on the stack.
+
+When looking up a value by key, a VarMap will first see if this is one of the keys it has mapped to a slot.  If so, then it will return the value in that slot if assigned, or throw a key-not-found error if it is not assigned.  If it's not one of those special keys, then it will behave as an ordinary map.
+
+When storing a value by key, a VarMap will first see if this is one of the keys it has mapped to a slot.  If so, it will store the value directly into that slot on the stack, and set the assigned flag to true.  If not, then it will store it as an ordinary map value.
+
+A VarMap supports a "gather" operation that reads the current values (if they are assigned) of all its special keys, and stores them as ordinary map key/value pairs, clearing out its special keys.  After this operation, the VarMap behaves no different than any ordinary map.
+
+(This is how we will support `locals` and `outer` -- see the situations below.)
+
+
+## Situations (Use Cases)
+
+The following sub-sections each describe a "situation" -- a particular use case involving one or more variables in MiniScript code.  Each will be given a description of the situation (with MiniScript code when possible), a conceptual description of how we can handle it, and (eventually) the VM assembly code that would be used.
+
+The rarity of each case is noted.  We assume that in ordinary code, the common case is to use variables in a simple manner with no special prefixes: `x = y + z`, etc.  Invoking functions is also common (`x = myFunc(y, z)`).  Everything else is rare to some degree.
+
+### Variable assignment (common)
+
+MiniScript code:
+```
+x = 42
+```
+
+#### Concept
+
+The compiler has mapped `x` to some register, let's say **r7**.  In the register metadata, this slot will have a **name** of "x", and the **assigned** flag may or may not be set.  This assignment simply stores the RHS value in the slot, and sets **assigned** to true.
+
+#### Assembly
+
+```
+LOAD r7, 42    # load the value into the register named "x"
+SETASN r7      # set the assigned flag for this slot to true
+```
+
+
+### `@`-protected variable read (rare-ish)
+
+MiniScript code:
+```
+_ = @x
+```
+
+Possibly an ordinary read (e.g. `_ = x`) could fall into this situation too, if by static analysis the compiler could determine that `x` cannot contain a function reference.
+
+#### Concept
+
+The compiler has mapped `x` to some register, let's say **r7**.  In the register metadata, this slot will have a **name** of "x", and the **assigned** flag may or may not be set.  In compiling the expression on the RHS of this example, we would want to get the value of `x` into some temp register, let's say **r13**.  Because of `@` (or if, through some static analysis, we know that `x` cannot hold a function reference), we don't want to invoke any function; we just want to get the value as it is stored.
+
+We can do this directly with a `LOAD` opcode, but that opcode should note that this is a named register, and execute a somewhat longer path.  So `LOAD` will look like:
+
+1. If the source register is not named, use its value as-is.
+2. If it is named, see if its **assigned** flag is set.
+  a. If set, use its value as-is.
+  b. If not set, then look for the same name in the _outer_ stack frame, and then in _globals_.
+  c. Use the value found, or if not found, throw an undefined-identifier error.
+
+#### Assembly
+
+```
+LOAD r13, r7    # get value from r7 (x) into r13 (a temp register)
+```
+
+### Ordinary variable read (common)
+
+MiniScript code:
+```
+_ = x
+```
+
+#### Concept
+
+This is very similar to above, except that in case `x` is a function reference, we want to actually invoke that function (with no parameters) and use the return value.  We'll do this with a special opcode, `LOADC` (load-and-call).  This will go through the same process as `LOAD` (above) to find the value, and if the value found is not a function reference, it stores it in the target register just like `LOAD`.  But if it *is* a function reference, then it invokes that function, and stores the result, similar to a `CALLF` + `LOAD`.
+
+Note that just like CALLF, we have to define how big our stack frame is, and where the invoked function can put its own **r0** (potentially clobbering anything beyond that point in the stack).  That's the `19` in the `LOAD` call above.  Since functions always store their return value in **r0**, from the point of view of this code, it will find that value in **r19**, which `LOADC` then copies into the target register **r13**.
+
+In order to do that copy after the call, the call stack will need to include an extra bit of data that means "upon return to this frame, copy from *srcRegister* to *destRegister*".
+
+#### Assembly
+
+```
+LOADC r13, r7, 19   # get value from r7 (x), copying result from r19 to r13
+```
+
+### Explicit assignment to local via locals (rare-ish)
+
+MiniScript code:
+```
+locals.x = 42
+```
+
+#### Concept
+
+This is actually exactly equivalent to ordinary `x = 42`.  The compiler should just ignore `locals.` in this case and compile it to the same as the common case.
+
+### First use of `locals`
+
+Every stack frame will have a weak reference to a VarMap representing its locals.  In common cases, this VarMap will never be created.
+
+Apart from the above trivial case of assignment to `locals.x`, any other use of the `locals` keyword should see if the current stack frame already has a locals VarMap.  If not, then it will create it on the spot, using the **name** metadata for the current registers.  It then pushes a reference to this map into the temp register representing `locals` in the expression, and proceeds compiling the dot operator as for any other map.
+
+#### Assembly
+
+(in progress)
+
+
+### Explicit variable read via locals (rare)
+
+MiniScript code:
+```
+_ = locals.x
+```
+
+There isn't much reason to write code like this, since if `x` is a local variable, an ordinary reference would find it; and if it's not, then this code would crash with a key-not-found error.
+
+#### Concept
+
+So, we should treat this as first referencing the `locals` VarMap (creating it if necessary), and then doing a lookup in that.
+
+### Passing locals to another function (rare)
+
+### Assignment of outer variable (rare)
+
+### Assignment of global variable (common-ish)
+
+### Read of global variable (common)
+
+### Deleting local variable (rare)
+
+### Deleting outer variable (rare)
+
+### Deleting global variable (rare-ish)
+
