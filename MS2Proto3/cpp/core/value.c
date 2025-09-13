@@ -134,21 +134,8 @@ Value value_div(Value a, Value b) {
         return make_double(da / db);
     // Handle string / number
     } else if (is_string(a) && is_number(b)) {
-        int repeats = 0;
-        int extraChars = 0;
-        double factor = 1 / (is_double(b) ? as_double(b) : (double)as_int(b));
-        int factorClass = fpclassify(factor);
-        if (factorClass == FP_NAN || factorClass == FP_INFINITE) return make_null();
-        if (factorClass <= 0) return make_string("");
-
-        repeats = (int)factor;
-        Value result = make_string("");
-        for (int i = 0; i < repeats; i++) {
-            result = string_concat(result, a);
-        }
-        extraChars = (int)(string_length(a) * (factor - repeats));
-        if (extraChars > 0) result = string_concat(result, string_substring(a, 0, extraChars));
-        return result;
+    	// We'll just call through to value_mult for this, with a factor of 1/b.
+    	return value_mult(a, value_div(make_double(1), b));
     }
     
     // TODO: Handle string concatenation, etc.

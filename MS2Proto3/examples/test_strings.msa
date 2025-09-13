@@ -60,12 +60,28 @@
 	LOAD r0, 0
 	RETURN
 
+@testDiv:
+	# "abcdef" / 2 = "abc"
+	LOAD r0, "String / 2"
+	LOAD r1, "abcdef"
+	LOAD r2, 2
+	DIV r1, r1, r2
+	LOAD r3, "abc"
+	IFNE r1, r3
+	RETURN
+
+	# All good!
+	LOAD r0, 0
+	RETURN
+
 @main:
 	CALLF 0, @testConcat
 	BRTRUE r0, error
 	CALLF 0, @testConcatNumber
 	BRTRUE r0, error
 	CALLF 0, @testMult
+	BRTRUE r0, error
+	CALLF 0, @testDiv
 	BRTRUE r0, error
 	LOAD r0, "✅ All tests passed!"
 	RETURN
