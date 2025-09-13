@@ -253,6 +253,51 @@ Value value_shl(Value v, int shift) {
     }
 }
 
+// Conversion functions
+
+
+// TODO: Consider inlining this.
+// TODO: Add support for lists and maps
+// Using raw C-String
+Value to_string(Value v){
+    char buf[32];
+
+    if (is_string(v)) return v;
+    if (is_double(v)) {
+        double value = as_double(v);
+        if (fmod(value, 1.0) == 0.0) {
+            snprintf(buf, sizeof buf, "%.0f", value);
+            return make_string(buf);
+        } else if (value > 1E10 || value < -1E10 || (value < 1E-6 && value > -1E-6)) {
+            // very large/small numbers in exponential form
+            snprintf(buf, sizeof buf, "%.6E", value);
+            return make_string(buf);
+        } else {
+            // all others in decimal form, with 1-6 digits past the decimal point
+
+            // Old MiniScript 1.0 code:
+                //String s = String::Format(value, "%.6f");
+                //long i = s.LengthB() - 1;
+                //while (i > 1 && s[i] == '0' && s[i-1] != '.') i--;
+                //if (i+1 < s.LengthB()) s = s.SubstringB(0, i+1);
+                //
+            // Converted code:
+            size_t i;
+
+            snprintf(buf, sizeof buf, "%.6f", value);
+            i = strlen(buf) - 1;
+            while (i > 1 && buf[i] == '0' && buf[i-1] != '.') i--;
+            if (i+1 < strlen(buf)) buf[i+1] = '\0';
+            return make_string(buf);
+        }
+    }
+    else if (is_int(v)) {
+        snprintf(buf, sizeof buf, "%d", as_int(v));
+        return make_string(buf);
+    }
+    return make_string("");
+}
+
 // Inspection
 // ToDo: get this into a header somewhere, so it can be inlined
 bool is_truthy(Value v) {

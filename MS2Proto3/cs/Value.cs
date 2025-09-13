@@ -166,9 +166,12 @@ namespace MiniScript {
 				return FromDouble(da + db);
 			}
 			// Handle string concatenation
-			if (a.IsString && b.IsString) {
-				return StringOperations.StringConcat(a, b);
-			}
+			if (a.IsString) {
+                if (b.IsString) return StringOperations.StringConcat(a, b);
+                if (b.IsInt || b.IsDouble) return StringOperations.StringConcat(a, ValueHelpers.make_string(b.ToString()));
+			} else if(b.IsString) {
+                if (a.IsInt || a.IsDouble) return StringOperations.StringConcat(ValueHelpers.make_string(a.ToString()), b);
+            }
 			// string concat, list append, etc. can be added here.
 			return Null();
 		}
@@ -186,6 +189,21 @@ namespace MiniScript {
 				return FromDouble(da * db);
 			}
 			// TODO: String support not added yet!
+
+            // Handle string repetition: string * int or int * string
+            if (a.IsString && b.IsInt) {
+                int count = b.AsInt();
+                if (count <= 0) return FromString("");
+                if (count == 1) return a;
+                
+                // Build repeated string
+                Value result = a;
+                for (int i = 1; i < count; i++) {
+                    result = StringOperations.StringConcat(result, a);
+                }
+                return result;
+                // ToDo: handle fractional b.
+            }
 			// string concat, list append, etc. can be added here.
 			return Null();
 		}
@@ -427,6 +445,10 @@ namespace MiniScript {
 		// Comparison operations (matching value.h)
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool value_equal(Value a, Value b) => Value.Equal(a, b);		
+
+        // Conversion operations (matching value.h)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Value to_string(Value a) => make_string(a.ToString());
 	}
 
 	// A minimal, fast handle table. Stores actual C# objects referenced by Value.
