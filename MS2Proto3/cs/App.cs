@@ -2,14 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;	// only for ToList!
 using MiniScript;
+using static MiniScript.ValueHelpers;
+
 // CPP: #include "UnitTests.g.h"
 // CPP: #include "VM.g.h"
 // CPP: #include "gc.h"
 // CPP: #include "dispatch_macros.h"
+// CPP: #include "VMVis.g.h"
 // CPP: using namespace MiniScript;
 
 public class App {
 	public static bool debugMode = false;
+	public static bool visMode = false;
 	
 	public static void Main(string[] args) {
 		// CPP: gc_init();
@@ -26,6 +30,8 @@ public class App {
 		for (Int32 i = 1; i < argCount; i++) {
 			if (args[i] == "-debug") {
 				debugMode = true;
+			} else if (args[i] == "-vis") {
+				visMode = true;
 			} else if (!args[i].StartsWith("-")) {
 				// First non-switch argument is the assembly file
 				if (fileArgIndex == -1) fileArgIndex = i;
@@ -99,10 +105,23 @@ public class App {
 			
 			// Run the program
 			VM vm = new VM();
-			vm.DebugMode = debugMode;
-			Value result = vm.Run(assembler.Functions);
+			vm.Reset(assembler.Functions);
+			Value result = make_null();
 			
-			IOHelper.Print("VM execution complete. Result in r0:");
+			if (visMode) {
+				VMVis vis = new VMVis(vm);
+				vis.ClearScreen();
+				while (vm.IsRunning) {
+					vis.UpdateDisplay();
+					String cmd = IOHelper.Input("Command: ");
+					vm.Run(1);
+				}
+			} else {
+				vm.DebugMode = debugMode;
+				result = vm.Run();
+			}
+			
+			IOHelper.Print("\nVM execution complete. Result in r0:");
 			IOHelper.Print(StringUtils.Format("\u001b[1;93m{0}\u001b[0m", result)); // (bold bright yellow)
 		}
 		

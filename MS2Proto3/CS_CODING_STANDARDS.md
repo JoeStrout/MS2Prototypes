@@ -18,6 +18,11 @@ A C# property has code for a getter and/or setter.  The closest C++ equivalent w
 
 - Put a **close brace at the start of a line**.  It will usually be the *only* thing on that line, except for something like `} else {` or in a `switch` statement, `} break;`.
 
+## Indentation
+
+- Indent each code block with one **tab character**.  Not spaces.
+
+
 ## No indented blocks without braces
 
 Never, _ever_ do something like this:
