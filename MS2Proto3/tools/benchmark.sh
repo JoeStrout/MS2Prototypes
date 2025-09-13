@@ -29,7 +29,7 @@ verify_result() {
     
     if [[ "$name" == "Iterative Factorial" ]]; then
         # For factorial, accept both full precision and scientific notation
-        if [[ "$actual" == "2.43290200817664E+18" || "$actual" == "2.4329e+18" ]]; then
+        if [[ "$actual" == "2.43290200817664E+18" || "$actual" == "2.4329e+18" || "$actual" == "2432902008176640000" ]]; then
             return 0
         fi
     elif [[ "$actual" == "$expected" ]]; then
@@ -38,14 +38,15 @@ verify_result() {
     return 1
 }
 
+
 EXPECTED_ITER_FIB="832040"                 # fib(30) * 500000 iterations  
 EXPECTED_RECUR_FIB="3524578"              # fib(33)
 
 # Benchmark definitions  
 BENCHMARKS=(
-    "factorial_iterative.msa:Iterative Factorial:unused"
-    "iter_fib.msa:Iterative Fibonacci:$EXPECTED_ITER_FIB" 
-    "recur_fib.msa:Recursive Fibonacci:$EXPECTED_RECUR_FIB"
+    "factorial_iterative:Iterative Factorial:unused"
+    "iter_fib:Iterative Fibonacci:$EXPECTED_ITER_FIB" 
+    "recur_fib:Recursive Fibonacci:$EXPECTED_RECUR_FIB"
 )
 
 # For quick testing, uncomment the line below to run only one benchmark:
@@ -61,11 +62,14 @@ run_benchmark() {
     
     # Run benchmark and capture timing and result
     if [[ "$build_type" == "C#" ]]; then
-        TIME_OUTPUT=$(time (dotnet "$executable" "examples/$benchmark_file" 2>/dev/null) 2>&1)
-        RESULT=$(dotnet "$executable" "examples/$benchmark_file" 2>/dev/null | grep -o "Result in r0:" -A1 | tail -1 | sed 's/\x1b\[[0-9;]*m//g')
+        TIME_OUTPUT=$(time (dotnet "$executable" "examples/$benchmark_file.msa" 2>/dev/null) 2>&1)
+        RESULT=$(dotnet "$executable" "examples/$benchmark_file.msa" 2>/dev/null | grep "Result in r0:" -A1 | tail -1 | sed 's/\x1b\[[0-9;]*m//g')
+    elif [[ "$build_type" == "MiniScript 1.0" ]]; then
+        TIME_OUTPUT=$(time ("$executable" "tools/examples/$benchmark_file.ms" 2>/dev/null) 2>&1)
+        RESULT=$("$executable" "tools/examples/$benchmark_file.ms" 2>/dev/null | grep "Result in r0:" -A1 | tail -1 | sed 's/\x1b\[[0-9;]*m//g')
     else
-        TIME_OUTPUT=$(time ("$executable" "examples/$benchmark_file" 2>/dev/null) 2>&1)
-        RESULT=$("$executable" "examples/$benchmark_file" 2>/dev/null | grep -o "Result in r0:" -A1 | tail -1 | sed 's/\x1b\[[0-9;]*m//g')
+        TIME_OUTPUT=$(time ("$executable" "examples/$benchmark_file.msa" 2>/dev/null) 2>&1)
+        RESULT=$("$executable" "examples/$benchmark_file.msa" 2>/dev/null | grep "Result in r0:" -A1 | tail -1 | sed 's/\x1b\[[0-9;]*m//g')
     fi
     
     # Extract timing information (handle both formats: "real 0m3.072s" or "3.072 total")
@@ -100,6 +104,7 @@ run_benchmark() {
 declare -a CS_TIMES
 declare -a CPP_GOTO_TIMES
 declare -a CPP_SWITCH_TIMES
+declare -a MS_TIMES
 
 echo -e "${BOLD}=== Benchmark Results ===${NC}"
 echo ""
@@ -154,19 +159,32 @@ for i in "${!BENCHMARKS[@]}"; do
 done
 echo ""
 
+# Run all MiniScript benchmarks
+echo -e "${BOLD}Running MiniScript benchmarks...${NC}"
+for i in "${!BENCHMARKS[@]}"; do
+    benchmark_def="${BENCHMARKS[i]}"
+    IFS=':' read -r file name expected <<< "$benchmark_def"
+    
+    echo -e "${BLUE}  $name...${NC}"
+    ms1_time=$(run_benchmark "$file" "$name" "$expected" "MiniScript 1.0" "miniscript")
+    MS1_TIMES+=("$ms1_time")
+done
+echo ""
+
 # Clean markdown-style summary table
 echo -e "${BOLD}=== Performance Summary ===${NC}"
 echo ""
-echo "| Benchmark               | C#        | C++ (switch) | C++ (goto) |"
-echo "|-------------------------|-----------|--------------|------------|"
+echo "| Benchmark               | C#        | C++ (switch) | C++ (goto) | MiniScript 1.0 |"
+echo "|-------------------------|-----------|--------------|------------|----------------|"
 
 for i in "${!BENCHMARKS[@]}"; do
     IFS=':' read -r file name expected <<< "${BENCHMARKS[i]}"
     cs_time="${CS_TIMES[i]}"
     cpp_goto_time="${CPP_GOTO_TIMES[i]}"
     cpp_switch_time="${CPP_SWITCH_TIMES[i]}"
+    ms1_time="${MS1_TIMES[i]}"
     
-    printf "| %-23s | %-9s | %-12s | %-10s |\n" "$name" "${cs_time}s" "${cpp_switch_time}s" "${cpp_goto_time}s"
+    printf "| %-23s | %-9s | %-12s | %-10s | %-14s |\n" "$name" "${cs_time}s" "${cpp_switch_time}s" "${cpp_goto_time}s" "${ms1_time}s"
 done
 
 echo ""
