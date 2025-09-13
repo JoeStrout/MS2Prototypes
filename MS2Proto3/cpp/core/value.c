@@ -256,20 +256,14 @@ Value value_shl(Value v, int shift) {
 // Conversion functions
 
 
-// Note: This is probably the most dangerous function currently in MiniScript as of this date: 9/12/2025.
-// If there is any sign of buffer overflows, this function should be checked, and rechecked -- just because
-// of the nature of working with C-strings. We're copying MiniScript 1.0's implementation and tweaking it
-// a little to be in line with the new MS2Proto3 design.
-// 
-// ~ BC
-//
 // TODO: Consider inlining this.
 // TODO: Add support for lists and maps
+// Using raw C-String
 Value to_string(Value v){
     char buf[32];
 
-    if(is_tiny_string(v) || is_heap_string(v)) return v;
-    if(is_double(v)) {
+    if (is_string(v)) return v;
+    if (is_double(v)) {
         double value = as_double(v);
         if (fmod(value, 1.0) == 0.0) {
             snprintf(buf, sizeof buf, "%.0f", value);
@@ -288,17 +282,16 @@ Value to_string(Value v){
                 //if (i+1 < s.LengthB()) s = s.SubstringB(0, i+1);
                 //
             // Converted code:
-            char *ptr = &buf[0];
             size_t i;
 
             snprintf(buf, sizeof buf, "%.6f", value);
             i = strlen(buf) - 1;
             while (i > 1 && buf[i] == '0' && buf[i-1] != '.') i--;
-            if (i+1 < strlen(buf)) ptr = &buf[i+1];
-            return make_string(ptr);
+            if (i+1 < strlen(buf)) buf[i+1] = '\0';
+            return make_string(buf);
         }
     }
-    else if(is_int(v)) {
+    else if (is_int(v)) {
         snprintf(buf, sizeof buf, "%d", as_int(v));
         return make_string(buf);
     }
