@@ -406,7 +406,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						SByte b = BytecodeUtil.Bs(instruction);
 						SByte offset = BytecodeUtil.Cs(instruction);
-						if value_lt(stack[baseIndex + a], make_int(b))){
+						if (value_lt(stack[baseIndex + a], make_int(b))){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();

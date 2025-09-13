@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <limits.h>
+#include <math.h>
 
 // Debug utilities for Value inspection
 void debug_print_value(Value v) {
@@ -91,7 +92,22 @@ Value value_mult(Value a, Value b) {
             result = string_concat(result, a);
         }
         return result;
-        // ToDo: handle fractional b.
+    } else if (is_string(a) && is_double(b)) {
+        int repeats = 0;
+        int extraChars = 0;
+        double factor = as_double(b);
+        int factorClass = fpclassify(factor);
+        if (factorClass == FP_NAN || factorClass == FP_INFINITE) return make_null();
+        if (factorClass <= 0) return make_string("");
+
+        repeats = (int)factor;
+        Value result = make_string("");
+        for (int i = 0; i < repeats; i++) {
+            result = string_concat(result, a);
+        }
+        extraChars = (int)(string_length(a) * (factor - repeats));
+        if (extraChars > 0) result = string_concat(result, string_substring(a, 0, extraChars));
+        return result;
     }
     
     // For now, return nil for unsupported operations
@@ -116,6 +132,23 @@ Value value_div(Value a, Value b) {
         double da = is_int(a) ? (double)as_int(a) : as_double(a);
         double db = is_int(b) ? (double)as_int(b) : as_double(b);
         return make_double(da / db);
+    // Handle string / number
+    } else if (is_string(a) && is_number(b)) {
+        int repeats = 0;
+        int extraChars = 0;
+        double factor = 1 / (is_double(b) ? as_double(b) : (double)as_int(b));
+        int factorClass = fpclassify(factor);
+        if (factorClass == FP_NAN || factorClass == FP_INFINITE) return make_null();
+        if (factorClass <= 0) return make_string("");
+
+        repeats = (int)factor;
+        Value result = make_string("");
+        for (int i = 0; i < repeats; i++) {
+            result = string_concat(result, a);
+        }
+        extraChars = (int)(string_length(a) * (factor - repeats));
+        if (extraChars > 0) result = string_concat(result, string_substring(a, 0, extraChars));
+        return result;
     }
     
     // TODO: Handle string concatenation, etc.

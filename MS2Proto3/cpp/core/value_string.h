@@ -31,6 +31,7 @@ Value string_concat(Value a, Value b);
 int string_indexOf(Value haystack, Value needle, int start_pos);
 Value string_replace(Value source, Value search, Value replacement);
 Value string_split(Value str, Value delimiter);
+Value string_substring(Value str, int startIndex, int len);
 
 // Zero-copy string data access (for performance-critical operations)
 const char* get_string_data_zerocopy(const Value* v_ptr, int* out_len);
