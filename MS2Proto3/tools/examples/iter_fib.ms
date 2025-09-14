@@ -2,12 +2,7 @@ for i in range (1, 500000)
     n = 30
     answer = 0
 
-    if n < 1 then
-        continue
-    end if
-    if n < 2 then
-        continue
-    end if
+    if n < 2 then continue
 
     a = 0
     b = 1
