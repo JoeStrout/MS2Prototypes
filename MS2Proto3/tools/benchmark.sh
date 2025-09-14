@@ -206,8 +206,8 @@ echo ""
 # Clean markdown-style summary table
 echo -e "${BOLD}=== Performance Summary ===${NC}"
 echo ""
-echo "| Benchmark               | C#        | C++ (switch) | C++ (goto) | MiniScript 1.0 | Python |  Lua  |"
-echo "|-------------------------|-----------|--------------|------------|----------------|--------|-------|"
+echo "| Benchmark               | C#        | C++ (switch) | C++ (goto) |  MS 1.0  |  Python  |   Lua    |"
+echo "|-------------------------|-----------|--------------|------------|----------|----------|----------|"
 
 for i in "${!BENCHMARKS[@]}"; do
     IFS=':' read -r file name expected <<< "${BENCHMARKS[i]}"
@@ -218,7 +218,7 @@ for i in "${!BENCHMARKS[@]}"; do
     py_time="${PY_TIMES[i]}"
     lua_time="${LUA_TIMES[i]}"
     
-    printf "| %-23s | %-9s | %-12s | %-10s | %-14s | %-6s | %-5s |\n" "$name" "${cs_time}s" "${cpp_switch_time}s" "${cpp_goto_time}s" "${ms1_time}s" "${py_time}s" "${lua_time}s"
+    printf "| %-23s | %-9s | %-12s | %-10s | %-8s | %-8s | %-8s |\n" "$name" "${cs_time}s" "${cpp_switch_time}s" "${cpp_goto_time}s" "${ms1_time}s" "${py_time}s" "${lua_time}s"
 done
 
 echo ""
