@@ -114,7 +114,8 @@ public class App {
 				while (vm.IsRunning) {
 					vis.UpdateDisplay();
 					String cmd = IOHelper.Input("Command: ");
-					vm.Run(1);
+					if (!String.IsNullOrEmpty(cmd) && cmd[0] == 'q') return;
+					result = vm.Run(1);
 				}
 			} else {
 				vm.DebugMode = debugMode;

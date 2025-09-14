@@ -47,6 +47,24 @@ namespace MiniScript {
 		public Int32 PC { get { return _pc; } }
 		public FuncDef CurrentFunction { get { return _currentFunc; } }
 		public Boolean IsRunning { get { return _isRunning; } }
+		public Int32 BaseIndex { get { return _baseIndex; } }
+		public Int32 StackSize { get { return stack.Count; } }
+		public Int32 CallStackDepth { get { return callStackTop; } }
+
+		public Value GetStackValue(Int32 index) {
+			if (index < 0 || index >= stack.Count) return make_null();
+			return stack[index];
+		}
+
+		public CallInfo GetCallStackFrame(Int32 index) {
+			if (index < 0 || index >= callStackTop) return new CallInfo(0, 0, -1);
+			return callStack[index];
+		}
+
+		public String GetFunctionName(Int32 funcIndex) {
+			if (funcIndex < 0 || funcIndex >= functions.Count) return "???";
+			return functions[funcIndex].Name;
+		}
 
 		public VM() {
 			InitVM(1024, 256);
@@ -223,7 +241,7 @@ namespace MiniScript {
 						// R[A] = R[B] (equivalent to MOVE)
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
-						stack[_baseIndex + a] = stack[_baseIndex + b];
+						stack[baseIndex + a] = stack[baseIndex + b];
 						break; // CPP: VM_NEXT();
 					}
 
@@ -231,7 +249,7 @@ namespace MiniScript {
 						// R[A] = BC (signed 16-bit immediate as integer)
 						Byte a = BytecodeUtil.Au(instruction);
 						short bc = BytecodeUtil.BCs(instruction);
-						stack[_baseIndex + a] = make_int(bc);
+						stack[baseIndex + a] = make_int(bc);
 						break; // CPP: VM_NEXT();
 					}
 
@@ -239,11 +257,11 @@ namespace MiniScript {
 						// R[A] = constants[BC]
 						Byte a = BytecodeUtil.Au(instruction);
 						UInt16 constIdx = BytecodeUtil.BCu(instruction);
-						if (constIdx >= _currentFunc.Constants.Count) {
+						if (constIdx >= curFunc.Constants.Count) {
 							IOHelper.Print("LOAD_rA_kBC: invalid constant index");
 							return make_null();
 						}
-						stack[_baseIndex + a] = _currentFunc.Constants[constIdx];
+						stack[baseIndex + a] = curFunc.Constants[constIdx];
 						break; // CPP: VM_NEXT();
 					}
 
@@ -252,7 +270,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
-						stack[_baseIndex + a] = value_add(stack[_baseIndex + b], stack[_baseIndex + c]);
+						stack[baseIndex + a] = value_add(stack[baseIndex + b], stack[baseIndex + c]);
 						break; // CPP: VM_NEXT();
 					}
 
@@ -261,7 +279,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
-						stack[_baseIndex + a] = value_sub(stack[_baseIndex + b], stack[_baseIndex + c]);
+						stack[baseIndex + a] = value_sub(stack[baseIndex + b], stack[baseIndex + c]);
 						break; // CPP: VM_NEXT();
 					}
 
@@ -270,7 +288,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
-						stack[_baseIndex + a] = value_mult(stack[_baseIndex + b], stack[_baseIndex + c]);
+						stack[baseIndex + a] = value_mult(stack[baseIndex + b], stack[baseIndex + c]);
 						break; // CPP: VM_NEXT();
 					}
 
@@ -279,7 +297,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
-						stack[_baseIndex + a] = value_div(stack[_baseIndex + b], stack[_baseIndex + c]);
+						stack[baseIndex + a] = value_div(stack[baseIndex + b], stack[baseIndex + c]);
 						break; // CPP: VM_NEXT();
 					}
 
@@ -288,7 +306,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
-						stack[_baseIndex + a] = value_mod(stack[_baseIndex + b], stack[_baseIndex + c]);
+						stack[baseIndex + a] = value_mod(stack[baseIndex + b], stack[baseIndex + c]);
 						break; // CPP: VM_NEXT();
 					}
 
@@ -296,7 +314,7 @@ namespace MiniScript {
 						// R[A] = make_list(BC)
 						Byte a = BytecodeUtil.Au(instruction);
 						Int16 capacity = BytecodeUtil.BCs(instruction);
-						stack[_baseIndex + a] = make_list(capacity);
+						stack[baseIndex + a] = make_list(capacity);
 						break; // CPP: VM_NEXT();
 					}
 
@@ -304,7 +322,7 @@ namespace MiniScript {
 						// list_push(R[A], R[B])
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
-						list_push(stack[_baseIndex + a], stack[_baseIndex + b]);
+						list_push(stack[baseIndex + a], stack[baseIndex + b]);
 						break; // CPP: VM_NEXT();
 					}
 
@@ -313,7 +331,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
-						stack[_baseIndex + a] = list_get(stack[_baseIndex + b], as_int(stack[_baseIndex + c]));
+						stack[baseIndex + a] = list_get(stack[baseIndex + b], as_int(stack[baseIndex + c]));
 						break; // CPP: VM_NEXT();
 					}
 
@@ -322,7 +340,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
-						list_set(stack[_baseIndex + a], as_int(stack[_baseIndex + b]), stack[_baseIndex + c]);
+						list_set(stack[baseIndex + a], as_int(stack[baseIndex + b]), stack[baseIndex + c]);
 						break; // CPP: VM_NEXT();
 					}
 
@@ -339,7 +357,7 @@ namespace MiniScript {
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 
-						stack[_baseIndex + a] = make_int(value_lt(stack[_baseIndex + b], stack[_baseIndex + c]));
+						stack[baseIndex + a] = make_int(value_lt(stack[baseIndex + b], stack[baseIndex + c]));
 						break; // CPP: VM_NEXT();
 					}
 
@@ -349,7 +367,7 @@ namespace MiniScript {
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte c = BytecodeUtil.Cs(instruction);
 						
-						stack[_baseIndex + a] = make_int(value_lt(stack[_baseIndex + b], make_int(c)));
+						stack[baseIndex + a] = make_int(value_lt(stack[baseIndex + b], make_int(c)));
 						break; // CPP: VM_NEXT();
 					}
 
@@ -359,7 +377,7 @@ namespace MiniScript {
 						SByte b = BytecodeUtil.Bs(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 						
-						stack[_baseIndex + a] = make_int(value_lt(make_int(b), stack[_baseIndex + c]));
+						stack[baseIndex + a] = make_int(value_lt(make_int(b), stack[baseIndex + c]));
 						break; // CPP: VM_NEXT();
 					}
 
@@ -369,7 +387,7 @@ namespace MiniScript {
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 
-						stack[_baseIndex + a] = make_int(value_le(stack[_baseIndex + b], stack[_baseIndex + c]));
+						stack[baseIndex + a] = make_int(value_le(stack[baseIndex + b], stack[baseIndex + c]));
 						break; // CPP: VM_NEXT();
 					}
 
@@ -379,7 +397,7 @@ namespace MiniScript {
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte c = BytecodeUtil.Cs(instruction);
 						
-						stack[_baseIndex + a] = make_int(value_le(stack[_baseIndex + b], make_int(c)));
+						stack[baseIndex + a] = make_int(value_le(stack[baseIndex + b], make_int(c)));
 						break; // CPP: VM_NEXT();
 					}
 
@@ -389,7 +407,7 @@ namespace MiniScript {
 						SByte b = BytecodeUtil.Bs(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 						
-						stack[_baseIndex + a] = make_int(value_le(make_int(b), stack[_baseIndex + c]));
+						stack[baseIndex + a] = make_int(value_le(make_int(b), stack[baseIndex + c]));
 						break; // CPP: VM_NEXT();
 					}
 
@@ -399,7 +417,7 @@ namespace MiniScript {
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 
-						stack[_baseIndex + a] = make_int(value_equal(stack[_baseIndex + b], stack[_baseIndex + c]));
+						stack[baseIndex + a] = make_int(value_equal(stack[baseIndex + b], stack[baseIndex + c]));
 						break; // CPP: VM_NEXT();
 					}
 
@@ -409,7 +427,7 @@ namespace MiniScript {
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte c = BytecodeUtil.Cs(instruction);
 						
-						stack[_baseIndex + a] = make_int(value_equal(stack[_baseIndex + b], make_int(c)));
+						stack[baseIndex + a] = make_int(value_equal(stack[baseIndex + b], make_int(c)));
 						break; // CPP: VM_NEXT();
 					}
 
@@ -419,7 +437,7 @@ namespace MiniScript {
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 
-						stack[_baseIndex + a] = make_int(!value_equal(stack[_baseIndex + b], stack[_baseIndex + c]));
+						stack[baseIndex + a] = make_int(!value_equal(stack[baseIndex + b], stack[baseIndex + c]));
 						break; // CPP: VM_NEXT();
 					}
 
@@ -429,14 +447,14 @@ namespace MiniScript {
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte c = BytecodeUtil.Cs(instruction);
 						
-						stack[_baseIndex + a] = make_int(!value_equal(stack[_baseIndex + b], make_int(c)));
+						stack[baseIndex + a] = make_int(!value_equal(stack[baseIndex + b], make_int(c)));
 						break; // CPP: VM_NEXT();
 					}
 
 					case Opcode.BRTRUE_rA_iBC: { // CPP: VM_CASE(BRTRUE_rA_iBC) {
 						Byte a = BytecodeUtil.Au(instruction);
 						Int32 offset = BytecodeUtil.BCs(instruction);
-						if (is_truthy(stack[_baseIndex + a])){
+						if (is_truthy(stack[baseIndex + a])){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();
@@ -445,7 +463,7 @@ namespace MiniScript {
 					case Opcode.BRFALSE_rA_iBC: { // CPP: VM_CASE(BRFALSE_rA_iBC) {
 						Byte a = BytecodeUtil.Au(instruction);
 						Int32 offset = BytecodeUtil.BCs(instruction);
-						if (!is_truthy(stack[_baseIndex + a])){
+						if (!is_truthy(stack[baseIndex + a])){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();
@@ -456,7 +474,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte offset = BytecodeUtil.Cs(instruction);
-						if (value_lt(stack[_baseIndex + a], stack[_baseIndex + b])){
+						if (value_lt(stack[baseIndex + a], stack[baseIndex + b])){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();
@@ -467,7 +485,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						SByte b = BytecodeUtil.Bs(instruction);
 						SByte offset = BytecodeUtil.Cs(instruction);
-						if (value_lt(stack[_baseIndex + a], make_int(b))){
+						if (value_lt(stack[baseIndex + a], make_int(b))){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();
@@ -478,7 +496,7 @@ namespace MiniScript {
 						SByte a = BytecodeUtil.As(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte offset = BytecodeUtil.Cs(instruction);
-						if (value_lt(make_int(a), stack[_baseIndex + b])){
+						if (value_lt(make_int(a), stack[baseIndex + b])){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();
@@ -489,7 +507,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte offset = BytecodeUtil.Cs(instruction);
-						if (value_le(stack[_baseIndex + a], stack[_baseIndex + b])){
+						if (value_le(stack[baseIndex + a], stack[baseIndex + b])){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();
@@ -500,7 +518,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						SByte b = BytecodeUtil.Bs(instruction);
 						SByte offset = BytecodeUtil.Cs(instruction);
-						if (value_le(stack[_baseIndex + a], make_int(b))){
+						if (value_le(stack[baseIndex + a], make_int(b))){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();
@@ -511,7 +529,7 @@ namespace MiniScript {
 						SByte a = BytecodeUtil.As(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte offset = BytecodeUtil.Cs(instruction);
-						if (value_le(make_int(a), stack[_baseIndex + b])){
+						if (value_le(make_int(a), stack[baseIndex + b])){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();
@@ -522,7 +540,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte offset = BytecodeUtil.Cs(instruction);
-						if (value_equal(stack[_baseIndex + a], stack[_baseIndex + b])){
+						if (value_equal(stack[baseIndex + a], stack[baseIndex + b])){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();
@@ -533,7 +551,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						SByte b = BytecodeUtil.Bs(instruction);
 						SByte offset = BytecodeUtil.Cs(instruction);
-						if (value_equal(stack[_baseIndex + a], make_int(b))){
+						if (value_equal(stack[baseIndex + a], make_int(b))){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();
@@ -544,7 +562,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte offset = BytecodeUtil.Cs(instruction);
-						if (!value_equal(stack[_baseIndex + a], stack[_baseIndex + b])){
+						if (!value_equal(stack[baseIndex + a], stack[baseIndex + b])){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();
@@ -555,7 +573,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						SByte b = BytecodeUtil.Bs(instruction);
 						SByte offset = BytecodeUtil.Cs(instruction);
-						if (!value_equal(stack[_baseIndex + a], make_int(b))){
+						if (!value_equal(stack[baseIndex + a], make_int(b))){
 							pc += offset;
 						}
 						break; // CPP: VM_NEXT();
@@ -565,7 +583,7 @@ namespace MiniScript {
 						// if R[A] < R[B] is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
-						if (!value_lt(stack[_baseIndex + a], stack[_baseIndex + b])) {
+						if (!value_lt(stack[baseIndex + a], stack[baseIndex + b])) {
 							pc++; // Skip next instruction
 						}
 						break; // CPP: VM_NEXT();
@@ -575,7 +593,7 @@ namespace MiniScript {
 						// if R[A] < BC (immediate) is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						short bc = BytecodeUtil.BCs(instruction);
-						if (!value_lt(stack[_baseIndex + a], make_int(bc))) {
+						if (!value_lt(stack[baseIndex + a], make_int(bc))) {
 							pc++; // Skip next instruction
 						}
 						break; // CPP: VM_NEXT();
@@ -585,7 +603,7 @@ namespace MiniScript {
 						// if AB (immediate) < R[C] is false, skip next instruction
 						short ab = BytecodeUtil.ABs(instruction);
                         Byte c = BytecodeUtil.Cu(instruction);
-						if (!value_lt(make_int(ab), stack[_baseIndex + c])) {
+						if (!value_lt(make_int(ab), stack[baseIndex + c])) {
 							pc++; // Skip next instruction
 						}
 						break; // CPP: VM_NEXT();
@@ -595,7 +613,7 @@ namespace MiniScript {
 						// if R[A] <= R[B] is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
-						if (!value_le(stack[_baseIndex + a], stack[_baseIndex + b])) {
+						if (!value_le(stack[baseIndex + a], stack[baseIndex + b])) {
 							pc++; // Skip next instruction
 						}
 						break; // CPP: VM_NEXT();
@@ -605,7 +623,7 @@ namespace MiniScript {
 						// if R[A] <= BC (immediate) is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						short bc = BytecodeUtil.BCs(instruction);
-						if (!value_le(stack[_baseIndex + a], make_int(bc))) {
+						if (!value_le(stack[baseIndex + a], make_int(bc))) {
 							pc++; // Skip next instruction
 						}
 						break; // CPP: VM_NEXT();
@@ -615,7 +633,7 @@ namespace MiniScript {
 						// if AB (immediate) <= R[C] is false, skip next instruction
 						short ab = BytecodeUtil.ABs(instruction);
                         Byte c = BytecodeUtil.Cu(instruction);
-						if (!value_le(make_int(ab), stack[_baseIndex + c])) {
+						if (!value_le(make_int(ab), stack[baseIndex + c])) {
 							pc++; // Skip next instruction
 						}
 						break; // CPP: VM_NEXT();
@@ -625,7 +643,7 @@ namespace MiniScript {
 						// if R[A] == R[B] is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
-						if (!value_equal(stack[_baseIndex + a], stack[_baseIndex + b])) {
+						if (!value_equal(stack[baseIndex + a], stack[baseIndex + b])) {
 							pc++; // Skip next instruction
 						}
 						break; // CPP: VM_NEXT();
@@ -635,7 +653,7 @@ namespace MiniScript {
 						// if R[A] == BC (immediate) is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						short bc = BytecodeUtil.BCs(instruction);
-						if (!value_equal(stack[_baseIndex + a], make_int(bc))) {
+						if (!value_equal(stack[baseIndex + a], make_int(bc))) {
 							pc++; // Skip next instruction
 						}
 						break; // CPP: VM_NEXT();
@@ -645,7 +663,7 @@ namespace MiniScript {
 						// if R[A] != R[B] is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
-						if (value_equal(stack[_baseIndex + a], stack[_baseIndex + b])) {
+						if (value_equal(stack[baseIndex + a], stack[baseIndex + b])) {
 							pc++; // Skip next instruction
 						}
 						break; // CPP: VM_NEXT();
@@ -655,7 +673,7 @@ namespace MiniScript {
 						// if R[A] != BC (immediate) is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						short bc = BytecodeUtil.BCs(instruction);
-						if (value_equal(stack[_baseIndex + a], make_int(bc))) {
+						if (value_equal(stack[baseIndex + a], make_int(bc))) {
 							pc++; // Skip next instruction
 						}
 						break; // CPP: VM_NEXT();

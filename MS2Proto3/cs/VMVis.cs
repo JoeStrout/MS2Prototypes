@@ -1,5 +1,7 @@
 using System;
 
+using static MiniScript.ValueHelpers;
+
 /*** BEGIN CPP_ONLY ***
 #include "StringUtils.g.h"
 #ifdef _WIN32
@@ -25,6 +27,8 @@ namespace MiniScript {
 		
 		private const String CursorHome = Esc + "[f";
 		private const Int32 CodeDisplayColumn = 0;
+		private const Int32 RegisterDisplayColumn = 35;
+		private const Int32 CallStackDisplayColumn = 70;
 
 		private Int32 _screenWidth;
 		private Int32 _screenHeight;
@@ -113,9 +117,118 @@ namespace MiniScript {
 				Write(StringUtils.SpacePad("", 32));
 			}
 		}
-		
+
+		private String GetValueTypeCode(Value v) {
+			if (is_null(v)) return "nul";
+			if (is_int(v)) return "int";
+			if (is_double(v)) return "dbl";
+			if (is_string(v)) return "str";
+			return "unk";
+		}
+
+		private String GetValueDisplayString(Value v) {
+			if (is_null(v)) return "";
+			return v.ToString();
+		}
+
+		private void DrawRegisters() {
+			if (!_vm.IsRunning) return;
+
+			// Draw header
+			GoTo(RegisterDisplayColumn + 1, 1);
+			Write(StringUtils.SpacePad(Bold + "Registers" + Normal, 20));
+
+			// Get current base index
+			Int32 baseIndex = _vm.BaseIndex;
+			Int32 stackSize = _vm.StackSize;
+
+			// Calculate display range: r7 down to r0, then below baseIndex
+			Int32 topRegister = baseIndex + 7;
+			Int32 bottomIndex = Math.Min(stackSize - 1, baseIndex + (_screenHeight - 4) - 8);
+
+			Int32 displayRow = 2;
+			Int32 totalRegLines = _screenHeight - 4;
+
+			// Draw r7 down to r0
+			for (Int32 reg = 7; reg >= 0 && displayRow <= totalRegLines + 1; reg--) {
+				Int32 stackIndex = baseIndex + reg;
+				if (stackIndex < stackSize) {
+					Value val = _vm.GetStackValue(stackIndex);
+					String typeCode = GetValueTypeCode(val);
+					String valueStr = GetValueDisplayString(val);
+					String label = "r" + reg + " ";
+					String line = label + Dim + typeCode + Normal + " " +
+					  StringUtils.SpacePad(valueStr, 24);
+
+					GoTo(RegisterDisplayColumn + 1, displayRow);
+					Write(StringUtils.SpacePad(line, 32));
+				}
+				displayRow++;
+			}
+
+			// Draw stack entries below baseIndex
+			for (Int32 i = baseIndex - 1; i >= 0 && displayRow <= totalRegLines + 1; i--) {
+				Value val = _vm.GetStackValue(i);
+				String typeCode = GetValueTypeCode(val);
+				String valueStr = GetValueDisplayString(val);
+				String label = "   ";  // unlabeled
+				String line = label + Dim + typeCode + Normal + " " +
+					  StringUtils.SpacePad(valueStr, 24);
+
+				GoTo(RegisterDisplayColumn + 1, displayRow);
+				Write(StringUtils.SpacePad(line, 32));
+				displayRow++;
+			}
+
+			// Clear remaining lines
+			for (Int32 i = displayRow; i <= totalRegLines + 1; i++) {
+				GoTo(RegisterDisplayColumn + 1, i);
+				Write(StringUtils.SpacePad("", 20));
+			}
+		}
+
+		private void DrawCallStack() {
+			if (!_vm.IsRunning) return;
+
+			// Draw header
+			GoTo(CallStackDisplayColumn + 1, 1);
+			Write(StringUtils.SpacePad(Bold + "Call Stack" + Normal, 20));
+
+			Int32 displayRow = 2;
+			Int32 maxRows = _screenHeight - 3;
+
+			// Show current function at top
+			if (_vm.CurrentFunction != null) {
+				String currentFunc = "* " + _vm.CurrentFunction.Name;
+				GoTo(CallStackDisplayColumn + 1, displayRow);
+				Write(StringUtils.SpacePad(currentFunc, 20));
+				displayRow++;
+			}
+
+			// Show call stack frames (most recent first)
+			Int32 callDepth = _vm.CallStackDepth;
+			for (Int32 i = callDepth - 1; i >= 0 && displayRow <= maxRows; i--) {
+				CallInfo frame = _vm.GetCallStackFrame(i);
+				String funcName = _vm.GetFunctionName(frame.ReturnFuncIndex);
+				String prefix = "  "; // indent to show stack depth
+				String line = prefix + funcName + ":" + StringUtils.ZeroPad(frame.ReturnPC, 3);
+
+				GoTo(CallStackDisplayColumn + 1, displayRow);
+				Write(StringUtils.SpacePad(line, 20));
+				displayRow++;
+			}
+
+			// Clear remaining lines
+			for (Int32 i = displayRow; i <= maxRows; i++) {
+				GoTo(CallStackDisplayColumn + 1, i);
+				Write(StringUtils.SpacePad("", 20));
+			}
+		}
+
 		public void UpdateDisplay() {
 			DrawCodeDisplay();
+			DrawRegisters();
+			DrawCallStack();
 			GoTo(1, _screenHeight - 2);
 		}
 	}
