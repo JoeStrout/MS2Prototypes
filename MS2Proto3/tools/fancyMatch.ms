@@ -21,6 +21,7 @@ isWholeWord = function(str, startPos, endPos)
 	// possibly including a parameterized type.
 	gotLT = false
 	gotGT = false
+	if str.len > 1 and str[-1] == "&" then endPos -= 1
 	for c in str[startPos:endPos]
 		if c == "<" and not gotLT then
 			gotLT = true

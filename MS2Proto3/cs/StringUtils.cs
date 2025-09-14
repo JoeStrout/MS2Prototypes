@@ -44,10 +44,9 @@ namespace MiniScript {
 
 		public static String SpacePad(String text, Int32 width) {
 			if (text == null) text = "";
-			if (text.Length >= width) {
-				return text.Substring(0, width); // CPP: return text.substr(0, width);
-			}
-			return text + new String(' ', width - text.Length); // CPP: return text + String(width - text.length(), ' ');
+			String spaces = "                             ";
+			while (text.Length < width) text += spaces;
+			return text.Substring(0, width);
 		}
 		
 		public static String Str(List<String> list) {

@@ -37,19 +37,17 @@ namespace MiniScript {
 		private List<FuncDef> functions; // functions addressed by CALLF
 
 		// Execution state (persistent across RunSteps calls)
-		private Int32 _pc = 0;
-		private Int32 _baseIndex = 0;
+		public Int32 PC { get; private set; }
 		private Int32 _currentFuncIndex = -1;
-		private FuncDef _currentFunc = null;
-		private Boolean _isRunning = false;
-
-		// Public accessors for visualization
-		public Int32 PC { get { return _pc; } }
-		public FuncDef CurrentFunction { get { return _currentFunc; } }
-		public Boolean IsRunning { get { return _isRunning; } }
-		public Int32 BaseIndex { get { return _baseIndex; } }
-		public Int32 StackSize { get { return stack.Count; } }
-		public Int32 CallStackDepth { get { return callStackTop; } }
+		public FuncDef CurrentFunction { get; private set; }
+		public Boolean IsRunning { get; private set; }
+		public Int32 BaseIndex { get; private set; }
+		public Int32 StackSize() {
+			return stack.Count;
+		}
+		public Int32 CallStackDepth() {
+			return callStackTop;
+		}
 
 		public Value GetStackValue(Int32 index) {
 			if (index < 0 || index >= stack.Count) return make_null();
@@ -120,14 +118,14 @@ namespace MiniScript {
 
 		public void Reset(List<FuncDef> allFunctions) {
 			// Store all functions for CALLF instructions, and find @main
-			FuncDef mainFunc = null;
+			FuncDef mainFunc = null; // CPP: FuncDef mainFunc;
 			functions.Clear();
 			for (Int32 i = 0; i < allFunctions.Count; i++) {
 				functions.Add(allFunctions[i]);
 				if (functions[i].Name == "@main") mainFunc = functions[i];
 			}
 
-			if (mainFunc == null) {
+			if (!mainFunc) {
 				IOHelper.Print("ERROR: No @main function found in VM.Reset");
 				return;
 			}
@@ -148,13 +146,13 @@ namespace MiniScript {
 			}
 
 			// Initialize execution state
-			_baseIndex = 0;			  // entry executes at stack base
-			_pc = 0;				 // start at entry code
-			_currentFunc = mainFunc; // CPP: FuncDef& curFunc = entry;
-			_isRunning = true;
+			BaseIndex = 0;			  // entry executes at stack base
+			PC = 0;				 // start at entry code
+			CurrentFunction = mainFunc;
+			IsRunning = true;
 			callStackTop = 0;
 
-			EnsureFrame(_baseIndex, _currentFunc.MaxRegs);
+			EnsureFrame(BaseIndex, CurrentFunction.MaxRegs);
 
 			if (DebugMode) {
 				IOHelper.Print(StringUtils.Format("VM Reset: Executing {0} out of {1} functions", mainFunc.Name, functions.Count));
@@ -174,15 +172,15 @@ namespace MiniScript {
 		}
 
 		public Value Run(UInt32 maxCycles=0) {
-			if (!_isRunning || _currentFunc == null) {
+			if (!IsRunning || !CurrentFunction) {
 				return make_null();
 			}
 
 			// Copy instance variables to locals for performance
-			Int32 pc = _pc;
-			Int32 baseIndex = _baseIndex;
+			Int32 pc = PC;
+			Int32 baseIndex = BaseIndex;
 			Int32 currentFuncIndex = _currentFuncIndex;
-			FuncDef curFunc = _currentFunc;
+			FuncDef curFunc = CurrentFunction;
 			UInt32 cycleCount = 0;
 
 /*** BEGIN CPP_ONLY ***
@@ -194,26 +192,26 @@ namespace MiniScript {
 #endif
 *** END CPP_ONLY ***/
 
-			while (_isRunning) {
+			while (IsRunning) {
 				// CPP: VM_DISPATCH_TOP();
 				cycleCount++;
 				if (maxCycles > 0 && cycleCount > maxCycles) {
 					// Update instance variables before returning
-					_pc = pc;
-					_baseIndex = baseIndex;
+					PC = pc;
+					BaseIndex = baseIndex;
 					_currentFuncIndex = currentFuncIndex;
-					_currentFunc = curFunc;
+					CurrentFunction = curFunc;
 					return make_null();
 				}
 
 				if (pc >= curFunc.Code.Count) {
 					IOHelper.Print("VM: PC out of bounds");
-					_isRunning = false;
+					IsRunning = false;
 					// Update instance variables before returning
-					_pc = pc;
-					_baseIndex = baseIndex;
+					PC = pc;
+					BaseIndex = baseIndex;
 					_currentFuncIndex = currentFuncIndex;
-					_currentFunc = curFunc;
+					CurrentFunction = curFunc;
 					return make_null();
 				}
 
@@ -713,12 +711,12 @@ namespace MiniScript {
 					case Opcode.RETURN: { // CPP: VM_CASE(RETURN) {
 						// Return value convention: value is in base[0]
 						if (callStackTop == 0) {
-							// Returning from main function: update instance vars and set _isRunning = false
-							_pc = pc;
-							_baseIndex = baseIndex;
+							// Returning from main function: update instance vars and set IsRunning = false
+							PC = pc;
+							BaseIndex = baseIndex;
 							_currentFuncIndex = currentFuncIndex;
-							_currentFunc = curFunc;
-							_isRunning = false;
+							CurrentFunction = curFunc;
+							IsRunning = false;
 							return stack[baseIndex];
 						}
 
@@ -737,20 +735,20 @@ namespace MiniScript {
 					default:
 						IOHelper.Print("Unknown opcode");
 						// Update instance variables before returning
-						_pc = pc;
-						_baseIndex = baseIndex;
+						PC = pc;
+						BaseIndex = baseIndex;
 						_currentFuncIndex = currentFuncIndex;
-						_currentFunc = curFunc;
+						CurrentFunction = curFunc;
 						return make_null();
 				}
 //*** END CS_ONLY ***
 			}
 
 			// Update instance variables after loop exit (shouldn't normally reach here)
-			_pc = pc;
-			_baseIndex = baseIndex;
+			PC = pc;
+			BaseIndex = baseIndex;
 			_currentFuncIndex = currentFuncIndex;
-			_currentFunc = curFunc;
+			CurrentFunction = curFunc;
 			return make_null();
 		}
 

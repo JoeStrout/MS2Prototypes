@@ -1,6 +1,12 @@
 using System;
-
 using static MiniScript.ValueHelpers;
+// CPP: #include "value.h"
+// CPP: #include "value_list.h"
+// CPP: #include "Bytecode.g.h"
+// CPP: #include "IOHelper.g.h"
+// CPP: #include "VM.g.h"
+// CPP: #include "StringUtils.g.h"
+// CPP: #include "CS_Math.h"
 
 /*** BEGIN CPP_ONLY ***
 #include "StringUtils.g.h"
@@ -56,8 +62,8 @@ namespace MiniScript {
 			#else
 				struct winsize w;
 				ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-				_screenWidth = w.ws_row;
-				_screenHeight = w.ws_col;
+				_screenWidth = w.ws_col;
+				_screenHeight = w.ws_row;
 			#endif
 			*** END CPP_ONLY ***/
 		}
@@ -84,9 +90,9 @@ namespace MiniScript {
 		}
 
 		private void DrawCodeDisplay() {
-			if (_vm.CurrentFunction == null) return;
+			if (_vm.CurrentFunction == null) return;  // CPP:
 
-			FuncDef func = _vm.CurrentFunction;
+			FuncDef func = _vm.CurrentFunction; // CPP: FuncDef& func = _vm.CurrentFunction;
 			Int32 pc = _vm.PC;
 
 			// Draw function name header
@@ -114,7 +120,7 @@ namespace MiniScript {
 			Int32 linesDrawn = endLine - startLine + 1;
 			for (Int32 i = linesDrawn; i < totalCodeLines; i++) {
 				GoTo(CodeDisplayColumn + 1, i + 2);
-				Write(StringUtils.SpacePad("", 32));
+				Write("                                ");
 			}
 		}
 
@@ -123,12 +129,14 @@ namespace MiniScript {
 			if (is_int(v)) return "int";
 			if (is_double(v)) return "dbl";
 			if (is_string(v)) return "str";
+			if (is_list(v)) return "lst";
+			if (is_map(v)) return "map";
 			return "unk";
 		}
 
 		private String GetValueDisplayString(Value v) {
 			if (is_null(v)) return "";
-			return v.ToString();
+			return StringUtils.Format("{0}", v);
 		}
 
 		private void DrawRegisters() {
@@ -140,11 +148,11 @@ namespace MiniScript {
 
 			// Get current base index
 			Int32 baseIndex = _vm.BaseIndex;
-			Int32 stackSize = _vm.StackSize;
+			Int32 stackSize = _vm.StackSize();
 
 			// Calculate display range: r7 down to r0, then below baseIndex
-			Int32 topRegister = baseIndex + 7;
-			Int32 bottomIndex = Math.Min(stackSize - 1, baseIndex + (_screenHeight - 4) - 8);
+			//Int32 topRegister = baseIndex + 7;
+			//Int32 bottomIndex = Math.Min(stackSize - 1, baseIndex + (_screenHeight - 4) - 8);
 
 			Int32 displayRow = 2;
 			Int32 totalRegLines = _screenHeight - 4;
@@ -156,7 +164,7 @@ namespace MiniScript {
 					Value val = _vm.GetStackValue(stackIndex);
 					String typeCode = GetValueTypeCode(val);
 					String valueStr = GetValueDisplayString(val);
-					String label = "r" + reg + " ";
+					String label = StringUtils.Format("r{0} ", reg);
 					String line = label + Dim + typeCode + Normal + " " +
 					  StringUtils.SpacePad(valueStr, 24);
 
@@ -183,7 +191,7 @@ namespace MiniScript {
 			// Clear remaining lines
 			for (Int32 i = displayRow; i <= totalRegLines + 1; i++) {
 				GoTo(RegisterDisplayColumn + 1, i);
-				Write(StringUtils.SpacePad("", 20));
+				Write("                    ");
 			}
 		}
 
@@ -198,7 +206,7 @@ namespace MiniScript {
 			Int32 maxRows = _screenHeight - 3;
 
 			// Show current function at top
-			if (_vm.CurrentFunction != null) {
+			if (_vm.CurrentFunction) {
 				String currentFunc = "* " + _vm.CurrentFunction.Name;
 				GoTo(CallStackDisplayColumn + 1, displayRow);
 				Write(StringUtils.SpacePad(currentFunc, 20));
@@ -206,7 +214,7 @@ namespace MiniScript {
 			}
 
 			// Show call stack frames (most recent first)
-			Int32 callDepth = _vm.CallStackDepth;
+			Int32 callDepth = _vm.CallStackDepth();
 			for (Int32 i = callDepth - 1; i >= 0 && displayRow <= maxRows; i--) {
 				CallInfo frame = _vm.GetCallStackFrame(i);
 				String funcName = _vm.GetFunctionName(frame.ReturnFuncIndex);

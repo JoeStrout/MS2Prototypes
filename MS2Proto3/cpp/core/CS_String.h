@@ -82,9 +82,23 @@ public:
         const StringStorage* s1 = getStorage();
         const StringStorage* s2 = other.getStorage();
         if (!s1 || !s2) return String();
-        
+
         StringStorage* result = ss_concat(s1, s2, StringPool::poolAllocator);
         return fromStorage(result, poolNum);
+    }
+
+    // String concatenation assignment
+    String& operator+=(const String& other) {
+        const StringStorage* s1 = getStorage();
+        const StringStorage* s2 = other.getStorage();
+        if (!s1 || !s2) return *this;
+
+        StringStorage* result = ss_concat(s1, s2, StringPool::poolAllocator);
+        if (result) {
+            index = StringPool::internString(poolNum, ss_getCString(result));
+            ss_destroy(result);
+        }
+        return *this;
     }
     
     // Comparison
@@ -371,7 +385,7 @@ public:
     }
     
     // C# String API - Static methods (as regular methods)
-    bool IsNullOrEmpty() const { return Length() == 0; }
+    static bool IsNullOrEmpty(const String& s) { return s.Length() == 0; }
     
     bool IsNullOrWhiteSpace() const {
         const StringStorage* s = getStorage();
@@ -492,7 +506,14 @@ public:
     // Access to pool info (for debugging/advanced use)
     uint8_t getPoolNum() const { return poolNum; }
     uint16_t getIndex() const { return index; }
-    const StringStorage* getStorage() const { 
-        return StringPool::getStorage(poolNum, index); 
+    const StringStorage* getStorage() const {
+        return StringPool::getStorage(poolNum, index);
     }
 };
+
+// Free function: C string + String concatenation
+inline String operator+(const char* lhs, const String& rhs) {
+    if (!lhs) return rhs;
+    String temp(lhs, rhs.getPoolNum());
+    return temp + rhs;
+}

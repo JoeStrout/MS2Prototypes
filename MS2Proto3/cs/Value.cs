@@ -424,6 +424,12 @@ namespace MiniScript {
 		public static bool is_string(Value v) => v.IsString;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool is_map(Value v) => v.IsMap;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool is_list(Value v) => v.IsList;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool is_tiny_string(Value v) => v.IsTiny;
 		
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]

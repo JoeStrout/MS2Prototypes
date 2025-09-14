@@ -36,7 +36,7 @@ Converter.cppOnly = false // when true, output only to cppLines
 
 Converter.Make = function
 	noob = new self
-	noob.classNames = ["IOHelper", "String", "List<string>"]
+	noob.classNames = ["IOHelper", "String", "Math", "List<string>"]
 	return noob
 end function
 
