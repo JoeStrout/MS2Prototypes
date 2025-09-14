@@ -67,6 +67,12 @@ run_benchmark() {
     elif [[ "$build_type" == "MiniScript 1.0" ]]; then
         TIME_OUTPUT=$(time ("$executable" "tools/examples/$benchmark_file.ms" 2>/dev/null) 2>&1)
         RESULT=$("$executable" "tools/examples/$benchmark_file.ms" 2>/dev/null | grep "Result in r0:" -A1 | tail -1 | sed 's/\x1b\[[0-9;]*m//g')
+    elif [[ "$build_type" == "Python" ]]; then
+        TIME_OUTPUT=$(time ("$executable" "tools/examples/$benchmark_file.py" 2>/dev/null) 2>&1)
+        RESULT=$("$executable" "tools/examples/$benchmark_file.py" 2>/dev/null | grep "Result in r0:" -A1 | tail -1 | sed 's/\x1b\[[0-9;]*m//g')
+    elif [[ "$build_type" == "Lua" ]]; then
+        TIME_OUTPUT=$(time ("$executable" "tools/examples/$benchmark_file.lua" 2>/dev/null) 2>&1)
+        RESULT=$("$executable" "tools/examples/$benchmark_file.lua" 2>/dev/null | grep "Result in r0:" -A1 | tail -1 | sed 's/\x1b\[[0-9;]*m//g')
     else
         TIME_OUTPUT=$(time ("$executable" "examples/$benchmark_file.msa" 2>/dev/null) 2>&1)
         RESULT=$("$executable" "examples/$benchmark_file.msa" 2>/dev/null | grep "Result in r0:" -A1 | tail -1 | sed 's/\x1b\[[0-9;]*m//g')
@@ -105,6 +111,8 @@ declare -a CS_TIMES
 declare -a CPP_GOTO_TIMES
 declare -a CPP_SWITCH_TIMES
 declare -a MS_TIMES
+declare -a PY_TIMES
+declare -a LUA_TIMES
 
 echo -e "${BOLD}=== Benchmark Results ===${NC}"
 echo ""
@@ -171,11 +179,35 @@ for i in "${!BENCHMARKS[@]}"; do
 done
 echo ""
 
+# Run all Python benchmarks
+echo -e "${BOLD}Running Python benchmarks...${NC}"
+for i in "${!BENCHMARKS[@]}"; do
+    benchmark_def="${BENCHMARKS[i]}"
+    IFS=':' read -r file name expected <<< "$benchmark_def"
+    
+    echo -e "${BLUE}  $name...${NC}"
+    py_time=$(run_benchmark "$file" "$name" "$expected" "Python" "python")
+    PY_TIMES+=("$py_time")
+done
+echo ""
+
+# Run all Lua benchmarks
+echo -e "${BOLD}Running Lua benchmarks...${NC}"
+for i in "${!BENCHMARKS[@]}"; do
+    benchmark_def="${BENCHMARKS[i]}"
+    IFS=':' read -r file name expected <<< "$benchmark_def"
+    
+    echo -e "${BLUE}  $name...${NC}"
+    lua_time=$(run_benchmark "$file" "$name" "$expected" "Lua" "lua")
+    LUA_TIMES+=("$lua_time")
+done
+echo ""
+
 # Clean markdown-style summary table
 echo -e "${BOLD}=== Performance Summary ===${NC}"
 echo ""
-echo "| Benchmark               | C#        | C++ (switch) | C++ (goto) | MiniScript 1.0 |"
-echo "|-------------------------|-----------|--------------|------------|----------------|"
+echo "| Benchmark               | C#        | C++ (switch) | C++ (goto) | MiniScript 1.0 | Python |  Lua  |"
+echo "|-------------------------|-----------|--------------|------------|----------------|--------|-------|"
 
 for i in "${!BENCHMARKS[@]}"; do
     IFS=':' read -r file name expected <<< "${BENCHMARKS[i]}"
@@ -183,8 +215,10 @@ for i in "${!BENCHMARKS[@]}"; do
     cpp_goto_time="${CPP_GOTO_TIMES[i]}"
     cpp_switch_time="${CPP_SWITCH_TIMES[i]}"
     ms1_time="${MS1_TIMES[i]}"
+    py_time="${PY_TIMES[i]}"
+    lua_time="${LUA_TIMES[i]}"
     
-    printf "| %-23s | %-9s | %-12s | %-10s | %-14s |\n" "$name" "${cs_time}s" "${cpp_switch_time}s" "${cpp_goto_time}s" "${ms1_time}s"
+    printf "| %-23s | %-9s | %-12s | %-10s | %-14s | %-6s | %-5s |\n" "$name" "${cs_time}s" "${cpp_switch_time}s" "${cpp_goto_time}s" "${ms1_time}s" "${py_time}s" "${lua_time}s"
 done
 
 echo ""
