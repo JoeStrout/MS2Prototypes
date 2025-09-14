@@ -238,24 +238,9 @@ namespace MiniScript {
 				double db = b.IsInt ? b.AsInt() : b.AsDouble();
 				return FromDouble(da / db);
 			}
-			// TODO: String support not added yet!
-
             if (is_string(a) && is_number(b)) {
-                int repeats = 0;
-                int extraChars = 0;
-                double factor = 1 / (is_double(b) ? as_double(b) : (double)as_int(b));
-                if (double.IsNaN(factor) || double.IsInfinity(factor)) return Null();
-                if (factor <= 0) return make_string("");
-                repeats = (int)factor;
-                // TODO: Do we need to check Max length of a string like in 1.0?
-
-                Value result = make_string("");
-                for (int i = 0; i < repeats; i++) {
-                    result = StringConcat(result, a);
-                }
-                extraChars = (int)(StringLength(a) * (factor - repeats));
-                if (extraChars > 0) result = StringConcat(result, StringSubstring(a, 0, extraChars));
-                return result;
+				// We'll just call through to value_mult for this, with a factor of 1/b.
+				return value_mult(a, value_div(make_double(1), b));
             }
 			// string concat, list append, etc. can be added here.
 			return Null();

@@ -61,7 +61,7 @@
 	RETURN
 
 @testDiv:
-	# "abc" * 2 == "abcabc"
+	# "abcdef" / 2 = "abc"
 	LOAD r0, "String / 2"
 	LOAD r1, "abcdef"
 	LOAD r2, 2
@@ -70,7 +70,7 @@
 	IFNE r1, r3
 	RETURN
 	
-	# "abcdef" * 0.5 = "abc"
+	# "abcdef" / 0.5 = "abcdefabcdef"
 	LOAD r0, "String / 0.5"
 	LOAD r1, "abcdef"
 	LOAD r2, 0.5

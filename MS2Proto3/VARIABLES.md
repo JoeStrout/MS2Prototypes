@@ -119,7 +119,7 @@ locals.x = 42
 
 This is actually exactly equivalent to ordinary `x = 42`.  The compiler should just ignore `locals.` in this case and compile it to the same as the common case.
 
-### First use of `locals`
+### Other use of `locals`
 
 Every stack frame will have a weak reference to a VarMap representing its locals.  In common cases, this VarMap will never be created.
 
@@ -127,7 +127,9 @@ Apart from the above trivial case of assignment to `locals.x`, any other use of 
 
 #### Assembly
 
-(in progress)
+```
+LOCALS r1     # get a reference to the `locals` VarMap, and put in r1
+```
 
 
 ### Explicit variable read via locals (rare)
@@ -143,9 +145,43 @@ There isn't much reason to write code like this, since if `x` is a local variabl
 
 So, we should treat this as first referencing the `locals` VarMap (creating it if necessary), and then doing a lookup in that.
 
+#### Assembly
+
+```
+LOCALS r1     # get a reference to the `locals` VarMap, and put in r1
+LOAD r2, "x"
+INDEX r13, r1, r2   # r13 = locals.x
+```
+
 ### Passing locals to another function (rare)
 
+This situation does come up occasionally when using `string.fill` (an extension method in stringUtil).
+
+MiniScript code:
+```
+name = "Bob"
+print "Hello {name}!".fill(locals)
+```
+
+#### Concept
+
+This is just another use of the `locals` VarMap.  As a parameter, it gets stuffed into whatever register we're using for function arguments, and the called code picks it up as **r0**.  Reads and writes via that map look like ordinary map indexing, but because it's a VarMap, it reaches into the stack and reads/writes the appropriate slots in the calling function registers.
+
+#### Assembly
+
+```
+LOAD r7, "Bob"   # name = "Bob"; assumes name has been mapped to r7
+LOAD r17, "Hello {name}!"   # put string into a stack top (func call/return point)
+LOCALS r18       # get `locals` into r18 (second parameter)
+CALLFN 17, "fill"  # call "fill" with args starting at r17
+CALLFN 17, "print" # call "print" with result of previous call
+```
+
+(Note that we haven't yet defined how we're going to call functions by name in code... here I'm imagining a `CALLFN` opcode that works like `CALLF`, but takes a function name.)
+
 ### Assignment of outer variable (rare)
+
+
 
 ### Assignment of global variable (common-ish)
 

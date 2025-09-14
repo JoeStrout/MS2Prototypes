@@ -41,6 +41,14 @@ namespace MiniScript {
 			return String(buffer);
 			*** END CPP_ONLY ***/
 		}
+
+		public static String SpacePad(String text, Int32 width) {
+			if (text == null) text = "";
+			if (text.Length >= width) {
+				return text.Substring(0, width); // CPP: return text.substr(0, width);
+			}
+			return text + new String(' ', width - text.Length); // CPP: return text + String(width - text.length(), ' ');
+		}
 		
 		public static String Str(List<String> list) {
 			if (list == null) return "null"; // CPP: // (null not possible)
