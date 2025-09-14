@@ -69,7 +69,16 @@
 	LOAD r3, "abc"
 	IFNE r1, r3
 	RETURN
-
+	
+	# "abcdef" / 0.5 = "abcdefabcdef"
+	LOAD r0, "String / 0.5"
+	LOAD r1, "abcdef"
+	LOAD r2, 0.5
+	DIV r1, r1, r2
+	LOAD r3, "abcdefabcdef"
+	IFNE r1, r3
+	RETURN
+	
 	# All good!
 	LOAD r0, 0
 	RETURN
