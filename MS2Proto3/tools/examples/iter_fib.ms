@@ -1,5 +1,5 @@
 for i in range (1, 500000)
-    n = 30
+    n = 30 // fib(30)
     answer = 0
 
     if n < 2 then continue
