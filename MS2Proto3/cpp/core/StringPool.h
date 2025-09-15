@@ -10,33 +10,30 @@
 namespace StringPool {
 
 struct HashEntry {
-	uint32_t hash;
-	uint16_t index; // into the pool's strings array
-	MemRef   next;  // MemRef -> HashEntry
+	uint32_t hash;	// hash value
+	MemRef ssRef; 	// MemRef to StringStorage
+	MemRef next;    // MemRef to next HashEntry in the bin
+	
+	const StringStorage* stringStorage() const { return (const StringStorage*)MemPoolManager::getPtr(ssRef); }
 };
 
 struct Pool {
-	// MemRef to a growable array of MemRef (each points to a StringStorage)
-	MemRef   stringsRef;          // MemRef -> MemRef[count] (array of StringStorage refs)
-	uint16_t capacity;
-	uint16_t count;
-
-	// Hash table heads are MemRefs to HashEntry
+	// Hash table heads are MemRefs to HashEntry (first in the linked list of entries for each bin)
 	MemRef   hashTable[256];
 
 	bool     initialized;
 };
 
-uint16_t internOrAdoptString(uint8_t poolNum, StringStorage *ss);
-uint16_t internString(uint8_t poolNum, const char* cstr);
-uint16_t storeInPool(MemRef sRef, uint8_t poolNum, uint32_t hash);
-const char* getCString(uint8_t poolNum, uint16_t idx);
-const StringStorage* getStorage(uint8_t poolNum, uint16_t idx);
+MemRef internOrAdoptString(uint8_t poolNum, StringStorage *ss);
+MemRef internString(uint8_t poolNum, const char* cstr);
+MemRef storeInPool(MemRef sRef, uint8_t poolNum, uint32_t hash);
+inline const StringStorage* getStorage(MemRef ref) { return (const StringStorage*)MemPoolManager::getPtr(ref); }
+inline const char* getCString(MemRef ref) { return getStorage(ref)->data; }
 
 // Pool management
 void clearPool(uint8_t poolNum);
 
-StringStorage* defaultStringAllocator(const char* src, int lenB, uint32_t hash);
+StringStorage* defaultStringAllocator(const char* src, int lenB, uint32_t hash);  // ToDo: is this needed?
 
 // Allocator function compatible with StringStorageAllocator typedef
 // Uses pool 0 by default

@@ -20,46 +20,44 @@ template<typename T> class List;
 // Lightweight String class - thin wrapper around StringPool
 class String {
 private:
-    uint8_t poolNum;    // Intern pool number (0-255)
-    uint16_t index;     // Index within the StringPool
-    
+	MemRef ref;		// MemPool reference to StringStorage
+	
     // Helper to create String from StringStorage allocated by malloc; the given
 	// storage is adopted into our MemPool, and should not be freed by the caller.
     static String fromMallocStorage(StringStorage* storage, uint8_t pool = 0) {
         if (!storage) return String();
-		uint16_t idx = StringPool::internOrAdoptString(pool, storage); // adopts or frees storage
-        return String(pool, idx);
+		MemRef ref = StringPool::internOrAdoptString(pool, storage); // adopts or frees storage
+        return String(ref);
     }
     
-    // Private constructor from pool and index
-    String(uint8_t pool, uint16_t idx) : poolNum(pool), index(idx) {}
+    // Private constructor from MemRef (assumed to be already in our hash table)
+    String(MemRef ssRef) : ref(ssRef) {}
     
 public:
     
+	static uint8_t defaultPool;	// pool in which new strings will be created by default
+	
     // Constructors
-    String() : poolNum(0), index(0) {}
+	String() {}
     
-    String(const char* cstr, uint8_t pool = 0) : poolNum(pool) {
-        if (!cstr) {
-            index = 0;
-            return;
-        }
-        index = StringPool::internString(pool, cstr);
-    }
-    
+	String(const char* cstr) {
+		if (!cstr) return;
+		ref = StringPool::internString(defaultPool, cstr);
+	}
+	
+	String(const char* cstr, uint8_t pool) {
+		if (!cstr) return;
+		ref = StringPool::internString(pool, cstr);
+	}
+	
     // Copy constructor and assignment (defaulted for trivial copyability)
     String(const String& other) = default;
     String& operator=(const String& other) = default;
     
     // Assignment from C string
     String& operator=(const char* cstr) {
-        if (!cstr) {
-            poolNum = 0;
-            index = 0;
-            return *this;
-        }
-        // Use current pool and static allocator
-        index = StringPool::internString(poolNum, cstr);
+        if (!cstr || *cstr == '\0') return *this;
+        ref = StringPool::internString(defaultPool, cstr);
         return *this;
     }
     
@@ -75,17 +73,28 @@ public:
     }
     
     const char* c_str() const { 
-        return StringPool::getCString(poolNum, index); 
+		if (ref.isNull()) return "";
+		const StringStorage *ss = getStorage();
+		return ss ? ss->data : "";
     }
+	
+	const StringStorage* getStorage() const {
+		return (const StringStorage*)MemPoolManager::getPtr(ref);
+	}
+	
+	uint8_t getPoolNum() const {
+		return ref.poolNum;
+	}
     
     // String concatenation
     String operator+(const String& other) const {
         const StringStorage* s1 = getStorage();
         const StringStorage* s2 = other.getStorage();
-        if (!s1 || !s2) return String();
+		if (!s1) return other;
+		if (!s2) return *this;
 
         StringStorage* result_ss = ss_concat(s1, s2, malloc);
-        String result = fromMallocStorage(result_ss, poolNum);
+        String result = fromMallocStorage(result_ss, defaultPool);
 		return result;
     }
 
@@ -95,18 +104,20 @@ public:
     String& operator+=(const String& other) {
         const StringStorage* s1 = getStorage();
         const StringStorage* s2 = other.getStorage();
-        if (!s1 || !s2) return *this;
+		if (!s2) return *this;
 
         StringStorage* result_ss = ss_concat(s1, s2, malloc);
         if (result_ss) {
-            index = StringPool::internOrAdoptString(poolNum, result_ss);
+            ref = StringPool::internOrAdoptString(defaultPool, result_ss);
         }
         return *this;
     }
     
     // Comparison
     bool operator==(const String& other) const {
-        if (poolNum == other.poolNum && index == other.index) return true;
+        if (ref == other.ref) return true;
+		// ToDo: if they're in the same pool, can we just compare refs, since we intern
+		// our strings and any identical strings ought to be the exact same ref?
         
         const StringStorage* s1 = getStorage();
         const StringStorage* s2 = other.getStorage();
@@ -201,7 +212,7 @@ public:
         if (!s) return String();
         
         StringStorage* result = ss_substring(s, startIndex, malloc);
-        return fromMallocStorage(result, poolNum);
+        return fromMallocStorage(result, defaultPool);
     }
     
     String Substring(int startIndex, int length) const {
@@ -209,7 +220,7 @@ public:
         if (!s) return String();
         
         StringStorage* result_ss = ss_substringLen(s, startIndex, length, malloc);
-        return fromMallocStorage(result_ss, poolNum);
+        return fromMallocStorage(result_ss, defaultPool);
     }
     
     String Left(int chars) const {
@@ -228,7 +239,7 @@ public:
         if (!s || !v) return String();
         
         StringStorage* result_ss = ss_insert(s, startIndex, v, malloc);
-		return fromMallocStorage(result_ss, poolNum);
+		return fromMallocStorage(result_ss, defaultPool);
     }
     
     String Remove(int startIndex) const {
@@ -236,7 +247,7 @@ public:
         if (!s) return String();
         
         StringStorage* result_ss = ss_remove(s, startIndex, malloc);
-		return fromMallocStorage(result_ss, poolNum);
+		return fromMallocStorage(result_ss, defaultPool);
     }
     
     String Remove(int startIndex, int count) const {
@@ -244,7 +255,7 @@ public:
         if (!s) return String();
         
         StringStorage* result_ss = ss_removeLen(s, startIndex, count, malloc);
-		return fromMallocStorage(result_ss, poolNum);
+		return fromMallocStorage(result_ss, defaultPool);
     }
     
     String Replace(const String& oldValue, const String& newValue) const {
@@ -254,7 +265,7 @@ public:
         if (!s || !oldVal || !newVal) return String();
         
         StringStorage* result_ss = ss_replace(s, oldVal, newVal, malloc);
-		return fromMallocStorage(result_ss, poolNum);
+		return fromMallocStorage(result_ss, defaultPool);
     }
     
     String Replace(char oldChar, char newChar) const {
@@ -262,7 +273,7 @@ public:
         if (!s) return String();
         
         StringStorage* result_ss = ss_replaceChar(s, oldChar, newChar, malloc);
-		return fromMallocStorage(result_ss, poolNum);
+		return fromMallocStorage(result_ss, defaultPool);
     }
     
     // C# String API - Case conversion
@@ -271,7 +282,7 @@ public:
         if (!s) return String();
         
         StringStorage* result_ss = ss_toLower(s, malloc);
-        return fromMallocStorage(result_ss, poolNum);
+        return fromMallocStorage(result_ss, defaultPool);
     }
     
     String ToUpper() const {
@@ -279,7 +290,7 @@ public:
         if (!s) return String();
         
         StringStorage* result_ss = ss_toUpper(s, malloc);
-        return fromMallocStorage(result_ss, poolNum);
+        return fromMallocStorage(result_ss, defaultPool);
     }
     
     // C# String API - Trimming
@@ -288,7 +299,7 @@ public:
         if (!s) return String();
         
         StringStorage* result_ss = ss_trim(s, malloc);
-        return fromMallocStorage(result_ss, poolNum);
+        return fromMallocStorage(result_ss, defaultPool);
     }
     
     String TrimStart() const {
@@ -296,7 +307,7 @@ public:
         if (!s) return String();
         
         StringStorage* result_ss = ss_trimStart(s, malloc);
-        return fromMallocStorage(result_ss, poolNum);
+        return fromMallocStorage(result_ss, defaultPool);
     }
     
     String TrimEnd() const {
@@ -304,7 +315,7 @@ public:
         if (!s) return String();
         
         StringStorage* result_ss = ss_trimEnd(s, malloc);
-        return fromMallocStorage(result_ss, poolNum);
+        return fromMallocStorage(result_ss, defaultPool);
     }
     
     // C# String API - Splitting (caller must free returned array and its contents)
@@ -320,7 +331,7 @@ public:
         
         String* result = (String*)malloc(*count * sizeof(String));
         for (int i = 0; i < *count; i++) {
-            result[i] = fromMallocStorage(parts[i], poolNum);
+            result[i] = fromMallocStorage(parts[i], defaultPool);
         }
         free(parts);  // Free the array, but not the contents (transferred to result)
         
@@ -340,7 +351,7 @@ public:
         
         String* result = (String*)malloc(*count * sizeof(String));
         for (int i = 0; i < *count; i++) {
-            result[i] = fromMallocStorage(parts[i], poolNum);
+            result[i] = fromMallocStorage(parts[i], defaultPool);
         }
         free(parts);
         
@@ -360,7 +371,7 @@ public:
         // Add all parts to the list
 		// OFI: add some List API to let us directly set the capacity to `count`
         for (int i = 0; i < count; i++) {
-            String part = fromMallocStorage(parts[i], poolNum);
+            String part = fromMallocStorage(parts[i], defaultPool);
             result.Add(part);
         }
         
@@ -380,7 +391,7 @@ public:
         
         // Add all parts to the list
         for (int i = 0; i < count; i++) {
-            String part = fromMallocStorage(parts[i], poolNum);
+            String part = fromMallocStorage(parts[i], defaultPool);
             result.Add(part);
         }
         
@@ -506,18 +517,12 @@ public:
         free(result);					// free valid here because it came from malloc, above
         return joined;
     }
-    
-    // Access to pool info (for debugging/advanced use)
-    uint8_t getPoolNum() const { return poolNum; }
-    uint16_t getIndex() const { return index; }
-    const StringStorage* getStorage() const {
-        return StringPool::getStorage(poolNum, index);
-    }
 };
 
 // Free function: C string + String concatenation
 inline String operator+(const char* lhs, const String& rhs) {
     if (!lhs) return rhs;
+	if (String::IsNullOrEmpty(rhs)) return String(lhs);
     String temp(lhs, rhs.getPoolNum());
     return temp + rhs;
 }

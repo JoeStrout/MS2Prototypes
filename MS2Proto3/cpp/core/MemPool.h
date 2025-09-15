@@ -30,6 +30,8 @@ struct __attribute__((packed)) MemRef {
     bool operator!=(const MemRef& other) const {
         return !(*this == other);
     }
+	
+	static MemRef Null;
 };
 
 // MemPool - manages memory blocks within a single pool

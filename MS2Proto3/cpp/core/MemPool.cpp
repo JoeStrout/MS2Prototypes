@@ -46,6 +46,8 @@ static bool debugValidateMemory(const void* ptr, size_t size) {
 
 #endif // MEM_DEBUG
 
+MemRef MemRef::Null = MemRef();
+
 // MemPool implementation
 MemPool::MemPool() : blocks(nullptr), blockCount(1), capacity(0) {
     // Start with initial capacity
@@ -121,7 +123,6 @@ uint32_t MemPool::realloc(uint32_t index, size_t newSize) {
         return 0;
     }
     
-	void* oldPtr = blocks[index].ptr;
     void* newPtr = ::realloc(blocks[index].ptr, newSize);
     if (!newPtr) return 0;  // Realloc failed
 

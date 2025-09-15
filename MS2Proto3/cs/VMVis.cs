@@ -38,12 +38,20 @@ namespace MiniScript {
 
 		private Int32 _screenWidth;
 		private Int32 _screenHeight;
+		
+		// Be careful to get a *reference* to the VM rather than a deep copy, even
+		// in C++.  ToDo: find a more elegant solution to this recurring issue.
+		//*** BEGIN CS_ONLY ***
 		private VM _vm;
-
 		public VMVis(VM vm) {
 			_vm = vm;
 			UpdateScreenSize();
 		}
+		//*** END CS_ONLY ***
+		/*** BEGIN H_ONLY ***
+		private: VM& _vm;
+		public: inline VMVis(VM& vm) : _vm(vm) { UpdateScreenSize(); }
+		*** END H_ONLY ***/
 
 		public void UpdateScreenSize() {
 			//*** BEGIN CS_ONLY ***

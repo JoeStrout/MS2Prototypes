@@ -41,12 +41,24 @@ namespace MiniScript {
 			return String(buffer);
 			*** END CPP_ONLY ***/
 		}
+		
+		public static String Spaces(Int32 count) {
+			if (count < 1) return "";
+			return new String(' ', count); // CPP:
+			/*** BEGIN CPP_ONLY ***
+			char* spaces = (char*)malloc(count + 1);
+			memset(spaces, ' ', count);
+			spaces[count] = '\0';
+			String result(spaces);
+			free(spaces);
+			return result;
+			*** END CPP_ONLY ***/
+		}
 
 		public static String SpacePad(String text, Int32 width) {
 			if (text == null) text = "";
-			String spaces = "                             ";
-			while (text.Length < width) text += spaces;
-			return text.Substring(0, width);
+			if (text.Length >= width) return text.Substring(0, width);
+			return text + Spaces(width - text.Length);
 		}
 		
 		public static String Str(List<String> list) {
