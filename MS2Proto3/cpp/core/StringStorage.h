@@ -24,22 +24,24 @@ typedef struct StringStorage {
 } StringStorage;
 
 // Allocator function type for StringStorage
-// size: total number of bytes to allocate (sizeof(StringStorage) + stringLength + 1)
+// size: total number of bytes to allocate (sizeof(StringStorage) + stringLenB + 1)
 // Returns: allocated memory block, or NULL on failure
 typedef void* (*StringStorageAllocator)(size_t size);
 
 // Core StringStorage functions (ss_ prefix for "string storage")
 
-// Creation and destruction
+// Creation (using the given allocator to actually allocate the memory)
 StringStorage* ss_create(const char* cstr, StringStorageAllocator allocator);
 StringStorage* ss_createWithLength(int byteLen, StringStorageAllocator allocator);
-void ss_destroy(StringStorage* storage);
 
 // Basic accessors
 const char* ss_getCString(const StringStorage* storage);
 int ss_lengthB(const StringStorage* storage);
 int ss_lengthC(const StringStorage* storage);
 bool ss_isEmpty(const StringStorage* storage);
+inline size_t ss_totalSize(const StringStorage* storage) {
+	return sizeof(StringStorage) + storage->lenB + 1;
+}
 
 // Character access (byte-based indexing)
 char ss_charAt(const StringStorage* storage, int byteIndex);
@@ -88,9 +90,6 @@ StringStorage** ss_splitStr(const StringStorage* storage, const StringStorage* s
 // Hash computation
 uint32_t ss_computeHash(const StringStorage* storage);
 void ss_ensureHashComputed(StringStorage* storage);
-
-// StringPool allocator (defined in StringPool.cpp)
-void* stringpool_allocator(size_t size);
 
 #ifdef __cplusplus
 }

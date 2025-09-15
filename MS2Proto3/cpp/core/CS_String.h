@@ -12,6 +12,7 @@
 #include "StringStorage.h"
 #include "StringPool.h"
 #include "CS_List.h"
+#include <cstdio> // for debugging
 
 // Forward declaration to avoid circular dependency
 template<typename T> class List;
@@ -20,13 +21,13 @@ template<typename T> class List;
 class String {
 private:
     uint8_t poolNum;    // Intern pool number (0-255)
-    uint16_t index;     // Index within the pool
+    uint16_t index;     // Index within the StringPool
     
-    // Helper to create String from StringStorage (takes ownership)
-    static String fromStorage(StringStorage* storage, uint8_t pool = 0) {
+    // Helper to create String from StringStorage allocated by malloc; the given
+	// storage is adopted into our MemPool, and should not be freed by the caller.
+    static String fromMallocStorage(StringStorage* storage, uint8_t pool = 0) {
         if (!storage) return String();
-        uint16_t idx = StringPool::internString(pool, ss_getCString(storage));
-        ss_destroy(storage);  // Clean up temporary storage
+		uint16_t idx = StringPool::internOrAdoptString(pool, storage); // adopts or frees storage
         return String(pool, idx);
     }
     
@@ -83,20 +84,22 @@ public:
         const StringStorage* s2 = other.getStorage();
         if (!s1 || !s2) return String();
 
-        StringStorage* result = ss_concat(s1, s2, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result_ss = ss_concat(s1, s2, malloc);
+        String result = fromMallocStorage(result_ss, poolNum);
+		return result;
     }
 
     // String concatenation assignment
+	// NOTE: This operation abandons our previous StringStorage to the MemPool
+	// it is in.
     String& operator+=(const String& other) {
         const StringStorage* s1 = getStorage();
         const StringStorage* s2 = other.getStorage();
         if (!s1 || !s2) return *this;
 
-        StringStorage* result = ss_concat(s1, s2, StringPool::poolAllocator);
-        if (result) {
-            index = StringPool::internString(poolNum, ss_getCString(result));
-            ss_destroy(result);
+        StringStorage* result_ss = ss_concat(s1, s2, malloc);
+        if (result_ss) {
+            index = StringPool::internOrAdoptString(poolNum, result_ss);
         }
         return *this;
     }
@@ -197,16 +200,16 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_substring(s, startIndex, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result = ss_substring(s, startIndex, malloc);
+        return fromMallocStorage(result, poolNum);
     }
     
     String Substring(int startIndex, int length) const {
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_substringLen(s, startIndex, length, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result_ss = ss_substringLen(s, startIndex, length, malloc);
+        return fromMallocStorage(result_ss, poolNum);
     }
     
     String Left(int chars) const {
@@ -224,24 +227,24 @@ public:
         const StringStorage* v = value.getStorage();
         if (!s || !v) return String();
         
-        StringStorage* result = ss_insert(s, startIndex, v, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result_ss = ss_insert(s, startIndex, v, malloc);
+		return fromMallocStorage(result_ss, poolNum);
     }
     
     String Remove(int startIndex) const {
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_remove(s, startIndex, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result_ss = ss_remove(s, startIndex, malloc);
+		return fromMallocStorage(result_ss, poolNum);
     }
     
     String Remove(int startIndex, int count) const {
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_removeLen(s, startIndex, count, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result_ss = ss_removeLen(s, startIndex, count, malloc);
+		return fromMallocStorage(result_ss, poolNum);
     }
     
     String Replace(const String& oldValue, const String& newValue) const {
@@ -250,16 +253,16 @@ public:
         const StringStorage* newVal = newValue.getStorage();
         if (!s || !oldVal || !newVal) return String();
         
-        StringStorage* result = ss_replace(s, oldVal, newVal, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result_ss = ss_replace(s, oldVal, newVal, malloc);
+		return fromMallocStorage(result_ss, poolNum);
     }
     
     String Replace(char oldChar, char newChar) const {
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_replaceChar(s, oldChar, newChar, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result_ss = ss_replaceChar(s, oldChar, newChar, malloc);
+		return fromMallocStorage(result_ss, poolNum);
     }
     
     // C# String API - Case conversion
@@ -267,16 +270,16 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_toLower(s, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result_ss = ss_toLower(s, malloc);
+        return fromMallocStorage(result_ss, poolNum);
     }
     
     String ToUpper() const {
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_toUpper(s, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result_ss = ss_toUpper(s, malloc);
+        return fromMallocStorage(result_ss, poolNum);
     }
     
     // C# String API - Trimming
@@ -284,24 +287,24 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_trim(s, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result_ss = ss_trim(s, malloc);
+        return fromMallocStorage(result_ss, poolNum);
     }
     
     String TrimStart() const {
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_trimStart(s, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result_ss = ss_trimStart(s, malloc);
+        return fromMallocStorage(result_ss, poolNum);
     }
     
     String TrimEnd() const {
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result = ss_trimEnd(s, StringPool::poolAllocator);
-        return fromStorage(result, poolNum);
+        StringStorage* result_ss = ss_trimEnd(s, malloc);
+        return fromMallocStorage(result_ss, poolNum);
     }
     
     // C# String API - Splitting (caller must free returned array and its contents)
@@ -312,12 +315,12 @@ public:
             return nullptr;
         }
         
-        StringStorage** parts = ss_split(s, separator, count, StringPool::poolAllocator);
+        StringStorage** parts = ss_split(s, separator, count, malloc);
         if (!parts) return nullptr;
         
         String* result = (String*)malloc(*count * sizeof(String));
         for (int i = 0; i < *count; i++) {
-            result[i] = fromStorage(parts[i], poolNum);
+            result[i] = fromMallocStorage(parts[i], poolNum);
         }
         free(parts);  // Free the array, but not the contents (transferred to result)
         
@@ -332,12 +335,12 @@ public:
             return nullptr;
         }
         
-        StringStorage** parts = ss_splitStr(s, sep, count, StringPool::poolAllocator);
+        StringStorage** parts = ss_splitStr(s, sep, count, malloc);
         if (!parts) return nullptr;
         
         String* result = (String*)malloc(*count * sizeof(String));
         for (int i = 0; i < *count; i++) {
-            result[i] = fromStorage(parts[i], poolNum);
+            result[i] = fromMallocStorage(parts[i], poolNum);
         }
         free(parts);
         
@@ -351,12 +354,13 @@ public:
         if (!s) return result;
         
         int count = 0;
-        StringStorage** parts = ss_split(s, separator, &count, StringPool::poolAllocator);
+        StringStorage** parts = ss_split(s, separator, &count, malloc);
         if (!parts) return result;
         
         // Add all parts to the list
+		// OFI: add some List API to let us directly set the capacity to `count`
         for (int i = 0; i < count; i++) {
-            String part = fromStorage(parts[i], poolNum);
+            String part = fromMallocStorage(parts[i], poolNum);
             result.Add(part);
         }
         
@@ -371,12 +375,12 @@ public:
         if (!s || !sep) return result;
         
         int count = 0;
-        StringStorage** parts = ss_splitStr(s, sep, &count, StringPool::poolAllocator);
+        StringStorage** parts = ss_splitStr(s, sep, &count, malloc);
         if (!parts) return result;
         
         // Add all parts to the list
         for (int i = 0; i < count; i++) {
-            String part = fromStorage(parts[i], poolNum);
+            String part = fromMallocStorage(parts[i], poolNum);
             result.Add(part);
         }
         
@@ -425,15 +429,15 @@ public:
         if (totalLength == 0) return String();
         
         // Build the result String
-        char* result = (char*)malloc(totalLength + 1);
+        char* result = (char*)malloc(totalLength + 1); // malloc valid here because we free it below
         if (!result) return String();
         
         int pos = 0;
-        const char* sepCStr = sepStorage ? ss_getCString(sepStorage) : "";
+        const char* sepCStr = ss_getCString(sepStorage);
         
         for (int i = 0; i < count; i++) {
             if (i > 0 && sepLength > 0) {
-                strcpy(result + pos, sepCStr);
+                strcpy(result + pos, sepCStr);  // ToDo: replace with memcpy
                 pos += sepLength;
             }
             
@@ -441,7 +445,7 @@ public:
             if (valueStorage) {
                 const char* valueCStr = ss_getCString(valueStorage);
                 int valueLength = ss_lengthB(valueStorage);
-                strcpy(result + pos, valueCStr);
+                strcpy(result + pos, valueCStr);  // ToDo: replace with memcpy
                 pos += valueLength;
             }
         }
@@ -449,7 +453,7 @@ public:
         
         // Create String from result and clean up
         String joined(result, pool);
-        free(result);
+        ::free(result);		// free valid here because it came from malloc, above
         return joined;
     }
     
@@ -475,7 +479,7 @@ public:
         if (totalLength == 0) return String();
         
         // Build the result String
-        char* result = (char*)malloc(totalLength + 1);
+        char* result = (char*)malloc(totalLength + 1);	// malloc valid here because we free it below
         if (!result) return String();
         
         int pos = 0;
@@ -499,7 +503,7 @@ public:
         
         // Create String from result and clean up
         String joined(result, pool);
-        free(result);
+        free(result);					// free valid here because it came from malloc, above
         return joined;
     }
     

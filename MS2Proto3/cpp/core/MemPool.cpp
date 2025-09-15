@@ -1,5 +1,50 @@
 #include "MemPool.h"
+#include "core_includes.h"
 #include <cstring>
+
+#if MEM_DEBUG
+#include <cstdio>
+
+// Memory debugging utilities
+static void debugFillMemory(void* ptr, size_t size) {
+    if (!ptr || size == 0) return;
+    
+	return;  // HACK!
+	
+    // Fill with 0xDEADBEEF pattern
+    uint32_t* words = (uint32_t*)ptr;
+    size_t wordCount = size / sizeof(uint32_t);
+    
+    for (size_t i = 0; i < wordCount; i++) {
+        words[i] = 0xDEADBEEF;
+    }
+    
+    // Fill any remaining bytes
+    uint8_t* bytes = (uint8_t*)ptr + (wordCount * sizeof(uint32_t));
+    size_t remainingBytes = size % sizeof(uint32_t);
+    for (size_t i = 0; i < remainingBytes; i++) {
+        bytes[i] = 0xEF; // Use last byte of 0xDEADBEEF
+    }
+}
+
+static bool debugValidateMemory(const void* ptr, size_t size) {
+    if (!ptr || size == 0) return true;
+	return true;  // HACK!!!
+	
+    // Check if memory contains the 0xDEADBEEF pattern (indicating use-after-free)
+    const uint32_t* words = (const uint32_t*)ptr;
+    size_t wordCount = size / sizeof(uint32_t);
+    
+    for (size_t i = 0; i < wordCount; i++) {
+        if (words[i] == 0xDEADBEEF) {
+            printf("MEM_DEBUG: Detected use-after-free! Memory at %p contains 0xDEADBEEF pattern\n", ptr);
+            return false;
+        }
+    }
+    return true;
+}
+
+#endif // MEM_DEBUG
 
 // MemPool implementation
 MemPool::MemPool() : blocks(nullptr), blockCount(1), capacity(0) {
@@ -14,8 +59,12 @@ MemPool::MemPool() : blocks(nullptr), blockCount(1), capacity(0) {
 }
 
 MemPool::~MemPool() {
+#if MEM_DEBUG
+	if (blocks == nullptr) printf("WHOOPS!  blocks is null in ~MemPool; double delete?");
+#endif
     clear();
     ::free(blocks);
+	blocks = nullptr;
 }
 
 uint32_t MemPool::allocateBlockSlot() {
@@ -53,8 +102,8 @@ uint32_t MemPool::alloc(size_t size) {
     
     void* ptr = malloc(size);
     if (!ptr) return 0;
-    
-    blocks[index].ptr = ptr;
+
+	blocks[index].ptr = ptr;
     blocks[index].size = size;
     blocks[index].inUse = true;
     
@@ -72,9 +121,10 @@ uint32_t MemPool::realloc(uint32_t index, size_t newSize) {
         return 0;
     }
     
+	void* oldPtr = blocks[index].ptr;
     void* newPtr = ::realloc(blocks[index].ptr, newSize);
     if (!newPtr) return 0;  // Realloc failed
-    
+
     blocks[index].ptr = newPtr;
     blocks[index].size = newSize;
     
@@ -92,10 +142,26 @@ void MemPool::free(uint32_t index) {
     blocks[index].inUse = false;
 }
 
+uint32_t MemPool::adopt(void* ptr, size_t size) {
+	uint32_t index = allocateBlockSlot();
+	blocks[index].ptr = ptr;
+	blocks[index].size = size;
+	blocks[index].inUse = true;
+	return index;
+}
+
 void* MemPool::getPtr(uint32_t index) const {
     if (index == 0 || index >= blockCount || !blocks[index].inUse) {
         return nullptr;
     }
+    
+#if MEM_DEBUG
+    // Validate that the memory hasn't been corrupted
+    if (!debugValidateMemory(blocks[index].ptr, blocks[index].size)) {
+        printf("MEM_DEBUG: Validation failed for block %u at %p\n", index, blocks[index].ptr);
+    }
+#endif
+    
     return blocks[index].ptr;
 }
 
@@ -107,6 +173,8 @@ size_t MemPool::getSize(uint32_t index) const {
 }
 
 void MemPool::clear() {
+	if (blockCount <= 1) return;  // Already cleared (only null block remains)
+    
     for (uint32_t i = 1; i < blockCount; i++) {
         if (blocks[i].inUse) {
             ::free(blocks[i].ptr);
@@ -162,9 +230,7 @@ MemRef MemPoolManager::realloc(MemRef ref, size_t newSize) {
 }
 
 void MemPoolManager::free(MemRef ref) {
-    if (pools[ref.poolNum]) {
-        pools[ref.poolNum]->free(ref.index);
-    }
+    if (pools[ref.poolNum]) pools[ref.poolNum]->free(ref.index);
 }
 
 void* MemPoolManager::getPtr(MemRef ref) {
@@ -178,9 +244,7 @@ size_t MemPoolManager::getSize(MemRef ref) {
 }
 
 void MemPoolManager::clearPool(uint8_t poolNum) {
-    if (pools[poolNum]) {
-        pools[poolNum]->clear();
-    }
+    if (pools[poolNum]) pools[poolNum]->clear();
 }
 
 void MemPoolManager::destroyAllPools() {

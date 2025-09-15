@@ -41,12 +41,6 @@ StringStorage* ss_createWithLength(int byteLen, StringStorageAllocator allocator
     return storage;
 }
 
-void ss_destroy(StringStorage* storage) {
-    if (storage) {
-        free(storage);
-    }
-}
-
 // Basic accessor functions
 const char* ss_getCString(const StringStorage* storage) {
     return storage ? storage->data : "";

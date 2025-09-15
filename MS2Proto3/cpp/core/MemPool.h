@@ -41,10 +41,10 @@ private:
         bool inUse;
     };
     
-    static const uint32_t MAX_BLOCKS = 65536;  // 64K blocks per pool
-    Block* blocks;
-    uint32_t blockCount;
-    uint32_t capacity;
+    static const uint32_t MAX_BLOCKS = 65536;  // at most 64K blocks per pool
+    Block* blocks;			// dynamically-sized array of blocks
+    uint32_t blockCount;	// how much of that array is actually in use
+    uint32_t capacity;		// number of blocks allocated in that array
     
     uint32_t allocateBlockSlot();
     
@@ -61,6 +61,9 @@ public:
     // Free a specific block
     void free(uint32_t index);
     
+	// Adopt a block of memory allocated externally by malloc; return its index
+	uint32_t adopt(void* ptr, size_t size);
+	
     // Get pointer from index (returns nullptr if invalid)
     void* getPtr(uint32_t index) const;
     
@@ -87,12 +90,16 @@ public:
     // Destroy a pool and all its allocations
     static void destroyPool(uint8_t poolNum);
     
-    // Global allocation functions
+    // Global allocation/deallocation functions
     static MemRef alloc(size_t size, uint8_t poolNum = 0);
     static MemRef realloc(MemRef ref, size_t newSize);
     static void free(MemRef ref);
+//	static void free(void* ptr);	// (assumes ptr was allocated by MemPool)
+	
+	// Inspectors
     static void* getPtr(MemRef ref);
     static size_t getSize(MemRef ref);
+//	static MemRef getMemRef(void* ptr);	// (for ptr allocated by MemPool)
     
     // Utility functions
     static void clearPool(uint8_t poolNum);

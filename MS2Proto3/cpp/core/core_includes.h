@@ -2,6 +2,9 @@
 #ifndef CORE_INCLUDES_H
 #define CORE_INCLUDES_H
 
+// Memory debugging support
+#define MEM_DEBUG 1
+
 #include "CS_List.h"
 #include "CS_String.h"
 

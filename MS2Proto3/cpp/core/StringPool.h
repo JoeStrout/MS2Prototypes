@@ -27,10 +27,14 @@ struct Pool {
 	bool     initialized;
 };
 
-// — public API unchanged —
+uint16_t internOrAdoptString(uint8_t poolNum, StringStorage *ss);
 uint16_t internString(uint8_t poolNum, const char* cstr);
+uint16_t storeInPool(MemRef sRef, uint8_t poolNum, uint32_t hash);
 const char* getCString(uint8_t poolNum, uint16_t idx);
 const StringStorage* getStorage(uint8_t poolNum, uint16_t idx);
+
+// Pool management
+void clearPool(uint8_t poolNum);
 
 StringStorage* defaultStringAllocator(const char* src, int lenB, uint32_t hash);
 
