@@ -449,12 +449,20 @@ Converter.checkType = function(type)
 	return false
 end function
 
+WARNING = [
+	"// AUTO-GENERATED FILE.  DO NOT MODIFY.",
+	"// Transpiled from: ",
+	"",
+]
+
 Converter.convertClass = function(sourcePath)
 	fileNameBase = file.name(sourcePath) - ".cs"
 	
 	guardSymbol = ("__" + file.name(sourcePath) - ".cs" + "_H").upper
-	self.hLines = ["#ifndef " + guardSymbol, "#define " + guardSymbol, ""]
-	self.cppLines = []
+	warning = WARNING[:]
+	warning[1] += file.name(sourcePath)
+	self.hLines = warning + ["#ifndef " + guardSymbol, "#define " + guardSymbol, ""]
+	self.cppLines = warning
 	self.didIncludes = false
 	self.filename = file.name(sourcePath)
 	self.lineNum = 0

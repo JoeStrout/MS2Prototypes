@@ -264,37 +264,37 @@ format_string="| %-23s "
 
 if should_run_language "cs"; then
     table_header+="| C#        "
-    table_separator+="|-----------|"
+    table_separator+="|-----------"
     format_string+="| %-9s "
 fi
 
 if should_run_language "cpp-switch"; then
     table_header+="| C++ (switch) "
-    table_separator+="|--------------|"
+    table_separator+="|--------------"
     format_string+="| %-12s "
 fi
 
 if should_run_language "cpp-goto" || should_run_language "msa"; then
     table_header+="| C++ (goto) "
-    table_separator+="|------------|"
+    table_separator+="|------------"
     format_string+="| %-10s "
 fi
 
 if should_run_language "ms1"; then
     table_header+="|  MS 1.0  "
-    table_separator+="|----------|"
+    table_separator+="|----------"
     format_string+="| %-8s "
 fi
 
 if should_run_language "python"; then
     table_header+="|  Python  "
-    table_separator+="|----------|"
+    table_separator+="|----------"
     format_string+="| %-8s "
 fi
 
 if should_run_language "lua"; then
     table_header+="|   Lua    "
-    table_separator+="|----------|"
+    table_separator+="|----------"
     format_string+="| %-8s "
 fi
 

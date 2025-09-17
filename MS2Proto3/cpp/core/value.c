@@ -60,26 +60,7 @@ const char* value_type_name(Value v) {
 // Arithmetic operations for VM support
 // Note: value_add() and value_sub() are now inlined in value.h
 
-Value value_mult(Value a, Value b) {
-    // Handle integer * integer case
-    if (is_int(a) && is_int(b)) {
-        // Use int64_t to detect overflow
-        int64_t result = (int64_t)as_int(a) * (int64_t)as_int(b);
-        if (result >= INT32_MIN && result <= INT32_MAX) {
-            return make_int((int32_t)result);
-        } else {
-            // Overflow to double
-            return make_double((double)result);
-        }
-    }
-    
-    // Handle mixed integer/double or double/double cases
-    if (is_number(a) && is_number(b)) {
-        double da = is_int(a) ? (double)as_int(a) : as_double(a);
-        double db = is_int(b) ? (double)as_int(b) : as_double(b);
-        return make_double(da * db);
-    }
-    
+Value value_mult_nonnumeric(Value a, Value b) {
     // Handle string repetition: string * int or int * string
     if (is_string(a) && is_int(b)) {
         int count = as_int(b);
@@ -114,62 +95,9 @@ Value value_mult(Value a, Value b) {
     return make_null();
 }
 
-Value value_div(Value a, Value b) {
-    // Handle integer / integer case
-    if (is_int(a) && is_int(b)) {
-        // Use int64_t to detect overflow
-        int64_t result = (int64_t)as_int(a) / (int64_t)as_int(b);
-        if (result >= INT32_MIN && result <= INT32_MAX) {
-            return make_int((int32_t)result);
-        } else {
-            // Overflow to double
-            return make_double((double)result);
-        }
-    }
-    
-    // Handle mixed integer/double or double/double cases
-    if (is_number(a) && is_number(b)) {
-        double da = is_int(a) ? (double)as_int(a) : as_double(a);
-        double db = is_int(b) ? (double)as_int(b) : as_double(b);
-        return make_double(da / db);
-    // Handle string / number
-    } else if (is_string(a) && is_number(b)) {
-    	// We'll just call through to value_mult for this, with a factor of 1/b.
-    	return value_mult(a, value_div(make_double(1), b));
-    }
-    
-    // TODO: Handle string concatenation, etc.
-    // For now, return nil for unsupported operations
-    return make_null();
-}
-
-Value value_mod(Value a, Value b) {
-    // Handle integer % integer case
-    if (is_int(a) && is_int(b)) {
-        // Use int64_t to detect overflow
-        int64_t result = (int64_t)as_int(a) % (int64_t)as_int(b);
-        if (result >= INT32_MIN && result <= INT32_MAX) {
-            return make_int((int32_t)result);
-        } else {
-            // Overflow to double
-            return make_double((double)result);
-        }
-    }
-    
-    // Handle mixed integer/double or double/double cases
-    if (is_number(a) && is_number(b)) {
-        double da = is_int(a) ? (double)as_int(a) : as_double(a);
-        double db = is_int(b) ? (double)as_int(b) : as_double(b);
-        return make_double(fmod(da, db));
-    }
-    
-    // TODO: Handle string concatenation, etc.
-    // For now, return nil for unsupported operations
-    return make_null();
-}
-
 // Note: value_lt() is now inlined in value.h
 
+// ToDo: inline the following too.
 bool value_le(Value a, Value b) {
     // Handle numeric comparisons
     if (is_number(a) && is_number(b)) {

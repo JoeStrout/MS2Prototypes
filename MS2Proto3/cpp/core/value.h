@@ -216,11 +216,78 @@ static inline bool value_lt(Value a, Value b) {
     return false;
 }
 
-// Less frequently used arithmetic operations (keep in .c file for code size)
-// ToDo: reconsider that... * and / are pretty common in real code.
-Value value_mult(Value a, Value b);
-Value value_div(Value a, Value b);
-Value value_mod(Value a, Value b);
+extern Value value_mult_nonnumeric(Value a, Value b);
+static inline Value value_mult(Value a, Value b) {
+    // Handle integer * integer case
+    if (is_int(a) && is_int(b)) {
+        // Use int64_t to detect overflow
+        int64_t result = (int64_t)as_int(a) * (int64_t)as_int(b);
+        if (result >= INT32_MIN && result <= INT32_MAX) {
+            return make_int((int32_t)result);
+        } else {
+            // Overflow to double
+            return make_double((double)result);
+        }
+    }
+    
+    // Handle mixed integer/double or double/double cases
+    if (is_number(a) && is_number(b)) {
+        double da = is_int(a) ? (double)as_int(a) : as_double(a);
+        double db = is_int(b) ? (double)as_int(b) : as_double(b);
+        return make_double(da * db);
+    }
+    
+    // Everything else, go to the non-numeric handler
+    return value_mult_nonnumeric(a, b);
+}
+
+static inline Value value_div(Value a, Value b) {
+    // Handle integer / integer case
+    if (is_int(a) && is_int(b)) {
+        // Use int64_t to detect overflow
+        int64_t result = (int64_t)as_int(a) / (int64_t)as_int(b);
+        if (result >= INT32_MIN && result <= INT32_MAX) {
+            return make_int((int32_t)result);
+        } else {
+            // Overflow to double
+            return make_double((double)result);
+        }
+    }
+    
+    // Handle mixed integer/double or double/double cases
+    if (is_number(a) && is_number(b)) {
+        double da = is_int(a) ? (double)as_int(a) : as_double(a);
+        double db = is_int(b) ? (double)as_int(b) : as_double(b);
+        return make_double(da / db);
+    // Handle string / number
+    } else if (is_string(a) && is_number(b)) {
+    	// We'll just call through to value_mult for this, with a factor of 1/b.
+    	return value_mult_nonnumeric(a, value_div(make_double(1), b));
+    }
+    return make_null();
+}
+
+static inline Value value_mod(Value a, Value b) {
+    // Handle integer % integer case
+    if (is_int(a) && is_int(b)) {
+        // Use int64_t to detect overflow
+        int64_t result = (int64_t)as_int(a) % (int64_t)as_int(b);
+        if (result >= INT32_MIN && result <= INT32_MAX) {
+            return make_int((int32_t)result);
+        } else {
+            // Overflow to double
+            return make_double((double)result);
+        }
+    }
+    
+    // Handle mixed integer/double or double/double cases
+    if (is_number(a) && is_number(b)) {
+        double da = is_int(a) ? (double)as_int(a) : as_double(a);
+        double db = is_int(b) ? (double)as_int(b) : as_double(b);
+        return make_double(fmod(da, db));
+    }
+    return make_null();
+}
 
 // Value comparison (most critical ones inlined above, others implemented in value.c)
 bool value_equal(Value a, Value b);
