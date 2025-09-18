@@ -19,8 +19,11 @@ We will need to extend this stack with some extra data for each slot:
 1. The **name** of the local variable associated with that slot, if any;
 2. An **assigned flag** indicating whether that variable currently has a value assigned.
 
-When a function is entered, this metadata will be set up according to details in the FuncDef.  Note that every local variable used in the function will get a slot, and thos slots will be named; but initially only the parameters will have their assigned flag set to true.  When an assignment to a local variable is done, the assigned flag will be set (this might be an extra opcode emitted for the assignment statement).
+When a function is entered, this metadata will be set up according to details in the FuncDef.  Note that every local variable used in the function will get a slot, and those slots will be named; but initially only the parameters will have their assigned flag set to true.  When an assignment to a local variable is done, the assigned flag will be set (this might be an extra opcode emitted for the assignment statement).
 
+_Alternatively_: could we have registers named only while they are assigned?  In this case an assignment statement would actually assign the name string to the register (in addition to copying the value).  But as all the identifiers in the code would be in the constants table already, this is no harder (and probably no slower) than setting the flag.  This might be more efficient than having both.  It also leaves open the possibility of reusing a register for different variables at different times, if we can determine (e.g. through static analysis) than an older variable is no longer needed).
+
+(Note: variable lifetime analysis is totally doable, since unless a function either (1) makes use of `locals`, or (2) defines an inner `function`, there is no way any other code can access its locals.)
 
 ## VarMaps
 
@@ -181,15 +184,39 @@ CALLFN 17, "print" # call "print" with result of previous call
 
 ### Assignment of outer variable (rare)
 
+Care must be taken here: the `outer` scope is not the previous stack frame, but rather, the stack frame that was current when the function was initially defined.
 
+So, part of the code behind the `function` keyword will grab the VarMap of the current  function, and store it as the `outer` context of the new function.  Note that if that function is invoked while the outer function is still on the stack, then it will be able to read and write live variables.  If the outer function exists before the new function is invoked, that's OK too; in this case the VarMap will have gathered its values and be acting like an ordinary map.
 
 ### Assignment of global variable (common-ish)
 
+`globals` should probably be a keyword, but it essentially evaluates to the VarMap of the bottommost call frame.  Like with any VarMap, you can update or store new key/value pairs in it via assignment with dot syntax.  If the given identifier was already mapped to a register in that call frame, then it will update the register; otherwise, it will just store the value in the map.
+
 ### Read of global variable (common)
+
+When you write `_ = globals.foo`, it compiles as a LOOKUP opcode on the `globals` map (with "foo" as a string constant key).  As that map is really a VarMap, this can either return a value from a register, or from one of the extra key/value pairs stored on the map.  If it is not found in either place, then an Undefined Identifier error occurs.
+
+The exception would be: if the compiler knows that `foo` is already assigned to a register, then it returns the value from that register directly.  This might be possible only for code at the global scope (since register references are 0-based from the current stack frame).
 
 ### Deleting local variable (rare)
 
+MiniScript code:
+```
+foo = 42
+locals.remove "foo"
+```
+
+#### Concept
+
+This uses the standard intrinsic for removing a map key, but as `locals` is a VarMap, if the variable is mapped to a register, then it just clears the **assigned flag** for that register.  (If it's not mapped to a register, then it just does ordinary map behavior.)
+
+This does mean that any register reads in our VM have to check the assigned flag, because if it's false, we need to throw an Undefined Identifier error.
+
+
 ### Deleting outer variable (rare)
+
+As above.
 
 ### Deleting global variable (rare-ish)
 
+Also as above.

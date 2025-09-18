@@ -20,3 +20,9 @@ And, **using any list or map as a map key actually uses a frozenCopy**.
 
 Any attempt to mutate a frozen list/map will result in a runtime `Attempt to modify a frozen list` (or `map`) error.
 
+## Function Expressions
+
+`function`...`end function` will comprise an _expression_, not a statement.  This just cleans up various odd corners of the syntax.  The effect of this expression is still to create a funcRef, with code that is compiled (just once) for whatever's between the keywords, and `outer` (if needed) assigned to the locals of the function evaluating this expression.
+
+
+
