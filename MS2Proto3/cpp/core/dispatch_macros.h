@@ -68,6 +68,7 @@
 	X(IFNE_rA_rB) \
 	X(IFNE_rA_iBC) \
 	X(CALLF_iA_iBC) \
+	X(CALLFN_iA_kBC) \
 	X(RETURN)
 
 

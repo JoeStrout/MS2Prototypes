@@ -11,7 +11,7 @@ namespace MiniScript {
 		LOAD_rA_kBC,
 		ADD_rA_rB_rC,
 		SUB_rA_rB_rC,
-		MULT_rA_rB_rC,
+		MULT_rA_rB_rC,	// ToDo: rename this MUL, to match ADD SUB DIV and MOD
 		DIV_rA_rB_rC,
 		MOD_rA_rB_rC,
 		LIST_rA_iBC,
@@ -52,6 +52,7 @@ namespace MiniScript {
 		IFNE_rA_rB,
 		IFNE_rA_iBC,
 		CALLF_iA_iBC,
+		CALLFN_iA_kBC,
 		RETURN,
 		OP__COUNT  // Not an opcode, but rather how many opcodes we have.
 	}
@@ -142,6 +143,7 @@ namespace MiniScript {
 				case Opcode.IFNE_rA_rB:     return "IFLT_rA_rB";
 				case Opcode.IFNE_rA_iBC:    return "IFLT_rA_iBC";
 				case Opcode.CALLF_iA_iBC:   return "CALLF_iA_iBC";
+				case Opcode.CALLFN_iA_kBC:  return "CALLFN_iA_kBC";
 				case Opcode.RETURN:         return "RETURN";
 				default:
 					return "Unknown opcode";
@@ -196,6 +198,7 @@ namespace MiniScript {
 			if (s == "IFNE_rA_rB")      return Opcode.IFNE_rA_rB;
 			if (s == "IFNE_rA_iBC")     return Opcode.IFNE_rA_iBC;
 			if (s == "CALLF_iA_iBC")    return Opcode.CALLF_iA_iBC;
+			if (s == "CALLFN_iA_kBC")   return Opcode.CALLFN_iA_kBC;
 			if (s == "RETURN")          return Opcode.RETURN;
 			return Opcode.NOOP;
 		}

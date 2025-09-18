@@ -348,6 +348,9 @@ namespace MiniScript {
 	}
 
 	// Global helper functions to match C++ value.h interface
+	// ToDo: take out most of the stuff above and have *only* these interfaces,
+	// so we don't have two ways to do things in the C# code (only one of which
+	// actually works in any transpiled code).
 	public static class ValueHelpers {
 		// Core value creation functions (matching value.h)
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -476,6 +479,18 @@ namespace MiniScript {
         // Conversion operations (matching value.h)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value to_string(Value a) => make_string(a.ToString());
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Value to_number(Value a) {
+			try {
+				double result = double.Parse(a.ToString());
+				if (result % 1 == 0 && Int32.MinValue <= result 
+				    && result <= Int32.MaxValue) return make_int((int)result);
+				return make_double(result);
+			} catch {
+				return make_int(0);
+			}
+		}
 	}
 
 	// A minimal, fast handle table. Stores actual C# objects referenced by Value.

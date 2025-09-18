@@ -647,6 +647,16 @@ namespace MiniScript {
 				}
 				instruction = BytecodeUtil.INS_AB(Opcode.CALLF_iA_iBC, reserveRegs, funcIdx);
 				
+			} else if (mnemonic == "CALLFN") {
+				if (parts.Count != 3) { Error("Syntax error"); return 0; }
+				Byte reserveRegs = (Byte)ParseInt16(parts[1]);	// ToDo: check range before typecast
+				Value constantValue = ParseAsConstant(parts[2]);
+				if (!is_string(constantValue)) {
+					Error(StringUtils.Format("Function name must be a string"));
+					return 0;
+				}
+				Int32 constIdx = AddConstant(constantValue);
+				instruction = BytecodeUtil.INS_AB(Opcode.CALLFN_iA_kBC, reserveRegs, (Int16)constIdx);
 			} else if (mnemonic == "RETURN") {
 				instruction = BytecodeUtil.INS(Opcode.RETURN);
 			

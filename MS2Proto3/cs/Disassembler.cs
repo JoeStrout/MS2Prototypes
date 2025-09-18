@@ -58,6 +58,7 @@ namespace MiniScript {
 				case Opcode.IFNE_rA_rB:
 				case Opcode.IFNE_rA_iBC:   return "IFNE";
 				case Opcode.CALLF_iA_iBC:  return "CALLF";
+				case Opcode.CALLFN_iA_kBC: return "CALLFN";
 				case Opcode.RETURN:        return "RETURN";
 				default:
 					return "Unknown opcode";
@@ -128,6 +129,13 @@ namespace MiniScript {
         				mnemonic,
         				(Int32)BytecodeUtil.As(instruction),
         				(Int32)BytecodeUtil.BCs(instruction));
+        		// iA, kBC
+        		case Opcode.CALLFN_iA_kBC:
+        			return StringUtils.Format("{0} {1}, k{2}",
+        				mnemonic,
+        				(Int32)BytecodeUtil.As(instruction),
+        				(Int32)BytecodeUtil.BCs(instruction));
+        		
         		
         		// Three Operands:
         		// rA, rB, rC

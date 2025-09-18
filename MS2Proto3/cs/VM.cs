@@ -715,6 +715,18 @@ namespace MiniScript {
 						EnsureFrame(baseIndex, callee.MaxRegs);
 						break; // CPP: VM_NEXT();
 					}
+					
+					case Opcode.CALLFN_iA_kBC: { // CPP: VM_CASE(CALLFN_iA_kBC) {
+						// Call named (intrinsic?) function kBC,
+						// with parameters/return at register A.
+						Byte a = BytecodeUtil.Au(instruction);
+						UInt16 constIdx = BytecodeUtil.BCu(instruction);
+						Value funcName = curConstants[constIdx];
+						// For now, we'll only support intrinsics.
+						// ToDo: change this once we have variable look-up.
+						DoIntrinsic(funcName, baseIndex + a);
+						break; // CPP: VM_NEXT();
+					}
 
 					case Opcode.RETURN: { // CPP: VM_CASE(RETURN) {
 						// Return value convention: value is in base[0]
@@ -768,6 +780,40 @@ namespace MiniScript {
 			if (baseIndex + neededRegs > stack.Count) {
 				// Simple error handling - just print and continue
 				IOHelper.Print("Stack overflow error");
+			}
+		}
+		
+		static Value FuncNamePrint = make_string("print");
+		static Value FuncNameInput = make_string("input");
+		static Value FuncNameVal = make_string("val");
+		
+		private void DoIntrinsic(Value funcName, Int32 baseReg) {
+			// Run the named intrinsic, with its parameters and return value
+			// stored in our stack starting at baseReg.
+			
+			// Prototype implementation:
+			
+			if (value_identical(funcName, FuncNamePrint)) {
+				IOHelper.Print(StringUtils.Format("{0}", stack[baseReg]));
+				stack[baseReg] = make_null();
+			
+			} else if (value_identical(funcName, FuncNameInput)) {
+				String prompt = new String("");
+				if (!is_null(stack[baseReg])) {
+					prompt = StringUtils.Format("{0}", stack[baseReg]);
+				}
+				String result = IOHelper.Input(prompt);
+				stack[baseReg] = make_string(result);
+			
+			} else if (value_identical(funcName, FuncNameVal)) {
+				stack[baseReg] = to_number(stack[baseReg]);
+				
+			} else {
+				IOHelper.Print(
+				  StringUtils.Format("ERROR: Unknown function '{0}'", funcName)
+				);
+				stack[baseReg] = make_null();
+				// ToDo: put VM in an error state, so it aborts.
 			}
 		}
 	}
