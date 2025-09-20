@@ -2,6 +2,7 @@
 #include "value.h"
 #include "value_string.h"
 #include "value_list.h"
+#include "value_map.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -47,6 +48,7 @@ GC gc = {0};
 // Forward declarations for marking functions
 void gc_mark_string(StringStorage* str);
 void gc_mark_list(ValueList* list);
+void gc_mark_map(ValueMap* map);
 
 void gc_init(void) {
     gc.all_objects = NULL;
@@ -164,6 +166,9 @@ void gc_mark_value(Value v) {
     } else if (is_list(v)) {
         ValueList* list = as_list(v);
         if (list) gc_mark_list(list);
+    } else if (is_map(v)) {
+        ValueMap* map = as_map(v);
+        if (map) gc_mark_map(map);
     }
     // Numbers, ints, nil don't need marking
 }
@@ -182,17 +187,44 @@ void gc_mark_string(StringStorage* str) {
 
 void gc_mark_list(ValueList* list) {
     if (!list) return;
-    
+
     // Get GC object header
     GCObject* obj = (GCObject*)((char*)list - sizeof(GCObject));
-    
+
     if (obj->marked) return;  // Already marked
-    
+
     obj->marked = true;
-    
+
     // Mark all items in the list
     for (int i = 0; i < list->count; i++) {
         gc_mark_value(list->items[i]);
+    }
+}
+
+void gc_mark_map(ValueMap* map) {
+    if (!map) return;
+
+    // Get GC object header for the ValueMap structure
+    GCObject* map_obj = (GCObject*)((char*)map - sizeof(GCObject));
+
+    if (map_obj->marked) return;  // Already marked
+
+    map_obj->marked = true;
+
+    // Mark the entries array (if it exists)
+    if (map->entries) {
+        GCObject* entries_obj = (GCObject*)((char*)map->entries - sizeof(GCObject));
+        if (!entries_obj->marked) {
+            entries_obj->marked = true;
+        }
+
+        // Mark all keys and values in the map
+        for (int i = 0; i < map->capacity; i++) {
+            if (map->entries[i].occupied) {
+                gc_mark_value(map->entries[i].key);
+                gc_mark_value(map->entries[i].value);
+            }
+        }
     }
 }
 

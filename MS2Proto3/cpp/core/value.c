@@ -6,6 +6,7 @@
 #include "value.h"
 #include "value_string.h"
 #include "value_list.h"
+#include "value_map.h"
 #include "StringStorage.h"
 #include <stdio.h>
 #include <stdint.h>
@@ -307,8 +308,12 @@ uint32_t value_hash(Value v) {
         // Forward declare list_hash - will be implemented in value_list.c
         extern uint32_t list_hash(Value v);
         return list_hash(v);
+    } else if (is_map(v)) {
+        // Forward declare map_hash - will be implemented in value_map.c
+        extern uint32_t map_hash(Value v);
+        return map_hash(v);
     } else {
-        // For everything else (int, double, null, tiny strings), 
+        // For everything else (int, double, null, tiny strings),
         // hash the raw uint64_t value
         return uint64_hash(v);
     }

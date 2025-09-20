@@ -26,6 +26,20 @@ extern "C" {
 
 typedef uint64_t Value;
 
+// Forward declarations for map structures
+typedef struct MapEntry {
+    Value key;
+    Value value;
+    uint32_t hash;      // Cached hash of the key
+    bool occupied;      // Whether this slot is occupied
+} MapEntry;
+
+typedef struct ValueMap {
+    int count;          // Number of key-value pairs
+    int capacity;       // Number of slots in the hash table
+    MapEntry* entries;  // Pointer to separately-allocated entries array
+} ValueMap;
+
 // NaN-boxing masks and constants
 #define NANISH_MASK        0xffff000000000000ULL
 #define NANISH             0x7ffc000000000000ULL
@@ -102,7 +116,9 @@ static inline Value make_double(double d) {
     return v;
 }
 
-// Note: make_map() will be implemented in the maps module
+// Map creation functions (forward declarations for value_map.h)
+extern Value make_map(int initial_capacity);
+extern Value make_empty_map(void);
 
 // Core value extraction functions
 static inline int32_t as_int(Value v) {
@@ -116,7 +132,8 @@ static inline double as_double(Value v) {
     return d;
 }
 
-// Note: as_map() will be implemented in the maps module
+// Map extraction function (forward declaration for value_map.h)
+extern ValueMap* as_map(Value v);
 
 // Utility functions for accessing tiny string data within Value
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
