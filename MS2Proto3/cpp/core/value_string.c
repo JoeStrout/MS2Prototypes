@@ -8,6 +8,7 @@
 #include "value.h"
 #include "gc.h"
 #include "unicodeUtil.h"
+#include "hashing.h"
 #include "value_list.h"
 #include <stdlib.h>
 #include <string.h>
@@ -33,23 +34,6 @@ static void init_intern_table() {
         intern_table[i] = NULL;
     }
     intern_table_initialized = true;
-}
-
-// FNV-1a hash function for strings
-// Returns 0 to indicate "not computed" is reserved, so we use 1 as minimum hash
-uint32_t string_hash(const char* data, int len) {
-    // FNV-1a constants
-    const uint32_t FNV_PRIME = 0x01000193;
-    const uint32_t FNV_OFFSET_BASIS = 0x811c9dc5;
-    
-    uint32_t hash = FNV_OFFSET_BASIS;
-    for (int i = 0; i < len; i++) {
-        hash ^= (unsigned char)data[i];
-        hash *= FNV_PRIME;
-    }
-    
-    // Ensure hash is never 0 (reserved for "not computed")
-    return hash == 0 ? 1 : hash;
 }
 
 // Buffer for tiny string conversion - thread-local would be better in real code

@@ -2,6 +2,7 @@
 #include "value.h"
 #include "gc.h"
 #include "value_string.h"
+#include "hashing.h"
 #include <stdlib.h>
 #include <assert.h>
 
@@ -174,4 +175,25 @@ void list_resize(Value list_val, int new_capacity) {
     // Use list_with_expanded_capacity() for capacity expansion instead
     (void)list_val;
     (void)new_capacity;
+}
+
+// Hash function for lists
+uint32_t list_hash(Value list_val) {
+    ValueList* list = as_list(list_val);
+    if (!list) return 0;
+
+    // Use a simple hash algorithm: combine the hashes of all elements
+    // Using FNV-1a constants for consistency with our other hash functions.
+    // ToDo: avoid getting stuck in a loop if list structure is recursive.
+    const uint32_t FNV_PRIME = 0x01000193;
+    uint32_t hash = 0x811c9dc5; // FNV-1a offset basis
+
+    for (int i = 0; i < list->count; i++) {
+        uint32_t element_hash = value_hash(list->items[i]);
+        hash ^= element_hash;
+        hash *= FNV_PRIME;
+    }
+
+    // Ensure hash is never 0 (reserved for "not computed")
+    return hash == 0 ? 1 : hash;
 }

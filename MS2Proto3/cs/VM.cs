@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 // CPP: #include "value.h"
 // CPP: #include "value_list.h"
+// CPP: #include "value_string.h"
 // CPP: #include "Bytecode.g.h"
 // CPP: #include "IOHelper.g.h"
 // CPP: #include "Disassembler.g.h"
@@ -783,9 +784,9 @@ namespace MiniScript {
 			}
 		}
 		
-		static Value FuncNamePrint = make_string("print");
-		static Value FuncNameInput = make_string("input");
-		static Value FuncNameVal = make_string("val");
+		private static readonly Value FuncNamePrint = make_string("print");
+		private static readonly Value FuncNameInput = make_string("input");
+		private static readonly Value FuncNameVal = make_string("val");
 		
 		private void DoIntrinsic(Value funcName, Int32 baseReg) {
 			// Run the named intrinsic, with its parameters and return value
@@ -803,7 +804,8 @@ namespace MiniScript {
 					prompt = StringUtils.Format("{0}", stack[baseReg]);
 				}
 				String result = IOHelper.Input(prompt);
-				stack[baseReg] = make_string(result);
+				stack[baseReg] = 
+				  make_string(result);	// CPP: make_string(result.c_str());
 			
 			} else if (value_identical(funcName, FuncNameVal)) {
 				stack[baseReg] = to_number(stack[baseReg]);

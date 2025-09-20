@@ -5,10 +5,13 @@
 
 #include "value.h"
 #include "value_string.h"
+#include "value_list.h"
+#include "StringStorage.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <limits.h>
 #include <math.h>
+#include <stdlib.h>
 
 // Debug utilities for Value inspection
 void debug_print_value(Value v) {
@@ -207,7 +210,7 @@ Value value_shl(Value v, int shift) {
 // TODO: Consider inlining this.
 // TODO: Add support for lists and maps
 // Using raw C-String
-Value to_string(Value v){
+Value to_string(Value v) {
     char buf[32];
 
     if (is_string(v)) return v;
@@ -246,6 +249,44 @@ Value to_string(Value v){
     return make_string("");
 }
 
+Value to_number(Value v) {
+	if (is_number(v)) return v;
+	if (!is_string(v)) return make_int(0);
+
+	// Get the string data
+	int len;
+	const char* str = get_string_data_zerocopy(&v, &len);
+	if (!str || len == 0) return make_int(0);
+
+	// Parse as double using strtod (handles all cases efficiently)
+	char* endptr;
+	double result = strtod(str, &endptr);
+
+	// Check if parsing was successful
+	if (endptr == str) {
+		// No conversion performed
+		return make_int(0);
+	}
+
+	// Skip trailing whitespace after the number
+	while (endptr < str + len && (*endptr == ' ' || *endptr == '\t' || *endptr == '\n' || *endptr == '\r')) {
+		endptr++;
+	}
+
+	// Check if we consumed the entire string
+	if (endptr != str + len) {
+		// Invalid characters after the number
+		return make_int(0);
+	}
+
+	// Check if the result can be represented as int32 and has no fractional part
+	if (result >= INT32_MIN && result <= INT32_MAX && result == (double)(int32_t)result) {
+		return make_int((int32_t)result);
+	}
+
+	return make_double(result);
+}
+
 // Inspection
 // ToDo: get this into a header somewhere, so it can be inlined
 bool is_truthy(Value v) {
@@ -255,3 +296,20 @@ bool is_truthy(Value v) {
                 (is_string(v) && string_length(v) != 0)
                 ));
     }
+
+// Hash function for Values
+uint32_t value_hash(Value v) {
+    if (is_heap_string(v)) {
+		// For heap strings, use the cached hash from StringStorage
+		StringStorage* storage = as_string(v);
+		return ss_hash(storage);
+    } else if (is_list(v)) {
+        // Forward declare list_hash - will be implemented in value_list.c
+        extern uint32_t list_hash(Value v);
+        return list_hash(v);
+    } else {
+        // For everything else (int, double, null, tiny strings), 
+        // hash the raw uint64_t value
+        return uint64_hash(v);
+    }
+}

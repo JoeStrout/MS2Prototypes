@@ -1,6 +1,7 @@
 // StringPool.cpp
 #include "StringPool.h"
 #include "CS_String.h"
+#include "hashing.h"
 #include <cstring>  // strlen, memcpy
 #include <malloc/malloc.h> // for debugging (malloc_size) on macOS
 #include <cstdio>
@@ -14,14 +15,6 @@ static Pool pools[256];  // 256 pools because poolNum is a utf8_t
 // Small helpers to keep code tidy
 static inline HashEntry* derefHE(MemRef r) {
     return (HashEntry*)MemPoolManager::getPtr(r);
-}
-
-static uint32_t string_hash(const char* data, int len) {
-    // same FNV-1a as StringStorage.cpp so hashes match
-    const uint32_t FNV_PRIME = 0x01000193u, FNV_OFFSET = 0x811c9dc5u;
-    uint32_t h = FNV_OFFSET;
-    for (int i = 0; i < len; ++i) { h ^= (unsigned char)data[i]; h *= FNV_PRIME; }
-    return h ? h : 1;
 }
 
 static int utf8_char_count(const char* s, int n) {

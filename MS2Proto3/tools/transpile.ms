@@ -283,6 +283,12 @@ Converter.processNonmethodLine = function
 	  "≤scope≥: static const ≤type≥ ≤name≥;",
 	  "const ≤type≥ ≤className≥::≤name≥ = ≤value≥;") then return self.checkType
 
+	// static readonly class field with default (usually non-constant) value
+	if self.context == Context.CLASS and 
+	  self.match("≤scope:w≥ static readonly ≤type:w≥ ≤name:w≥ = ≤value≥;",
+	  "≤scope≥: static const ≤type≥ ≤name≥;",
+	  "const ≤type≥ ≤className≥::≤name≥ = ≤value≥;") then return self.checkType
+
 	// class property with expression body
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ => ≤expr≥;",
 	  "≤scope≥: ≤type≥ ≤name≥() { return ≤expr≥; }", "") then

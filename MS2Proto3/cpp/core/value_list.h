@@ -50,6 +50,9 @@ void list_resize(Value list_val, int new_capacity);
 bool list_needs_expansion(Value list_val);
 Value list_with_expanded_capacity(Value list_val);
 
+// Hash function for lists
+uint32_t list_hash(Value list_val);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

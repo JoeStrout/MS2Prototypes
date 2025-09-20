@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "unicodeUtil.h"
+#include "hashing.h"
 
 // Creation and destruction functions
 StringStorage* ss_create(const char* cstr, StringStorageAllocator allocator) {
@@ -437,13 +438,7 @@ StringStorage** ss_split(const StringStorage* storage, char separator, int* coun
 
 uint32_t ss_computeHash(const StringStorage* storage) {
     if (!storage) return 0;
-    return fnv1a_hash(storage->data, storage->lenB);
-}
-
-void ss_ensureHashComputed(StringStorage* storage) {
-    if (storage && storage->hash == 0) {
-        storage->hash = ss_computeHash(storage);
-    }
+    return string_hash(storage->data, storage->lenB);
 }
 
 // Not yet implemented - more complex methods

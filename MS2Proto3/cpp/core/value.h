@@ -15,6 +15,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include <string.h>
+#include "hashing.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -135,7 +136,7 @@ extern int string_compare(Value a, Value b);
 // Conversion functions
 
 Value to_string(Value v);
-Value to_number(Value v); // TODO: implement this
+Value to_number(Value v);
 
 // Arithmetic operations (inlined for performance)
 static inline Value value_add(Value a, Value b) {
@@ -303,6 +304,9 @@ Value value_xor(Value a, Value b);
 Value value_unary(Value a);  // ~ (not)
 Value value_shr(Value v, int shift);
 Value value_shl(Value v, int shift);
+
+// Hash function for Values
+uint32_t value_hash(Value v);
 
 // Debug utility functions (implemented in value.c)
 void debug_print_value(Value v);
