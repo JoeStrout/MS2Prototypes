@@ -153,6 +153,7 @@ extern int string_compare(Value a, Value b);
 // Conversion functions
 
 Value to_string(Value v);
+Value value_repr(Value v);  // Quoted representation for literals
 Value to_number(Value v);
 
 // Arithmetic operations (inlined for performance)

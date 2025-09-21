@@ -13,6 +13,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Debug utilities for Value inspection
 void debug_print_value(Value v) {
@@ -211,6 +212,47 @@ Value value_shl(Value v, int shift) {
 // TODO: Consider inlining this.
 // TODO: Add support for lists and maps
 // Using raw C-String
+// Convert value to quoted representation (for literals)
+Value value_repr(Value v) {
+    if (is_string(v)) {
+        // For strings, return quoted representation with internal quotes doubled
+        const char* content = as_cstring(v);
+        if (!content) content = "";
+
+        // Count quotes to determine output size
+        int quote_count = 0;
+        for (const char* p = content; *p; p++) {
+            if (*p == '"') quote_count++;
+        }
+
+        // Allocate buffer: original length + 2 (outer quotes) + quote_count (doubled quotes)
+        int orig_len = strlen(content);
+        int new_len = orig_len + 2 + quote_count;
+        char* escaped = malloc(new_len + 1);
+
+        // Build escaped string
+        escaped[0] = '"';
+        char* out = escaped + 1;
+        for (const char* p = content; *p; p++) {
+            if (*p == '"') {
+                *out++ = '"';  // First quote
+                *out++ = '"';  // Doubled quote
+            } else {
+                *out++ = *p;
+            }
+        }
+        *out++ = '"';
+        *out = '\0';
+
+        Value result = make_string(escaped);
+        free(escaped);
+        return result;
+    } else {
+        // For everything else, use normal string representation
+        return to_string(v);
+    }
+}
+
 Value to_string(Value v) {
     char buf[32];
 
@@ -246,6 +288,12 @@ Value to_string(Value v) {
     else if (is_int(v)) {
         snprintf(buf, sizeof buf, "%d", as_int(v));
         return make_string(buf);
+    }
+    else if (is_list(v)) {
+        return list_to_string(v);
+    }
+    else if (is_map(v)) {
+        return map_to_string(v);
     }
     return make_string("");
 }

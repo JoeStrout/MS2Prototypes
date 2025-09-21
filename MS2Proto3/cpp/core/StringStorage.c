@@ -461,9 +461,68 @@ StringStorage* ss_removeLen(const StringStorage* storage, int startIndex, int co
 }
 
 StringStorage* ss_replace(const StringStorage* storage, const StringStorage* oldValue, const StringStorage* newValue, StringStorageAllocator allocator) {
-    // TODO: Implement
-    (void)storage; (void)oldValue; (void)newValue; (void)allocator;
-    return NULL;
+    if (!storage || !oldValue || !newValue) return NULL;
+
+    const char* str = storage->data;
+    const char* old_str = oldValue->data;
+    const char* new_str = newValue->data;
+
+    int str_len = storage->lenB;
+    int old_len = oldValue->lenB;
+    int new_len = newValue->lenB;
+
+    // If old string is empty, return copy of original
+    if (old_len == 0) {
+        return ss_create(storage->data, allocator);
+    }
+
+    // Count occurrences of old_str in str
+    int count = 0;
+    const char* pos = str;
+    while ((pos = strstr(pos, old_str)) != NULL) {
+        count++;
+        pos += old_len;
+    }
+
+    // If no occurrences, return copy of original
+    if (count == 0) {
+        return ss_create(storage->data, allocator);
+    }
+
+    // Calculate new length
+    int new_total_len = str_len + count * (new_len - old_len);
+
+    // Allocate new StringStorage
+    StringStorage* result = (StringStorage*)allocator(sizeof(StringStorage) + new_total_len + 1);
+    if (!result) return NULL;
+
+    result->lenB = new_total_len;
+    result->lenC = -1; // Will be computed on demand
+    result->hash = 0;  // Will be computed on demand
+
+    // Build the result string
+    char* dest = result->data;
+    const char* src = str;
+
+    while (*src) {
+        const char* found = strstr(src, old_str);
+        if (found == src) {
+            // Found occurrence at current position
+            memcpy(dest, new_str, new_len);
+            dest += new_len;
+            src += old_len;
+        } else {
+            // Copy characters until next occurrence or end
+            const char* next = found ? found : str + str_len;
+            int copy_len = next - src;
+            memcpy(dest, src, copy_len);
+            dest += copy_len;
+            src += copy_len;
+        }
+    }
+
+    *dest = '\0';
+    return result;
 }
 
 StringStorage* ss_replaceChar(const StringStorage* storage, char oldChar, char newChar, StringStorageAllocator allocator) {

@@ -326,3 +326,43 @@ uint32_t map_hash(Value map_val) {
     // Ensure hash is never 0 (reserved for "not computed")
     return hash == 0 ? 1 : hash;
 }
+
+// Convert map to string representation for runtime (returns GC-managed Value)
+Value map_to_string(Value map_val) {
+    ValueMap* map = as_map(map_val);
+    if (!map) return make_string("{}");
+
+    if (map->count == 0) return make_string("{}");
+
+    // Build string: {"key1": "value1", "key2": "value2"}
+    Value result = make_string("{");
+
+    MapIterator iter = map_iterator(map_val);
+    Value key, value;
+    bool first = true;
+
+	// ToDo: instead of repeatedly calling string_concat, gather all
+	// the items in a list, and use join.
+    while (map_iterator_next(&iter, &key, &value)) {
+        if (!first) {
+            Value comma = make_string(", ");
+            result = string_concat(result, comma);
+        }
+        first = false;
+
+        // Get string representation of key and value
+        Value key_str = value_repr(key);
+        Value value_str = value_repr(value);
+
+        // Add "key": "value"
+        result = string_concat(result, key_str);
+        Value colon = make_string(": ");
+        result = string_concat(result, colon);
+        result = string_concat(result, value_str);
+    }
+
+    Value close = make_string("}");
+    result = string_concat(result, close);
+
+    return result;
+}

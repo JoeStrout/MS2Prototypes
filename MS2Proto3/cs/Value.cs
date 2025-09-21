@@ -145,11 +145,28 @@ namespace MiniScript {
 					// ToDo: watch out for recursion, or maybe just limit our depth in
 					// general.  I think MS1.0 limits nesting to 16 levels deep.  But
 					// whatever we do, we shouldn't just crash with a stack overflow.
-					items[i] = item.ToString();
+					items[i] = ValueHelpers.value_repr(item).ToString();
 				}
 				return "[" + string.Join(", ", items) + "]";
 			}
-			if (IsMap) return "<map>";
+			if (IsMap) {
+				var valueMap = HandlePool.Get(Handle()) as ValueMap;
+				if (valueMap == null) return "<map?>";
+
+				var items = new string[valueMap.Count];
+				int i = 0;
+				foreach (var kvp in valueMap.Items) {
+					// ToDo: watch out for recursion, or maybe just limit our depth in
+					// general.  I think MS1.0 limits nesting to 16 levels deep.  But
+					// whatever we do, we shouldn't just crash with a stack overflow.
+					string keyStr = ValueHelpers.value_repr(kvp.Key).ToString();
+					string valueStr = ValueHelpers.value_repr(kvp.Value).ToString();
+					items[i] = keyStr + ": " + valueStr;
+					i++;
+				}
+
+				return "{" + string.Join(", ", items) + "}";
+			}
 			return "<value>";
 		}
 
@@ -405,7 +422,66 @@ namespace MiniScript {
 			var valueList = HandlePool.Get(list_val.Handle()) as ValueList;
 			valueList?.Add(item);
 		}
-		
+
+		// Map functions (matching value_map.h)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Value make_map(int initial_capacity) {
+			var map = new ValueMap();
+			return Value.FromMap(map);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Value make_empty_map() => make_map(8);
+
+		public static int map_count(Value map_val) {
+			if (!map_val.IsMap) return 0;
+			var valueMap = HandlePool.Get(map_val.Handle()) as ValueMap;
+			return valueMap?.Count ?? 0;
+		}
+
+		public static Value map_get(Value map_val, Value key) {
+			if (!map_val.IsMap) return make_null();
+			var valueMap = HandlePool.Get(map_val.Handle()) as ValueMap;
+			return valueMap?.Get(key) ?? make_null();
+		}
+
+		public static bool map_set(Value map_val, Value key, Value value) {
+			if (!map_val.IsMap) return false;
+			var valueMap = HandlePool.Get(map_val.Handle()) as ValueMap;
+			return valueMap?.Set(key, value) ?? false;
+		}
+
+		public static bool map_remove(Value map_val, Value key) {
+			if (!map_val.IsMap) return false;
+			var valueMap = HandlePool.Get(map_val.Handle()) as ValueMap;
+			return valueMap?.Remove(key) ?? false;
+		}
+
+		public static bool map_has_key(Value map_val, Value key) {
+			if (!map_val.IsMap) return false;
+			var valueMap = HandlePool.Get(map_val.Handle()) as ValueMap;
+			return valueMap?.HasKey(key) ?? false;
+		}
+
+		public static void map_clear(Value map_val) {
+			if (!map_val.IsMap) return;
+			var valueMap = HandlePool.Get(map_val.Handle()) as ValueMap;
+			valueMap?.Clear();
+		}
+
+		// Value representation function (for literal representation)
+		public static Value value_repr(Value v) {
+			if (v.IsString) {
+				// For strings, return quoted representation with internal quotes doubled
+				string content = v.ToString();
+				string escaped = content.Replace("\"", "\"\"");  // Double internal quotes
+				return make_string("\"" + escaped + "\"");
+			} else {
+				// For everything else, use normal string representation
+				return make_string(v.ToString());
+			}
+		}
+
 		// Core value extraction functions (matching value.h)
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int as_int(Value v) => v.AsInt();
@@ -434,6 +510,12 @@ namespace MiniScript {
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool is_tiny_string(Value v) => v.IsTiny;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static String as_cstring(Value v) {
+			if (!v.IsString) return "";
+			return GetStringValue(v);
+		}
 		
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool is_number(Value v) => v.IsInt || v.IsDouble;
@@ -540,7 +622,40 @@ namespace MiniScript {
 			return -1;
 		}
 	}
-	
+
+	public class ValueMap {
+		private Dictionary<Value, Value> _items = new Dictionary<Value, Value>();
+
+		public int Count => _items.Count;
+
+		public Value Get(Value key) {
+			if (_items.TryGetValue(key, out Value value)) {
+				return value;
+			}
+			return Value.Null();
+		}
+
+		public bool Set(Value key, Value value) {
+			_items[key] = value;
+			return true;
+		}
+
+		public bool Remove(Value key) {
+			return _items.Remove(key);
+		}
+
+		public bool HasKey(Value key) {
+			return _items.ContainsKey(key);
+		}
+
+		public void Clear() {
+			_items.Clear();
+		}
+
+		// For iteration support
+		public IEnumerable<KeyValuePair<Value, Value>> Items => _items;
+	}
+
 	// String operations
 	public static class StringOperations {
 		public static Value StringSplit(Value str, Value delimiter) {
@@ -629,7 +744,7 @@ namespace MiniScript {
             return make_string(a.Substring(index, length));
         }
 		
-		private static string GetStringValue(Value val) {
+		public static string GetStringValue(Value val) {
 			if (val.IsTiny) return val.ToString();
 			if (val.IsHeapString) return HandlePool.Get(val.Handle()) as string ?? "";
 			return "";

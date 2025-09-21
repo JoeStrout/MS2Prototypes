@@ -5,6 +5,7 @@ using System.Collections.Generic;
 // CPP: #include "IOHelper.g.h"
 // CPP: #include "value_string.h"
 // CPP: #include "value_list.h"
+// CPP: #include "value_map.h"
 // CPP: #include <sstream>
 // CPP: #include <cctype>
 
@@ -150,16 +151,48 @@ namespace MiniScript {
 				// ToDo: watch out for recursion, or maybe just limit our depth in
 				// general.  I think MS1.0 limits nesting to 16 levels deep.  But
 				// whatever we do, we shouldn't just crash with a stack overflow.
-				for(int i = 0; i < list_count(v); i++) {
+				for (int i = 0; i < list_count(v); i++) {
 					oss << (i != 0 ? ", " : "") << makeString(pool, list_get(v, i)).c_str();
 				}
 				oss << "]";
+				return String(oss.str().c_str(), pool);
+			}
+			if (is_map(v)) {
+				std::ostringstream oss;
+				oss << "{";
+				// ToDo: watch out for recursion, or maybe just limit our depth in
+				// general.  I think MS1.0 limits nesting to 16 levels deep.  But
+				// whatever we do, we shouldn't just crash with a stack overflow.
+				MapIterator iter = map_iterator(v); 
+				Value key, value;
+				bool first = true;
+				while (map_iterator_next(&iter, &key, &value)) {
+					if (first) first = false; else oss << ", ";
+					oss << makeRepr(pool, key).c_str() << ": "
+					    << makeRepr(pool, value).c_str();
+				}
+				oss << "}";
 				return String(oss.str().c_str(), pool);
 			}
 			std::ostringstream oss;
 			oss << "<value:0x" << std::hex << v << ">";
 			return String(oss.str().c_str(), pool);
 		}
+		inline static String makeRepr(uint8_t pool, const Value v) {
+			if (is_string(v)) {
+				const char* str = as_cstring(v);
+				if (!str) {
+					return String("\"\"", pool);
+				}
+				String s = String(str, pool);
+				// Replace quotes: " becomes ""
+				String escaped = s.Replace(String("\"", pool), String("\"\"", pool));
+				// Wrap in quotes
+				return String("\"", pool) + escaped + String("\"", pool);
+			}
+			return makeString(pool, v);
+		}
+
 		// Generic fallback for numbers and streamable types.
 		template <typename T>
 		inline static String makeString(uint8_t pool, const T& v) {

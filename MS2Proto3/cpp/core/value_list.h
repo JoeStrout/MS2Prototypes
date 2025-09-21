@@ -53,6 +53,9 @@ Value list_with_expanded_capacity(Value list_val);
 // Hash function for lists
 uint32_t list_hash(Value list_val);
 
+// String conversion for runtime (returns GC-managed Value)
+Value list_to_string(Value list_val);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

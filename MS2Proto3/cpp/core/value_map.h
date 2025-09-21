@@ -48,6 +48,9 @@ bool map_iterator_next(MapIterator* iter, Value* out_key, Value* out_value);
 // Hash function for maps
 uint32_t map_hash(Value map_val);
 
+// String conversion for runtime (returns GC-managed Value)
+Value map_to_string(Value map_val);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

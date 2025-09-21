@@ -197,3 +197,31 @@ uint32_t list_hash(Value list_val) {
     // Ensure hash is never 0 (reserved for "not computed")
     return hash == 0 ? 1 : hash;
 }
+
+// Convert list to string representation for runtime (returns GC-managed Value)
+Value list_to_string(Value list_val) {
+    ValueList* list = as_list(list_val);
+    if (!list) return make_string("[]");
+
+    if (list->count == 0) return make_string("[]");
+
+    // Build string: [item1, item2, ...]
+    // Use a simple approach: build each part and concatenate
+    Value result = make_string("[");
+
+    for (int i = 0; i < list->count; i++) {
+        if (i > 0) {
+            Value comma = make_string(", ");
+            result = string_concat(result, comma);
+        }
+
+        // Get string representation of item (may call to_string recursively)
+        Value item_str = to_string(list->items[i]);
+        result = string_concat(result, item_str);
+    }
+
+    Value close = make_string("]");
+    result = string_concat(result, close);
+
+    return result;
+}
