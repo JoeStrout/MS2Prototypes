@@ -38,7 +38,9 @@ int list_capacity(Value list_val) {
 // List element operations
 Value list_get(Value list_val, int index) {
     ValueList* list = as_list(list_val);
-    if (list && index >= 0 && index < list->count) {
+    if (!list) return make_null();
+    if (index < 0) index += list->count;
+    if (index >= 0 && index < list->count) {
         return list->items[index];
     }
     return make_null();
@@ -46,7 +48,9 @@ Value list_get(Value list_val, int index) {
 
 void list_set(Value list_val, int index, Value item) {
     ValueList* list = as_list(list_val);
-    if (list && index >= 0 && index < list->count) {
+    if (!list) return;
+    if (index < 0) index += list->count;
+    if (index >= 0 && index < list->count) {
         list->items[index] = item;
     }
 }
@@ -73,7 +77,9 @@ Value list_pop(Value list_val) {
 
 void list_insert(Value list_val, int index, Value item) {
     ValueList* list = as_list(list_val);
-    if (!list || index < 0 || index > list->count) return;
+    if (!list) return;
+    if (index < 0) index += list->count;
+    if (index < 0 || index > list->count) return;
     
     // Insert item if there's space
     if (list->count >= list->capacity) return;
@@ -87,9 +93,11 @@ void list_insert(Value list_val, int index, Value item) {
     list->count++;
 }
 
-void list_remove(Value list_val, int index) {
+bool list_remove(Value list_val, int index) {
     ValueList* list = as_list(list_val);
-    if (!list || index < 0 || index >= list->count) return;
+    if (!list) return false;
+    if (index < 0) index += list->count;
+    if (index < 0 || index > list->count) return false;
     
     // Shift elements to the left
     for (int i = index; i < list->count - 1; i++) {
@@ -97,6 +105,7 @@ void list_remove(Value list_val, int index) {
     }
     
     list->count--;
+    return true;
 }
 
 // List searching

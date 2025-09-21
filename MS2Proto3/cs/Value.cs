@@ -423,6 +423,13 @@ namespace MiniScript {
 			valueList?.Add(item);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool list_remove(Value list_val, int index) {
+			if (!list_val.IsList) return false;
+			var valueList = HandlePool.Get(list_val.Handle()) as ValueList;
+			return valueList != null ? valueList.Remove(index) : false;
+		}
+
 		// Map functions (matching value_map.h)
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value make_map(int initial_capacity) {
@@ -620,6 +627,13 @@ namespace MiniScript {
 				if (Value.Equal(_items[i], item)) return i;
 			}
 			return -1;
+		}
+		
+		public bool Remove(int index) {
+			if (index < 0) index += _items.Count;
+			if (index < 0 || index >= _items.Count) return false;
+			_items.RemoveAt(index);
+			return true;
 		}
 	}
 

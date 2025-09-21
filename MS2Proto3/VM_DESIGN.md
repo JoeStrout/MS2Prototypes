@@ -22,6 +22,7 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | DIV_rA_rB_rC | R[A] := R[B] / R[C] |
 | MOD_rA_rB_rC | R[A] := R[B] % R[C] |
 | LIST_rA_iBC | R[A] := new list with capacity BC |
+| MAP_rA_iBC | R[A] := new map with initial capacity BC |
 | PUSH_rA_rB | push R[B] onto list R[A] |
 | INDEX_rA_rB_rC | R[A] := R[B][R[C]] (get element R[C] from list R[B]) |
 | IDXSET_rA_rB_rC | R[A][R[B]] := R[C] (set element R[B] of list R[A] to R[C]) |

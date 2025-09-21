@@ -322,6 +322,14 @@ namespace MiniScript {
 						break; // CPP: VM_NEXT();
 					}
 
+					case Opcode.MAP_rA_iBC: { // CPP: VM_CASE(MAP_rA_iBC) {
+						// R[A] = make_map(BC)
+						Byte a = BytecodeUtil.Au(instruction);
+						Int16 capacity = BytecodeUtil.BCs(instruction);
+						localStack[a] = make_map(capacity);
+						break; // CPP: VM_NEXT();
+					}
+
 					case Opcode.PUSH_rA_rB: { // CPP: VM_CASE(PUSH_rA_rB) {
 						// list_push(R[A], R[B])
 						Byte a = BytecodeUtil.Au(instruction);
@@ -331,20 +339,39 @@ namespace MiniScript {
 					}
 
 					case Opcode.INDEX_rA_rB_rC: { // CPP: VM_CASE(INDEX_rA_rB_rC) {
-						// R[A] = list_get(R[B], as_int(R[C]))
+						// R[A] = R[B][R[C]] (supports both lists and maps)
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
-						localStack[a] = list_get(localStack[b], as_int(localStack[c]));
+						Value container = localStack[b];
+						Value index = localStack[c];
+
+						if (is_list(container)) {
+							localStack[a] = list_get(container, as_int(index));
+						} else if (is_map(container)) {
+							localStack[a] = map_get(container, index);
+						} else {
+							// TODO: Add error handling for unsupported types
+							localStack[a] = make_null();
+						}
 						break; // CPP: VM_NEXT();
 					}
 
 					case Opcode.IDXSET_rA_rB_rC: { // CPP: VM_CASE(IDXSET_rA_rB_rC) {
-						// list_set(R[A], as_int(R[B]), R[C])
+						// R[A][R[B]] = R[C] (supports both lists and maps)
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
-						list_set(localStack[a], as_int(localStack[b]), localStack[c]);
+						Value container = localStack[a];
+						Value index = localStack[b];
+						Value value = localStack[c];
+
+						if (is_list(container)) {
+							list_set(container, as_int(index), value);
+						} else if (is_map(container)) {
+							map_set(container, index, value);
+						}
+						// TODO: Add error handling for unsupported types
 						break; // CPP: VM_NEXT();
 					}
 
@@ -787,6 +814,7 @@ namespace MiniScript {
 		private static readonly Value FuncNamePrint = make_string("print");
 		private static readonly Value FuncNameInput = make_string("input");
 		private static readonly Value FuncNameVal = make_string("val");
+		private static readonly Value FuncNameRemove = make_string("remove");
 		
 		private void DoIntrinsic(Value funcName, Int32 baseReg) {
 			// Run the named intrinsic, with its parameters and return value
@@ -794,11 +822,11 @@ namespace MiniScript {
 			
 			// Prototype implementation:
 			
-			if (value_identical(funcName, FuncNamePrint)) {
+			if (value_equal(funcName, FuncNamePrint)) {
 				IOHelper.Print(StringUtils.Format("{0}", stack[baseReg]));
 				stack[baseReg] = make_null();
 			
-			} else if (value_identical(funcName, FuncNameInput)) {
+			} else if (value_equal(funcName, FuncNameInput)) {
 				String prompt = new String("");
 				if (!is_null(stack[baseReg])) {
 					prompt = StringUtils.Format("{0}", stack[baseReg]);
@@ -807,9 +835,23 @@ namespace MiniScript {
 				stack[baseReg] = 
 				  make_string(result);	// CPP: make_string(result.c_str());
 			
-			} else if (value_identical(funcName, FuncNameVal)) {
+			} else if (value_equal(funcName, FuncNameVal)) {
 				stack[baseReg] = to_number(stack[baseReg]);
-				
+			
+			} else if (value_equal(funcName, FuncNameRemove)) {
+				// Remove index r1 from map r0; return (in r0) 1 if successful,
+				// 0 if index not found.
+				Value container = stack[baseReg];
+				int result = 0;
+				if (is_list(container)) {
+					result = list_remove(container, as_int(stack[baseReg+1])) ? 1 : 0;
+				} else if (is_map(container)) {
+					result = map_remove(container, stack[baseReg+1]) ? 1 : 0;
+				} else {
+					IOHelper.Print("ERROR: `remove` must be called on list or map");
+				}
+				stack[baseReg] = make_int(result);
+			
 			} else {
 				IOHelper.Print(
 				  StringUtils.Format("ERROR: Unknown function '{0}'", funcName)

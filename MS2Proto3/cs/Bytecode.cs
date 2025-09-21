@@ -15,6 +15,7 @@ namespace MiniScript {
 		DIV_rA_rB_rC,
 		MOD_rA_rB_rC,
 		LIST_rA_iBC,
+		MAP_rA_iBC,
 		PUSH_rA_rB,
 		INDEX_rA_rB_rC,
 		IDXSET_rA_rB_rC,
@@ -106,6 +107,7 @@ namespace MiniScript {
 				case Opcode.DIV_rA_rB_rC:   return "DIV_rA_rB_rC";
 				case Opcode.MOD_rA_rB_rC:   return "MOD_rA_rB_rC";
 				case Opcode.LIST_rA_iBC:    return "LIST_rA_iBC";
+				case Opcode.MAP_rA_iBC:     return "MAP_rA_iBC";
 				case Opcode.PUSH_rA_rB:     return "PUSH_rA_rB";
 				case Opcode.INDEX_rA_rB_rC: return "INDEX_rA_rB_rC";
 				case Opcode.IDXSET_rA_rB_rC:return "IDXSET_rA_rB_rC";
@@ -161,6 +163,7 @@ namespace MiniScript {
 			if (s == "DIV_rA_rB_rC")    return Opcode.DIV_rA_rB_rC;
 			if (s == "MOD_rA_rB_rC")    return Opcode.MOD_rA_rB_rC;
 			if (s == "LIST_rA_iBC")     return Opcode.LIST_rA_iBC;
+			if (s == "MAP_rA_iBC")      return Opcode.MAP_rA_iBC;
 			if (s == "PUSH_rA_rB")      return Opcode.PUSH_rA_rB;
 			if (s == "INDEX_rA_rB_rC")  return Opcode.INDEX_rA_rB_rC;
 			if (s == "IDXSET_rA_rB_rC") return Opcode.IDXSET_rA_rB_rC;

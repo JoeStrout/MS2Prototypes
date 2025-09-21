@@ -238,7 +238,13 @@ namespace MiniScript {
 				Byte dest = ParseRegister(parts[1]);
 				Int16 capacity = ParseInt16(parts[2]);
 				instruction = BytecodeUtil.INS_AB(Opcode.LIST_rA_iBC, dest, capacity);
-			
+
+			} else if (mnemonic == "MAP") {
+				if (parts.Count != 3) { Error("Syntax error"); return 0; }
+				Byte dest = ParseRegister(parts[1]);
+				Int16 capacity = ParseInt16(parts[2]);
+				instruction = BytecodeUtil.INS_AB(Opcode.MAP_rA_iBC, dest, capacity);
+
 			} else if (mnemonic == "PUSH") {
 				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 				Byte listReg = ParseRegister(parts[1]);

@@ -20,6 +20,7 @@ namespace MiniScript {
 				case Opcode.DIV_rA_rB_rC:  return "DIV";
 				case Opcode.MOD_rA_rB_rC:  return "MOD";
 				case Opcode.LIST_rA_iBC:   return "LIST";
+				case Opcode.MAP_rA_iBC:    return "MAP";
 				case Opcode.PUSH_rA_rB:    return "PUSH";
 				case Opcode.INDEX_rA_rB_rC: return "INDEX";
 				case Opcode.IDXSET_rA_rB_rC: return "IDXSET";
@@ -106,6 +107,7 @@ namespace MiniScript {
         		// rA, iBC
         		case Opcode.LOAD_rA_iBC:
         		case Opcode.LIST_rA_iBC:
+        		case Opcode.MAP_rA_iBC:
         		case Opcode.IFLT_rA_iBC:
 				case Opcode.IFLE_rA_iBC:
 				case Opcode.IFEQ_rA_iBC:

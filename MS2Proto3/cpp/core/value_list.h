@@ -35,7 +35,7 @@ void list_set(Value list_val, int index, Value item);
 void list_push(Value list_val, Value item);
 Value list_pop(Value list_val);
 void list_insert(Value list_val, int index, Value item);
-void list_remove(Value list_val, int index);
+bool list_remove(Value list_val, int index);
 
 // List searching
 int list_indexOf(Value list_val, Value item, int start_pos);
