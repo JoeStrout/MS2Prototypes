@@ -32,6 +32,7 @@ namespace MiniScript {
 	public class VM {
 		public Boolean DebugMode = false;
 		private List<Value> stack;
+		private List<Value> names;		// Variable names parallel to stack (null if unnamed)
 
 		private List<CallInfo> callStack;
 		private Int32 callStackTop;	   // Index of next free call stack slot
@@ -56,6 +57,11 @@ namespace MiniScript {
 			return stack[index];
 		}
 
+		public Value GetStackName(Int32 index) {
+			if (index < 0 || index >= names.Count) return make_null();
+			return names[index];
+		}
+
 		public CallInfo GetCallStackFrame(Int32 index) {
 			if (index < 0 || index >= callStackTop) return new CallInfo(0, 0, -1);
 			return callStack[index];
@@ -76,13 +82,15 @@ namespace MiniScript {
 
 		private void InitVM(Int32 stackSlots, Int32 callSlots) {
 			stack = new List<Value>();
+			names = new List<Value>();
 			callStack = new List<CallInfo>();
 			functions = new List<FuncDef>();
 			callStackTop = 0;
-			
+
 			// Initialize stack with null values
 			for (Int32 i = 0; i < stackSlots; i++) {
 				stack.Add(make_null());
+				names.Add(make_null());		// No variable name initially
 			}
 			
 			
@@ -266,6 +274,24 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						UInt16 constIdx = BytecodeUtil.BCu(instruction);
 						localStack[a] = curConstants[constIdx];
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.ASSIGN_rA_rB_kC: { // CPP: VM_CASE(ASSIGN_rA_rB_kC) {
+						// R[A] = R[B] and names[baseIndex + A] = constants[C]
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						Byte c = BytecodeUtil.Cu(instruction);
+						localStack[a] = localStack[b];
+						names[baseIndex + a] = curConstants[c];	// OFI: keep localNames?
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.NAME_rA_kBC: { // CPP: VM_CASE(NAME_rA_kBC) {
+						// names[baseIndex + A] = constants[BC] (without changing R[A])
+						Byte a = BytecodeUtil.Au(instruction);
+						UInt16 constIdx = BytecodeUtil.BCu(instruction);
+						names[baseIndex + a] = curConstants[constIdx];	// OFI: keep localNames?
 						break; // CPP: VM_NEXT();
 					}
 

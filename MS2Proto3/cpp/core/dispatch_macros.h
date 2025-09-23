@@ -25,6 +25,8 @@
 	X(LOAD_rA_rB) \
 	X(LOAD_rA_iBC) \
 	X(LOAD_rA_kBC) \
+	X(ASSIGN_rA_rB_kC) \
+	X(NAME_rA_kBC) \
 	X(ADD_rA_rB_rC) \
 	X(SUB_rA_rB_rC) \
 	X(MULT_rA_rB_rC) \

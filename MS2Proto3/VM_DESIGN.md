@@ -16,6 +16,8 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | LOAD_rA_rB | R[A] := R[B] (C unused) |
 | LOAD_rA_iBC | R[A] := BC (16-bit signed value) |
 | LOAD_rA_kBC | R[A] := constants[BC] (load from constants table) |
+| ASSIGN_rA_rB_kC | R[A] := R[B] and name[A] := constants[C] (copy value and assign variable name) |
+| NAME_rA_kBC | name[A] := constants[BC] (assign variable name without changing value) |
 | ADD_rA_rB_rC | R[A] := R[B] + R[C] |
 | SUB_rA_rB_rC | R[A] := R[B] - R[C] |
 | MULT_rA_rB_rC | R[A] := R[B] * R[C] |
@@ -81,6 +83,8 @@ While an official assembly language (or assembler) will probably not be part of 
 | LOAD r6, 42 | LOAD_rA_iBC 6, 42 |
 | LOAD r3, k20 | LOAD_rA_kBC 3, 20 |
 | LOAD r12, "foo" | LOAD_rA_kBC 12, 7 (if k[7] == "foo") |
+| ASSIGN r1, r2, "x" | ASSIGN_rA_rB_kC 1, 2, 3 (if k[3] == "x") |
+| NAME r0, "result" | NAME_rA_kBC 0, 5 (if k[5] == "result") |
 | ADD r5, r3, r4 | ADD_rA_rB_rC 5, 3, 4 |
 | ADD r5, r3, 42 | *error* (unless we add an ADD_rA_rB_iC opcode!) |
 

@@ -16,12 +16,9 @@ The VM maintains a stack of Values.  Each call frame gets a section of this stac
 
 We will need to extend this stack with some extra data for each slot:
 
-1. The **name** of the local variable associated with that slot, if any;
-2. An **assigned flag** indicating whether that variable currently has a value assigned.
+1. The **name** of the local variable associated with that slot, if any; this is set only while that variable has a value assigned.
 
-When a function is entered, this metadata will be set up according to details in the FuncDef.  Note that every local variable used in the function will get a slot, and those slots will be named; but initially only the parameters will have their assigned flag set to true.  When an assignment to a local variable is done, the assigned flag will be set (this might be an extra opcode emitted for the assignment statement).
-
-_Alternatively_: could we have registers named only while they are assigned?  In this case an assignment statement would actually assign the name string to the register (in addition to copying the value).  But as all the identifiers in the code would be in the constants table already, this is no harder (and probably no slower) than setting the flag.  This might be more efficient than having both.  It also leaves open the possibility of reusing a register for different variables at different times, if we can determine (e.g. through static analysis) than an older variable is no longer needed).
+In this design, an assignment statement would actually assign the name string to the register (in addition to copying the value).  But as all the identifiers in the code would be in the constants table already, this is no harder (and probably no slower) than setting the flag.  This might be more efficient than having a separate "assigned" flag.  It also leaves open the possibility of reusing a register for different variables at different times, if we can determine (e.g. through static analysis) than an older variable is no longer needed).
 
 (Note: variable lifetime analysis is totally doable, since unless a function either (1) makes use of `locals`, or (2) defines an inner `function`, there is no way any other code can access its locals.)
 
@@ -31,7 +28,7 @@ Ordinary maps map (arbitrary) keys to values.  A **VarMap** will be a specialize
 
 When looking up a value by key, a VarMap will first see if this is one of the keys it has mapped to a slot.  If so, then it will return the value in that slot if assigned, or throw a key-not-found error if it is not assigned.  If it's not one of those special keys, then it will behave as an ordinary map.
 
-When storing a value by key, a VarMap will first see if this is one of the keys it has mapped to a slot.  If so, it will store the value directly into that slot on the stack, and set the assigned flag to true.  If not, then it will store it as an ordinary map value.
+When storing a value by key, a VarMap will first see if this is one of the keys it has mapped to a slot.  If so, it will store the value directly into that slot on the stack, (and ensure that slot is named).  If not, then it will store it as an ordinary map value.
 
 A VarMap supports a "gather" operation that reads the current values (if they are assigned) of all its special keys, and stores them as ordinary map key/value pairs, clearing out its special keys.  After this operation, the VarMap behaves no different than any ordinary map.
 

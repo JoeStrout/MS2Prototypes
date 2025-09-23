@@ -1,0 +1,11 @@
+# Simple test of variable support.  Every register has
+# an optional name associated with it, which can be set
+# at the same times as its value using ASSIGN.
+
+@main:
+	LOAD r0, 42
+	NAME r0, "temp"              # temp = 42
+
+	ASSIGN r1, r0, "meaning"     # meaning = temp
+	
+	RETURN

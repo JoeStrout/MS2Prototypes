@@ -191,7 +191,41 @@ namespace MiniScript {
 					Int16 immediate = ParseInt16(source);
 					instruction = BytecodeUtil.INS_AB(Opcode.LOAD_rA_iBC, dest, immediate);
 				}
-				
+
+			} else if (mnemonic == "ASSIGN") {
+				// ASSIGN r1, r2, k3  -->  ASSIGN_rA_rB_kC
+				// Copy value from r2 to r1, and assign variable name from constants[3]
+				if (parts.Count != 4) {
+					Error("Syntax error: ASSIGN requires exactly 3 operands");
+					return 0;
+				}
+				Byte dest = ParseRegister(parts[1]);
+				Byte src = ParseRegister(parts[2]);
+
+				Value constantValue = ParseAsConstant(parts[3]);
+				if (!is_string(constantValue)) Error("Variable name must be a string");
+				Int32 constIdx = AddConstant(constantValue);
+				if (constIdx > 255) Error("Constant index out of range for ASSIGN opcode");
+				if (HasError) return 0;
+				instruction = BytecodeUtil.INS_ABC(Opcode.ASSIGN_rA_rB_kC, dest, src, (Byte)constIdx);
+
+			} else if (mnemonic == "NAME") {
+				// NAME r1, "varname"  -->  NAME_rA_kBC
+				// Set variable name for r1 without changing its value
+				if (parts.Count != 3) {
+					Error("Syntax error: NAME requires exactly 2 operands");
+					return 0;
+				}
+				Byte dest = ParseRegister(parts[1]);
+				if (HasError) return 0;
+
+				Value constantValue = ParseAsConstant(parts[2]);
+				if (!is_string(constantValue)) Error("Variable name must be a string");
+				Int32 constIdx = AddConstant(constantValue);
+				if (constIdx > 65535) Error("Constant index out of range for NAME opcode");
+				if (HasError) return 0;
+				instruction = BytecodeUtil.INS_AB(Opcode.NAME_rA_kBC, dest, (Int16)constIdx);
+
 			} else if (mnemonic == "ADD") {
 				if (parts.Count != 4) {
 					Error("Syntax error: ADD requires exactly 3 operands");

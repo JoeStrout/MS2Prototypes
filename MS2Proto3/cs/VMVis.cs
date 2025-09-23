@@ -147,20 +147,41 @@ namespace MiniScript {
 			return StringUtils.Format("{0}", v);
 		}
 
+		private String GetVariableNameDisplay(Value nameVal) {
+			if (is_null(nameVal)) {
+				return "        "; // 8 spaces for unnamed variables
+			}
+			String name = StringUtils.Format("{0}", nameVal);
+			if (name.Length <= 8) {
+				return StringUtils.SpacePad(name, 8);
+			} else {
+				return name.Substring(0, 7) + "…"; // 7 chars + ellipsis
+			}
+		}
+
+		private void DrawOneRegister(Int32 stackIndex, String label, Int32 displayRow) {
+			Value val = _vm.GetStackValue(stackIndex);
+			Value nameVal = _vm.GetStackName(stackIndex);
+			String varName = GetVariableNameDisplay(nameVal);
+			String typeCode = GetValueTypeCode(val);
+			String valueStr = GetValueDisplayString(val);
+			String line = varName + label + Dim + typeCode + Normal + " " +
+			  StringUtils.SpacePad(valueStr, 24);
+
+			GoTo(RegisterDisplayColumn + 1, displayRow);
+			Write(StringUtils.SpacePad(line, 44));
+		}
+
 		private void DrawRegisters() {
 			if (!_vm.IsRunning) return;
 
 			// Draw header
 			GoTo(RegisterDisplayColumn + 1, 1);
-			Write(StringUtils.SpacePad(Bold + "Registers" + Normal, 20));
+			Write(StringUtils.SpacePad(Bold + "Registers" + Normal, 32));
 
 			// Get current base index
 			Int32 baseIndex = _vm.BaseIndex;
 			Int32 stackSize = _vm.StackSize();
-
-			// Calculate display range: r7 down to r0, then below baseIndex
-			//Int32 topRegister = baseIndex + 7;
-			//Int32 bottomIndex = Math.Min(stackSize - 1, baseIndex + (_screenHeight - 4) - 8);
 
 			Int32 displayRow = 2;
 			Int32 totalRegLines = _screenHeight - 4;
@@ -169,37 +190,23 @@ namespace MiniScript {
 			for (Int32 reg = 7; reg >= 0 && displayRow <= totalRegLines + 1; reg--) {
 				Int32 stackIndex = baseIndex + reg;
 				if (stackIndex < stackSize) {
-					Value val = _vm.GetStackValue(stackIndex);
-					String typeCode = GetValueTypeCode(val);
-					String valueStr = GetValueDisplayString(val);
 					String label = StringUtils.Format("r{0} ", reg);
-					String line = label + Dim + typeCode + Normal + " " +
-					  StringUtils.SpacePad(valueStr, 24);
-
-					GoTo(RegisterDisplayColumn + 1, displayRow);
-					Write(StringUtils.SpacePad(line, 32));
+					DrawOneRegister(stackIndex, label, displayRow);
 				}
 				displayRow++;
 			}
 
 			// Draw stack entries below baseIndex
 			for (Int32 i = baseIndex - 1; i >= 0 && displayRow <= totalRegLines + 1; i--) {
-				Value val = _vm.GetStackValue(i);
-				String typeCode = GetValueTypeCode(val);
-				String valueStr = GetValueDisplayString(val);
 				String label = "   ";  // unlabeled
-				String line = label + Dim + typeCode + Normal + " " +
-					  StringUtils.SpacePad(valueStr, 24);
-
-				GoTo(RegisterDisplayColumn + 1, displayRow);
-				Write(StringUtils.SpacePad(line, 32));
+				DrawOneRegister(i, label, displayRow);
 				displayRow++;
 			}
 
 			// Clear remaining lines
 			for (Int32 i = displayRow; i <= totalRegLines + 1; i++) {
 				GoTo(RegisterDisplayColumn + 1, i);
-				Write("                    ");
+				Write("                                            ");
 			}
 		}
 
