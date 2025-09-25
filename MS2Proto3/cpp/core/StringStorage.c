@@ -526,9 +526,31 @@ StringStorage* ss_replace(const StringStorage* storage, const StringStorage* old
 }
 
 StringStorage* ss_replaceChar(const StringStorage* storage, char oldChar, char newChar, StringStorageAllocator allocator) {
-    // TODO: Implement
-    (void)storage; (void)oldChar; (void)newChar; (void)allocator;
-    return NULL;
+    if (!storage) return NULL;
+
+    // No sense in trying to replace '\0'. Return a copy of original.
+    if ((oldChar == '\0') || (newChar == '\0')) {
+        return ss_create(storage->data, allocator);
+    }
+
+    // Allocate new StringStorage
+    StringStorage* result = (StringStorage*)allocator(sizeof(StringStorage) + storage->lenB + 1);
+    if (!result) return NULL;
+
+    result->lenB = storage->lenB;
+    result->lenC = -1; // Will be computed on demand
+    result->hash = 0;  // Will be computed on demand
+
+    // Build the result string
+    char* dest = result->data;
+    const char* src = storage->data;
+
+    while (*src) { // We'll do it manually
+        *dest = *src == oldChar ? newChar : *src;
+    }
+
+    *dest = '\0';
+    return result;
 }
 
 StringStorage** ss_splitStr(const StringStorage* storage, const StringStorage* separator, int* count, StringStorageAllocator allocator) {
