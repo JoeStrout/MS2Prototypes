@@ -3,7 +3,9 @@
 #include "CS_String.h"
 #include "hashing.h"
 #include <cstring>  // strlen, memcpy
-#include <malloc/malloc.h> // for debugging (malloc_size) on macOS
+#if defined(__APPLE__)
+    #include <malloc/malloc.h> // for debugging (malloc_size) on macOS
+#endif
 #include <cstdio>
 
 uint8_t String::defaultPool = 0;

@@ -69,7 +69,8 @@ StringStorage* ss_insert(const StringStorage* storage, int startIndex, const Str
 StringStorage* ss_remove(const StringStorage* storage, int startIndex, StringStorageAllocator allocator);
 StringStorage* ss_removeLen(const StringStorage* storage, int startIndex, int count, StringStorageAllocator allocator);
 StringStorage* ss_replace(const StringStorage* storage, const StringStorage* oldValue, const StringStorage* newValue, StringStorageAllocator allocator);
-StringStorage* ss_replaceChar(const StringStorage* storage, char oldChar, char newChar, StringStorageAllocator allocator);
+StringStorage* ss_replaceByte(const StringStorage* storage, char oldChar, char newChar, StringStorageAllocator allocator);
+StringStorage* ss_replaceChar(const StringStorage* storage, const char *oldChar, const char *newChar, StringStorageAllocator allocator);
 
 // Case conversion (ASCII only)
 StringStorage* ss_toLower(const StringStorage* storage, StringStorageAllocator allocator);
