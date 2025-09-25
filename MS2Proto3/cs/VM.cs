@@ -20,11 +20,13 @@ namespace MiniScript {
 		public Int32 ReturnPC;		   // where to continue in caller (PC index)
 		public Int32 ReturnBase;		 // caller's base pointer (stack index)
 		public Int32 ReturnFuncIndex;  // caller's function index in functions list
+		public Value LocalVarMap;      // VarMap representing locals, if any
 
 		public CallInfo(Int32 returnPC, Int32 returnBase, Int32 returnFuncIndex) {
 			ReturnPC = returnPC;
 			ReturnBase = returnBase;
 			ReturnFuncIndex = returnFuncIndex;
+			LocalVarMap = make_null();
 		}
 	}
 
@@ -404,20 +406,22 @@ namespace MiniScript {
 					case Opcode.LOCALS_rA: { // CPP: VM_CASE(LOCALS_rA) {
 						// Create VarMap for local variables and store in R[A]
 						Byte a = BytecodeUtil.Au(instruction);
-
-						// Create a new VarMap with references to VM's stack and names arrays
-						// For now, assume our variables are within the first 5 registers.
-						Value varmap = make_varmap(stack, names, baseIndex, 5); // CPP: Value varmap = make_varmap(&stack[0], &names[0], baseIndex, 5);
-
+						
+						CallInfo frame = callStack[callStackTop]; // CPP: CallInfo& frame = callStack[callStackTop];
+						if (is_null(frame.LocalVarMap)) {
+							// Create a new VarMap with references to VM's stack and names arrays
+							// For now, assume our variables are within the first 5 registers.
+							frame.LocalVarMap = make_varmap(stack, names, baseIndex, 5); // CPP: frame.LocalVarMap = make_varmap(&stack[0], &names[0], baseIndex, 5);
+						}
 						// ToDo:
 						//   1. Have assembler keep track of how many registers each function
 						//      needs, and use that here (instead of hard-coded 5).
-						//   2. Cache the VarMap in the CallInfo, and return the cached one 
+						// ✅ 2. Cache the VarMap in the CallInfo, and return the cached one 
 						//		rather than creating a new one every time.
 						//	 3. In RETURN, if the current call stack has a cached VarMap,
 						//		call Gather on it.
 
-						localStack[a] = varmap;
+						localStack[a] = frame.LocalVarMap;
 						break; // CPP: VM_NEXT();
 					}
 
@@ -812,6 +816,12 @@ namespace MiniScript {
 							CurrentFunction = curFunc;
 							IsRunning = false;
 							return stack[baseIndex];
+						}
+						
+						// If current call frame had a locals VarMap, gather it up
+						CallInfo frame = callStack[callStackTop]; // CPP: CallInfo& frame = callStack[callStackTop];
+						if (!is_null(frame.LocalVarMap)) {
+							varmap_gather(frame.LocalVarMap);
 						}
 
 						// Pop call stack

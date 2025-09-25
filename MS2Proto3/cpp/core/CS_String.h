@@ -272,7 +272,7 @@ public:
         const StringStorage* s = getStorage();
         if (!s) return String();
         
-        StringStorage* result_ss = ss_replaceChar(s, oldChar, newChar, malloc);
+        StringStorage* result_ss = ss_replaceByte(s, oldChar, newChar, malloc);
 		return fromMallocStorage(result_ss, defaultPool);
     }
     

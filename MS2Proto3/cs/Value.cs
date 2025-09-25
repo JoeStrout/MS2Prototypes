@@ -475,6 +475,12 @@ namespace MiniScript {
 			var valueMap = HandlePool.Get(map_val.Handle()) as ValueMap;
 			valueMap?.Clear();
 		}
+		
+		public static void varmap_gather(Value map_val) {
+			if (!map_val.IsMap) return;
+			var varMap = HandlePool.Get(map_val.Handle()) as VarMap;
+			varMap?.Gather();
+		}
 
 		// Value representation function (for literal representation)
 		public static Value value_repr(Value v) {
