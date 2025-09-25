@@ -8,12 +8,29 @@ using static MiniScript.ValueHelpers;
 namespace MiniScript {
 
 	/// <summary>
+	/// Custom equality comparer for Value that uses semantic equality instead of bit equality
+	/// </summary>
+	public class ValueEqualityComparer : IEqualityComparer<Value> {
+		public bool Equals(Value x, Value y) => Value.Equal(x, y);
+
+		public int GetHashCode(Value obj) {
+			// For strings, hash the string content rather than the handle
+			if (obj.IsString) {
+				string str = obj.ToString();
+				return str.GetHashCode();
+			}
+			// For other types, use the bits as hash
+			return obj.Bits.GetHashCode();
+		}
+	}
+
+	/// <summary>
 	/// VarMap is a specialized map that bridges between register-based variables
 	/// and traditional map operations. It maps some string keys to VM stack slots,
 	/// allowing fast register access while maintaining map semantics.
 	/// </summary>
 	public class VarMap : ValueMap {
-		private Dictionary<Value, int> _regMap = new Dictionary<Value, int>();
+		private Dictionary<Value, int> _regMap = new Dictionary<Value, int>(new ValueEqualityComparer());
 		private List<Value> _registers;  // Reference to VM's register array
 		private List<Value> _names;      // Reference to VM's register names array
 		private int _firstIndex;         // First index where locals may be found

@@ -127,25 +127,9 @@ Value map_get(Value map_val, Value key) {
     return make_null();
 }
 
-bool map_set(Value map_val, Value key, Value value) {
+static bool base_map_set(Value map_val, Value key, Value value) {
     ValueMap* map = as_map(map_val);
     if (!map) return false;
-
-    // VarMap check - handle register assignment
-    if (map->varmap_data != NULL) {
-        VarMapData* vdata = map->varmap_data;
-        // Check if key maps to a register
-        for (int i = 0; i < vdata->reg_map_count; i++) {
-            if (value_equal(vdata->reg_map_keys[i], key)) {
-                int reg_index = vdata->reg_map_indices[i];
-                // Store in register and mark as assigned
-                vdata->registers[reg_index] = value;
-                vdata->names[reg_index] = key;
-                return true;
-            }
-        }
-        // Fall through to regular map storage
-    }
 
     // Check if we need to expand before adding
     if (map_needs_expansion(map_val)) {
@@ -175,6 +159,29 @@ bool map_set(Value map_val, Value key, Value value) {
     // Set or update value
     entry->value = value;
     return true;
+}
+
+bool map_set(Value map_val, Value key, Value value) {
+    ValueMap* map = as_map(map_val);
+    if (!map) return false;
+
+    // VarMap check - handle register assignment
+    if (map->varmap_data != NULL) {
+        VarMapData* vdata = map->varmap_data;
+        // Check if key maps to a register
+        for (int i = 0; i < vdata->reg_map_count; i++) {
+            if (value_equal(vdata->reg_map_keys[i], key)) {
+                int reg_index = vdata->reg_map_indices[i];
+                // Store in register and mark as assigned
+                vdata->registers[reg_index] = value;
+                vdata->names[reg_index] = key;
+                return true;
+            }
+        }
+        // Fall through to regular map storage
+    }
+
+	return base_map_set(map_val, key, value);
 }
 
 bool map_remove(Value map_val, Value key) {
@@ -432,7 +439,7 @@ Value map_to_string(Value map_val) {
     ValueMap* map = as_map(map_val);
     if (!map) return make_string("{}");
 
-    if (map->count == 0) return make_string("{}");
+    if (map->count == 0 && map->varmap_data == NULL) return make_string("{}");
 
     // Build string: {"key1": "value1", "key2": "value2"}
     Value result = make_string("{");
@@ -468,7 +475,7 @@ Value map_to_string(Value map_val) {
 }
 
 // VarMap creation and management
-Value make_varmap(Value* registers, Value* names, int firstIndex, int lastIndex) {
+Value make_varmap(Value* registers, Value* names, int firstIndex, int count) {
     // Create regular map structure
     ValueMap* map = (ValueMap*)gc_allocate(sizeof(ValueMap));
     Value result = MAP_MASK | ((uintptr_t)map & 0xFFFFFFFFFFFFULL);
@@ -495,13 +502,9 @@ Value make_varmap(Value* registers, Value* names, int firstIndex, int lastIndex)
         map->entries[i].hash = 0;
     }
     
-    for (int i=firstIndex; i<lastIndex; i++) {
-    	printf("%d is_null: %d  ", i, is_null(names[i]));
-    	debug_print_value(names[i]);
-    	printf("\n");
+    for (int i = firstIndex; i < firstIndex + count; i++) {
     	if (!is_null(names[i])) varmap_map_to_register(result, names[i], i);
     }
-    printf("make_varmap: got %d names\n", vdata->reg_map_count);
 
     return result;
 }
@@ -520,6 +523,22 @@ void varmap_map_to_register(Value map_val, Value var_name, int reg_index) {
     // ToDo: else grow our capacity!
 }
 
+static void map_debug_dump(Value map_val) {
+    ValueMap* map = as_map(map_val);
+	if (!map) {
+		printf("Not a map: ");
+		debug_print_value(map_val);
+		printf("\n");
+		return;
+	}
+	printf("Map "); debug_print_value(map_val); printf(" has %d entries\n", map->count);
+	VarMapData* vdata = map->varmap_data;
+	if (vdata) {
+		printf("...and varmap data with %d registers\n", vdata->reg_map_count);
+	}
+
+}
+
 // Gather all assigned register variables into regular map storage
 void varmap_gather(Value map_val) {
     ValueMap* map = as_map(map_val);
@@ -535,7 +554,7 @@ void varmap_gather(Value map_val) {
         // If register is assigned, copy to regular map storage
         if (!is_null(vdata->names[reg_index])) {
             Value value = vdata->registers[reg_index];
-            map_set(map_val, var_name, value);
+            base_map_set(map_val, var_name, value);
         }
     }
 

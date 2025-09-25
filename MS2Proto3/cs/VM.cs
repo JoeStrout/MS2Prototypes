@@ -418,10 +418,11 @@ namespace MiniScript {
 						//      needs, and use that here (instead of hard-coded 5).
 						// ✅ 2. Cache the VarMap in the CallInfo, and return the cached one 
 						//		rather than creating a new one every time.
-						//	 3. In RETURN, if the current call stack has a cached VarMap,
+						// ✅ 3. In RETURN, if the current call stack has a cached VarMap,
 						//		call Gather on it.
 
 						localStack[a] = frame.LocalVarMap;
+						names[baseIndex+a] = make_null();
 						break; // CPP: VM_NEXT();
 					}
 
@@ -822,6 +823,7 @@ namespace MiniScript {
 						CallInfo frame = callStack[callStackTop]; // CPP: CallInfo& frame = callStack[callStackTop];
 						if (!is_null(frame.LocalVarMap)) {
 							varmap_gather(frame.LocalVarMap);
+							frame.LocalVarMap = make_null();  // then clear from call frame
 						}
 
 						// Pop call stack

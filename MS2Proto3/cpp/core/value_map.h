@@ -17,7 +17,7 @@ extern "C" {
 // Map creation and management
 Value make_map(int initial_capacity);
 Value make_empty_map(void);
-Value make_varmap(Value* registers, Value* names, int firstIndex, int lastIndex);
+Value make_varmap(Value* registers, Value* names, int firstIndex, int count);
 
 // Map access
 ValueMap* as_map(Value v);
