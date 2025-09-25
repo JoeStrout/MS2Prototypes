@@ -8,4 +8,7 @@
 
 	ASSIGN r1, r0, "meaning"     # meaning = temp
 	
+	LOCALS r2                    # get locals in r2
+	CALLFN 2, "print"            # print locals
+	
 	RETURN

@@ -359,7 +359,7 @@ Converter.processMethodLine = function
 	// foreach statement
 	if self.match("foreach (≤type:w≥ ≤var:w≥ in ≤seq≥)", "",
 	  "for (int __≤var≥_idx=0, __≤var≥_qty=≤seq≥.Count(); __≤var≥_idx < __≤var≥_qty; __≤var≥_idx++)") then
-		self.cppLines.push indentation + TAB + 
+		self.cppLines.push self.indentation + TAB + 
 		  "≤type≥ ≤var≥ = ≤seq≥[__≤var≥_idx];".fill(self.m)
 		return self.checkType
 	end if
@@ -484,11 +484,12 @@ Converter.convertClass = function(sourcePath)
 		if self.failed then return
 	end for
 
-	if self.hLines.len <= 3 and not self.cppLines then
+	if self.hLines.len <= 6 and self.cppLines.len <= 3 then
 		print fileNameBase + ".cs: skipped (C# only)"
 		return
 	end if
-	print "≤fileNameBase≥.cs --> ≤fileNameBase≥.h/.cpp".fill(locals)
+	totalLines = self.hLines.len + self.cppLines.len
+	print "≤fileNameBase≥.cs --> ≤fileNameBase≥.h/.cpp (≤totalLines≥ lines)".fill(locals)
 
 	self.hLines.push ""
 	self.hLines.push "#endif // " + guardSymbol

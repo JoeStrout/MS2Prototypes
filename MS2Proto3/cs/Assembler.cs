@@ -298,7 +298,12 @@ namespace MiniScript {
 				Byte indexReg = ParseRegister(parts[2]);
 				Byte valueReg = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.IDXSET_rA_rB_rC, listReg, indexReg, valueReg);
-			
+
+			} else if (mnemonic == "LOCALS") {
+				if (parts.Count != 2) { Error("Syntax error: LOCALS requires exactly 1 operand"); return 0; }
+				Byte reg = ParseRegister(parts[1]);
+				instruction = BytecodeUtil.INS_A(Opcode.LOCALS_rA, reg);
+
 			} else if (mnemonic == "JUMP") {
 				if (parts.Count != 2) { Error("Syntax error"); return 0; }
 				String target = parts[1];

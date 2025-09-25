@@ -21,6 +21,7 @@ namespace MiniScript {
 		PUSH_rA_rB,
 		INDEX_rA_rB_rC,
 		IDXSET_rA_rB_rC,
+		LOCALS_rA,
 		JUMP_iABC,
 		LT_rA_rB_rC,
 		LT_rA_rB_iC,
@@ -92,6 +93,7 @@ namespace MiniScript {
 		
 		// Instruction encoding helpers
 		public static UInt32 INS(Opcode op) => (UInt32)((Byte)op << 24);
+		public static UInt32 INS_A(Opcode op, Byte a) => (UInt32)(((Byte)op << 24) | (a << 16));
 		public static UInt32 INS_AB(Opcode op, Byte a, Int16 bc) => (UInt32)(((Byte)op << 24) | (a << 16) | ((UInt16)bc));
 		public static UInt32 INS_BC(Opcode op, Int16 ab, Byte c) => (UInt32)(((Byte)op << 24) | ((UInt16)ab << 8) | c); // Note: ab is casted to (UInt16) instead of (Int16) in the encoding to avoid padding with 1's which overwrites the opcode. We could also use & instead.
 		public static UInt32 INS_ABC(Opcode op, Byte a, Byte b, Byte c) => (UInt32)(((Byte)op << 24) | (a << 16) | (b << 8) | c);
@@ -115,6 +117,7 @@ namespace MiniScript {
 				case Opcode.PUSH_rA_rB:     return "PUSH_rA_rB";
 				case Opcode.INDEX_rA_rB_rC: return "INDEX_rA_rB_rC";
 				case Opcode.IDXSET_rA_rB_rC:return "IDXSET_rA_rB_rC";
+				case Opcode.LOCALS_rA:      return "LOCALS_rA";
 				case Opcode.JUMP_iABC:      return "JUMP_iABC";
 				case Opcode.LT_rA_rB_rC:    return "LT_rA_rB_rC";
 				case Opcode.LT_rA_rB_iC:    return "LT_rA_rB_iC";
@@ -173,6 +176,7 @@ namespace MiniScript {
 			if (s == "PUSH_rA_rB")      return Opcode.PUSH_rA_rB;
 			if (s == "INDEX_rA_rB_rC")  return Opcode.INDEX_rA_rB_rC;
 			if (s == "IDXSET_rA_rB_rC") return Opcode.IDXSET_rA_rB_rC;
+			if (s == "LOCALS_rA")       return Opcode.LOCALS_rA;
 			if (s == "JUMP_iABC")       return Opcode.JUMP_iABC;
 			if (s == "LT_rA_rB_rC")     return Opcode.LT_rA_rB_rC;
 			if (s == "LT_rA_rB_iC")     return Opcode.LT_rA_rB_iC;

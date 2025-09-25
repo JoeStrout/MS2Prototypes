@@ -4,6 +4,7 @@
 #include "hashing.h"
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>  // HACK for testing
 
 // Default load factor threshold (resize when > 75% full)
 #define LOAD_FACTOR_THRESHOLD 0.75
@@ -16,6 +17,7 @@ Value make_map(int initial_capacity) {
     ValueMap* map = (ValueMap*)gc_allocate(sizeof(ValueMap));
     map->count = 0;
     map->capacity = initial_capacity;
+    map->varmap_data = NULL; // Regular map, no VarMap data
 
     // Allocate the entries array separately
     map->entries = (MapEntry*)gc_allocate(initial_capacity * sizeof(MapEntry));
@@ -43,7 +45,22 @@ ValueMap* as_map(Value v) {
 
 int map_count(Value map_val) {
     ValueMap* map = as_map(map_val);
-    return map ? map->count : 0;
+    if (!map) return 0;
+
+    // VarMap - include assigned register count
+    if (map->varmap_data != NULL) {
+        VarMapData* vdata = map->varmap_data;
+        int reg_count = 0;
+        for (int i = 0; i < vdata->reg_map_count; i++) {
+            int reg_index = vdata->reg_map_indices[i];
+            if (!is_null(vdata->names[reg_index])) {
+                reg_count++;
+            }
+        }
+        return map->count + reg_count;
+    }
+
+    return map->count;
 }
 
 int map_capacity(Value map_val) {
@@ -84,6 +101,22 @@ Value map_get(Value map_val, Value key) {
     ValueMap* map = as_map(map_val);
     if (!map) return make_null();
 
+    // VarMap check - zero overhead for regular maps
+    if (map->varmap_data != NULL) {
+        VarMapData* vdata = map->varmap_data;
+        // Check register mappings first
+        for (int i = 0; i < vdata->reg_map_count; i++) {
+            if (value_equal(vdata->reg_map_keys[i], key)) {
+                int reg_index = vdata->reg_map_indices[i];
+                if (!is_null(vdata->names[reg_index])) {
+                    return vdata->registers[reg_index];
+                }
+                return make_null(); // Unassigned register
+            }
+        }
+        // Fall through to regular map lookup
+    }
+
     uint32_t hash = value_hash(key);
     int index = find_entry(map, key, hash);
 
@@ -97,6 +130,22 @@ Value map_get(Value map_val, Value key) {
 bool map_set(Value map_val, Value key, Value value) {
     ValueMap* map = as_map(map_val);
     if (!map) return false;
+
+    // VarMap check - handle register assignment
+    if (map->varmap_data != NULL) {
+        VarMapData* vdata = map->varmap_data;
+        // Check if key maps to a register
+        for (int i = 0; i < vdata->reg_map_count; i++) {
+            if (value_equal(vdata->reg_map_keys[i], key)) {
+                int reg_index = vdata->reg_map_indices[i];
+                // Store in register and mark as assigned
+                vdata->registers[reg_index] = value;
+                vdata->names[reg_index] = key;
+                return true;
+            }
+        }
+        // Fall through to regular map storage
+    }
 
     // Check if we need to expand before adding
     if (map_needs_expansion(map_val)) {
@@ -132,6 +181,21 @@ bool map_remove(Value map_val, Value key) {
     ValueMap* map = as_map(map_val);
     if (!map) return false;
 
+    // VarMap check - handle register clearing
+    if (map->varmap_data != NULL) {
+        VarMapData* vdata = map->varmap_data;
+        // Check if key maps to a register
+        for (int i = 0; i < vdata->reg_map_count; i++) {
+            if (value_equal(vdata->reg_map_keys[i], key)) {
+                int reg_index = vdata->reg_map_indices[i];
+                // Clear assignment by setting name to null
+                vdata->names[reg_index] = make_null();
+                return true;
+            }
+        }
+        // Fall through to regular map removal
+    }
+
     uint32_t hash = value_hash(key);
     int index = find_entry(map, key, hash);
 
@@ -165,6 +229,20 @@ bool map_remove(Value map_val, Value key) {
 bool map_has_key(Value map_val, Value key) {
     ValueMap* map = as_map(map_val);
     if (!map) return false;
+
+    // VarMap check - check register assignment
+    if (map->varmap_data != NULL) {
+        VarMapData* vdata = map->varmap_data;
+        // Check if key maps to a register
+        for (int i = 0; i < vdata->reg_map_count; i++) {
+            if (value_equal(vdata->reg_map_keys[i], key)) {
+                int reg_index = vdata->reg_map_indices[i];
+                // Key exists if register is assigned
+                return !is_null(vdata->names[reg_index]);
+            }
+        }
+        // Fall through to regular map check
+    }
 
     uint32_t hash = value_hash(key);
     int index = find_entry(map, key, hash);
@@ -280,13 +358,35 @@ MapIterator map_iterator(Value map_val) {
     MapIterator iter;
     iter.map = as_map(map_val);
     iter.index = -1;
+    iter.varmap_reg_index = -1; // Start with register mappings for VarMaps
     return iter;
 }
 
 bool map_iterator_next(MapIterator* iter, Value* out_key, Value* out_value) {
     if (!iter || !iter->map) return false;
 
-    // Find next occupied entry
+    // For VarMaps, first iterate through register mappings
+    if (iter->map->varmap_data != NULL && iter->varmap_reg_index < iter->map->varmap_data->reg_map_count) {
+        VarMapData* vdata = iter->map->varmap_data;
+
+        // Find next assigned register variable
+        iter->varmap_reg_index++;
+        while (iter->varmap_reg_index < vdata->reg_map_count) {
+            int reg_index = vdata->reg_map_indices[iter->varmap_reg_index];
+            if (!is_null(vdata->names[reg_index])) {
+                // Found assigned register variable
+                if (out_key) *out_key = vdata->reg_map_keys[iter->varmap_reg_index];
+                if (out_value) *out_value = vdata->registers[reg_index];
+                return true;
+            }
+            iter->varmap_reg_index++;
+        }
+
+        // Finished with register mappings, continue to regular entries
+        iter->index = -1; // Reset for regular entry iteration
+    }
+
+    // Find next occupied regular entry
     iter->index++;
     while (iter->index < iter->map->capacity) {
         if (iter->map->entries[iter->index].occupied) {
@@ -365,4 +465,80 @@ Value map_to_string(Value map_val) {
     result = string_concat(result, close);
 
     return result;
+}
+
+// VarMap creation and management
+Value make_varmap(Value* registers, Value* names, int firstIndex, int lastIndex) {
+    // Create regular map structure
+    ValueMap* map = (ValueMap*)gc_allocate(sizeof(ValueMap));
+    Value result = MAP_MASK | ((uintptr_t)map & 0xFFFFFFFFFFFFULL);
+    map->count = 0;
+    map->capacity = 8;
+    map->entries = (MapEntry*)gc_allocate(8 * sizeof(MapEntry));
+
+    // Allocate and initialize VarMapData
+    VarMapData* vdata = (VarMapData*)gc_allocate(sizeof(VarMapData));
+    vdata->registers = registers;
+    vdata->names = names;
+    vdata->reg_map_keys = (Value*)gc_allocate(5 * sizeof(Value));
+    vdata->reg_map_indices = (int*)gc_allocate(5 * sizeof(int));
+    vdata->reg_map_count = 0;
+    vdata->reg_map_capacity = 5;
+
+    map->varmap_data = vdata;
+
+    // Initialize map entries
+    for (int i = 0; i < 8; i++) {
+        map->entries[i].occupied = false;
+        map->entries[i].key = make_null();
+        map->entries[i].value = make_null();
+        map->entries[i].hash = 0;
+    }
+    
+    for (int i=firstIndex; i<lastIndex; i++) {
+    	printf("%d is_null: %d  ", i, is_null(names[i]));
+    	debug_print_value(names[i]);
+    	printf("\n");
+    	if (!is_null(names[i])) varmap_map_to_register(result, names[i], i);
+    }
+    printf("make_varmap: got %d names\n", vdata->reg_map_count);
+
+    return result;
+}
+
+// Helper function to add register mapping
+void varmap_map_to_register(Value map_val, Value var_name, int reg_index) {
+    ValueMap* map = as_map(map_val);
+    if (!map || !map->varmap_data) return;
+
+    VarMapData* vdata = map->varmap_data;
+    if (vdata->reg_map_count < vdata->reg_map_capacity) {
+        vdata->reg_map_keys[vdata->reg_map_count] = var_name;
+        vdata->reg_map_indices[vdata->reg_map_count] = reg_index;
+        vdata->reg_map_count++;
+    }
+    // ToDo: else grow our capacity!
+}
+
+// Gather all assigned register variables into regular map storage
+void varmap_gather(Value map_val) {
+    ValueMap* map = as_map(map_val);
+    if (!map || !map->varmap_data) return;
+
+    VarMapData* vdata = map->varmap_data;
+
+    // Copy all assigned register variables to regular map storage
+    for (int i = 0; i < vdata->reg_map_count; i++) {
+        Value var_name = vdata->reg_map_keys[i];
+        int reg_index = vdata->reg_map_indices[i];
+
+        // If register is assigned, copy to regular map storage
+        if (!is_null(vdata->names[reg_index])) {
+            Value value = vdata->registers[reg_index];
+            map_set(map_val, var_name, value);
+        }
+    }
+
+    // Clear all register mappings
+    vdata->reg_map_count = 0;
 }

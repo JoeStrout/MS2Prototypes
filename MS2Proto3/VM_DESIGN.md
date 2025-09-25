@@ -28,6 +28,7 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | PUSH_rA_rB | push R[B] onto list R[A] |
 | INDEX_rA_rB_rC | R[A] := R[B][R[C]] (get element R[C] from list R[B]) |
 | IDXSET_rA_rB_rC | R[A][R[B]] := R[C] (set element R[B] of list R[A] to R[C]) |
+| LOCALS_rA | R[A] := new VarMap for local variables (r0-r4) |
 
 ### Boolean Storage
 

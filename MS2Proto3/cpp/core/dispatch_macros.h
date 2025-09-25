@@ -37,6 +37,7 @@
 	X(PUSH_rA_rB) \
 	X(INDEX_rA_rB_rC) \
 	X(IDXSET_rA_rB_rC) \
+	X(LOCALS_rA) \
 	X(JUMP_iABC) \
 	X(LT_rA_rB_rC) \
 	X(LT_rA_rB_iC) \

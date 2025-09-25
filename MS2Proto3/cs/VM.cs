@@ -401,6 +401,26 @@ namespace MiniScript {
 						break; // CPP: VM_NEXT();
 					}
 
+					case Opcode.LOCALS_rA: { // CPP: VM_CASE(LOCALS_rA) {
+						// Create VarMap for local variables and store in R[A]
+						Byte a = BytecodeUtil.Au(instruction);
+
+						// Create a new VarMap with references to VM's stack and names arrays
+						// For now, assume our variables are within the first 5 registers.
+						Value varmap = make_varmap(stack, names, baseIndex, 5); // CPP: Value varmap = make_varmap(&stack[0], &names[0], baseIndex, 5);
+
+						// ToDo:
+						//   1. Have assembler keep track of how many registers each function
+						//      needs, and use that here (instead of hard-coded 5).
+						//   2. Cache the VarMap in the CallInfo, and return the cached one 
+						//		rather than creating a new one every time.
+						//	 3. In RETURN, if the current call stack has a cached VarMap,
+						//		call Gather on it.
+
+						localStack[a] = varmap;
+						break; // CPP: VM_NEXT();
+					}
+
 					case Opcode.JUMP_iABC: { // CPP: VM_CASE(JUMP_iABC) {
 						// Jump by signed 24-bit ABC offset from current PC
 						Int32 offset = BytecodeUtil.ABCs(instruction);

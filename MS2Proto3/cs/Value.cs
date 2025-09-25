@@ -580,6 +580,11 @@ namespace MiniScript {
 				return make_int(0);
 			}
 		}
+		
+		public static Value make_varmap(List<Value> registers, List<Value> names, int baseIdx, int count) {
+			VarMap varmap = new VarMap(registers, names, baseIdx, baseIdx + count - 1);
+			return Value.FromMap(varmap);
+		}
 	}
 
 	// A minimal, fast handle table. Stores actual C# objects referenced by Value.
@@ -638,36 +643,36 @@ namespace MiniScript {
 	}
 
 	public class ValueMap {
-		private Dictionary<Value, Value> _items = new Dictionary<Value, Value>();
+		protected Dictionary<Value, Value> _items = new Dictionary<Value, Value>();
 
-		public int Count => _items.Count;
+		public virtual int Count => _items.Count;
 
-		public Value Get(Value key) {
+		public virtual Value Get(Value key) {
 			if (_items.TryGetValue(key, out Value value)) {
 				return value;
 			}
 			return Value.Null();
 		}
 
-		public bool Set(Value key, Value value) {
+		public virtual bool Set(Value key, Value value) {
 			_items[key] = value;
 			return true;
 		}
 
-		public bool Remove(Value key) {
+		public virtual bool Remove(Value key) {
 			return _items.Remove(key);
 		}
 
-		public bool HasKey(Value key) {
+		public virtual bool HasKey(Value key) {
 			return _items.ContainsKey(key);
 		}
 
-		public void Clear() {
+		public virtual void Clear() {
 			_items.Clear();
 		}
 
 		// For iteration support
-		public IEnumerable<KeyValuePair<Value, Value>> Items => _items;
+		public virtual IEnumerable<KeyValuePair<Value, Value>> Items => _items;
 	}
 
 	// String operations

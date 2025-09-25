@@ -34,10 +34,21 @@ typedef struct MapEntry {
     bool occupied;      // Whether this slot is occupied
 } MapEntry;
 
+// VarMap-specific data (only allocated when needed)
+typedef struct VarMapData {
+    Value* registers;        // Pointer to VM register array
+    Value* names;           // Pointer to VM names array
+    Value* reg_map_keys;    // Variable names mapped to registers
+    int* reg_map_indices;   // Corresponding register indices
+    int reg_map_count;      // Number of register mappings
+    int reg_map_capacity;   // Capacity of the mapping arrays
+} VarMapData;
+
 typedef struct ValueMap {
     int count;          // Number of key-value pairs
     int capacity;       // Number of slots in the hash table
     MapEntry* entries;  // Pointer to separately-allocated entries array
+    VarMapData* varmap_data; // NULL for regular maps, non-NULL for VarMaps
 } ValueMap;
 
 // NaN-boxing masks and constants
