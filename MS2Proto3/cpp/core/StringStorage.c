@@ -525,11 +525,11 @@ StringStorage* ss_replace(const StringStorage* storage, const StringStorage* old
     return result;
 }
 
-StringStorage* ss_replaceChar(const StringStorage* storage, char oldChar, char newChar, StringStorageAllocator allocator) {
+StringStorage* ss_replaceByte(const StringStorage* storage, char oldChar, char newChar, StringStorageAllocator allocator) {
     if (!storage) return NULL;
 
     // No sense in trying to replace '\0'. Return a copy of original.
-    if ((oldChar == '\0') || (newChar == '\0')) {
+    if (oldChar == '\0') {
         return ss_create(storage->data, allocator);
     }
 
