@@ -208,6 +208,7 @@ namespace MiniScript {
 				if (constIdx > 255) Error("Constant index out of range for ASSIGN opcode");
 				if (HasError) return 0;
 				instruction = BytecodeUtil.INS_ABC(Opcode.ASSIGN_rA_rB_kC, dest, src, (Byte)constIdx);
+				Current.NoteNamedRegister(dest);
 
 			} else if (mnemonic == "NAME") {
 				// NAME r1, "varname"  -->  NAME_rA_kBC
@@ -225,6 +226,7 @@ namespace MiniScript {
 				if (constIdx > 65535) Error("Constant index out of range for NAME opcode");
 				if (HasError) return 0;
 				instruction = BytecodeUtil.INS_AB(Opcode.NAME_rA_kBC, dest, (Int16)constIdx);
+				Current.NoteNamedRegister(dest);
 
 			} else if (mnemonic == "ADD") {
 				if (parts.Count != 4) {

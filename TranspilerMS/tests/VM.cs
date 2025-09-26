@@ -32,7 +32,7 @@ namespace ScriptingVM {
     // Function prototype (equivalent to C Proto struct)
     public class Proto {
         public List<UInt32> Code = new List<UInt32>();
-        public UInt16 MaxRegs; // frame reservation size
+        public UInt16 VarRegs; // frame reservation size
         public List<Value> Constants = new List<Value>();
 
         public Int32 CodeLength => Code.Count;
@@ -40,7 +40,7 @@ namespace ScriptingVM {
 
         public Proto(List<UInt32> code, UInt16 maxRegs, List<Value> constants) {
             Code = code;
-            MaxRegs = maxRegs;
+            VarRegs = maxRegs;
             Constants = constants;
             if (!Code) Code = new List<UInt32>();
             if (!Constants) Constants = new List<Value>();
@@ -48,7 +48,7 @@ namespace ScriptingVM {
 
         public Proto() {
             Code = new List<UInt32>();
-        	MaxRegs = 0; // frame reservation size
+        	VarRegs = 0; // frame reservation size
         	Constants = new List<Value>();
         }
     }
@@ -111,7 +111,7 @@ namespace ScriptingVM {
             Int32 baseReg = 0; // entry executes at stack base (index 0)
             Int32 pc = 0; // program counter (index into entry.Code)
             
-            EnsureFrame(baseReg, entry.MaxRegs);
+            EnsureFrame(baseReg, entry.VarRegs);
             
             UInt32 cycleCount = 0;
             bool debug = false; // Set to true for debug output
@@ -219,7 +219,7 @@ namespace ScriptingVM {
                             pc = 0; // start at beginning of callee code
                             entry = callee; // switch to callee's code and constants
 
-                            EnsureFrame(baseReg, callee.MaxRegs);
+                            EnsureFrame(baseReg, callee.VarRegs);
                         }
                         break;
 

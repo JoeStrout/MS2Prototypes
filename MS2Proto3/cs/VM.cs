@@ -17,10 +17,10 @@ namespace MiniScript {
 
 	// Call stack frame (return info)
 	public struct CallInfo {
-		public Int32 ReturnPC;		   // where to continue in caller (PC index)
-		public Int32 ReturnBase;		 // caller's base pointer (stack index)
-		public Int32 ReturnFuncIndex;  // caller's function index in functions list
-		public Value LocalVarMap;      // VarMap representing locals, if any
+		public Int32 ReturnPC;        // where to continue in caller (PC index)
+		public Int32 ReturnBase;      // caller's base pointer (stack index)
+		public Int32 ReturnFuncIndex; // caller's function index in functions list
+		public Value LocalVarMap;     // VarMap representing locals, if any
 
 		public CallInfo(Int32 returnPC, Int32 returnBase, Int32 returnFuncIndex) {
 			ReturnPC = returnPC;
@@ -164,7 +164,7 @@ namespace MiniScript {
 			IsRunning = true;
 			callStackTop = 0;
 
-			EnsureFrame(BaseIndex, CurrentFunction.MaxRegs);
+			EnsureFrame(BaseIndex, CurrentFunction.VarRegs);
 
 			if (DebugMode) {
 				IOHelper.Print(StringUtils.Format("VM Reset: Executing {0} out of {1} functions", mainFunc.Name, functions.Count));
@@ -410,16 +410,15 @@ namespace MiniScript {
 						CallInfo frame = callStack[callStackTop]; // CPP: CallInfo& frame = callStack[callStackTop];
 						if (is_null(frame.LocalVarMap)) {
 							// Create a new VarMap with references to VM's stack and names arrays
-							// For now, assume our variables are within the first 5 registers.
-							frame.LocalVarMap = make_varmap(stack, names, baseIndex, 5); // CPP: frame.LocalVarMap = make_varmap(&stack[0], &names[0], baseIndex, 5);
+							UInt16 regCount = curFunc.VarRegs;
+							if (regCount == 0) {
+								// We have no local vars at all!  Make an ordinary map.
+								frame.LocalVarMap = make_map(4);	// This is safe, right?
+							} else {
+								frame.LocalVarMap = 
+								  make_varmap(stack, names, baseIndex, regCount); // CPP: make_varmap(&stack[0], &names[0], baseIndex, regCount);
+							}
 						}
-						// ToDo:
-						//   1. Have assembler keep track of how many registers each function
-						//      needs, and use that here (instead of hard-coded 5).
-						// ✅ 2. Cache the VarMap in the CallInfo, and return the cached one 
-						//		rather than creating a new one every time.
-						// ✅ 3. In RETURN, if the current call stack has a cached VarMap,
-						//		call Gather on it.
 
 						localStack[a] = frame.LocalVarMap;
 						names[baseIndex+a] = make_null();
@@ -791,7 +790,7 @@ namespace MiniScript {
 						curConstants = curFunc.Constants; // CPP: curConstants = &curFunc.Constants[0];
 						currentFuncIndex = funcIndex; // Switch to callee function index
 
-						EnsureFrame(baseIndex, callee.MaxRegs);
+						EnsureFrame(baseIndex, callee.VarRegs);
 						break; // CPP: VM_NEXT();
 					}
 					

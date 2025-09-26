@@ -31,7 +31,7 @@ namespace ScriptingVM {
     // Function prototype (equivalent to C Proto struct)
     class Proto {
         public: List<UInt32> Code = List<UInt32>();
-        public: UInt16 MaxRegs; // frame reservation size
+        public: UInt16 VarRegs; // frame reservation size
         public: List<Value> Constants = List<Value>();
 
 

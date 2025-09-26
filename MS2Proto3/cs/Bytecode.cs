@@ -222,7 +222,12 @@ namespace MiniScript {
 		public String Name = "";
 		public List<UInt32> Code = new List<UInt32>();
 		public List<Value> Constants = new List<Value>();
-		public UInt16 MaxRegs = 0; // frame reservation size
+		public UInt16 VarRegs = 0; // how many registers must be scanned to find local vars
+		
+		public void NoteNamedRegister(Int32 registerNumber) {
+			UInt16 impliedCount = (UInt16)(registerNumber + 1);
+			if (VarRegs < impliedCount) VarRegs = impliedCount;
+		}
 		
 		// Conversion to bool: returns true if function has a name
 		/*** BEGIN H_ONLY ***

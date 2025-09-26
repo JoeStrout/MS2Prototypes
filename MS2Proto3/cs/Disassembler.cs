@@ -221,6 +221,7 @@ namespace MiniScript {
 		// Disassemble the given function.  If detailed=true, include extra
 		// details for debugging, like line numbers and instruction hex code.
 		public static void Disassemble(FuncDef funcDef, List<String> output, Boolean detailed=true) {
+			output.Add(StringUtils.Format("Local var registers: {0}", funcDef.VarRegs));
 			output.Add(StringUtils.Format("Constants ({0}):", funcDef.Constants.Count));
 			for (Int32 i = 0; i < funcDef.Constants.Count; i++) {
 				output.Add(StringUtils.Format("   {0}. {1}", i, funcDef.Constants[i]));
