@@ -122,8 +122,10 @@ public class App {
 				result = vm.Run();
 			}
 			
-			IOHelper.Print("\nVM execution complete. Result in r0:");
-			IOHelper.Print(StringUtils.Format("\u001b[1;93m{0}\u001b[0m", result)); // (bold bright yellow)
+			if (!vm.ReportRuntimeError()) {
+				IOHelper.Print("\nVM execution complete. Result in r0:");
+				IOHelper.Print(StringUtils.Format("\u001b[1;93m{0}\u001b[0m", result)); // (bold bright yellow)
+			}
 		}
 		
 		IOHelper.Print("All done!");

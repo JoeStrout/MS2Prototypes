@@ -47,6 +47,8 @@ namespace MiniScript {
 		public FuncDef CurrentFunction { get; private set; }
 		public Boolean IsRunning { get; private set; }
 		public Int32 BaseIndex { get; private set; }
+		public String RuntimeError { get; private set; }
+
 		public Int32 StackSize() {
 			return stack.Count;
 		}
@@ -88,6 +90,7 @@ namespace MiniScript {
 			callStack = new List<CallInfo>();
 			functions = new List<FuncDef>();
 			callStackTop = 0;
+			RuntimeError = "";
 
 			// Initialize stack with null values
 			for (Int32 i = 0; i < stackSlots; i++) {
@@ -107,26 +110,26 @@ namespace MiniScript {
 		}
 
 		// Run a program: store all functions, find @main, and execute it
-		public Value Run(List<FuncDef> allFunctions) {
-			// Store all functions for CALLF instructions, and find @main
-			FuncDef mainFunc = new FuncDef();
-			functions.Clear();
-			for (Int32 i = 0; i < allFunctions.Count; i++) {
-				functions.Add(allFunctions[i]);
-				if (functions[i].Name == "@main") mainFunc = functions[i];
-			}
-			
-			if (!mainFunc) {
-				IOHelper.Print("ERROR: No @main function found in VM.Run");
-				return make_null();
-			}
-			
-			// Execute @main
-			if (DebugMode) {
-				IOHelper.Print(StringUtils.Format("Executing {0} out of {1} functions", mainFunc.Name, functions.Count));
-			}
-			return Execute(mainFunc);
-		}
+//		public Value Run(List<FuncDef> allFunctions) {
+//			// Store all functions for CALLF instructions, and find @main
+//			FuncDef mainFunc = new FuncDef();
+//			functions.Clear();
+//			for (Int32 i = 0; i < allFunctions.Count; i++) {
+//				functions.Add(allFunctions[i]);
+//				if (functions[i].Name == "@main") mainFunc = functions[i];
+//			}
+//			
+//			if (!mainFunc) {
+//				IOHelper.Print("ERROR: No @main function found in VM.Run");
+//				return make_null();
+//			}
+//			
+//			// Execute @main
+//			if (DebugMode) {
+//				IOHelper.Print(StringUtils.Format("Executing {0} out of {1} functions", mainFunc.Name, functions.Count));
+//			}
+//			return Execute(mainFunc);
+//		}
 
 		public void Reset(List<FuncDef> allFunctions) {
 			// Store all functions for CALLF instructions, and find @main
@@ -163,12 +166,25 @@ namespace MiniScript {
 			CurrentFunction = mainFunc;
 			IsRunning = true;
 			callStackTop = 0;
+			RuntimeError = "";
 
 			EnsureFrame(BaseIndex, CurrentFunction.VarRegs);
 
 			if (DebugMode) {
 				IOHelper.Print(StringUtils.Format("VM Reset: Executing {0} out of {1} functions", mainFunc.Name, functions.Count));
 			}
+		}
+
+		public void RaiseRuntimeError(String message) {
+			RuntimeError = message;
+			IsRunning = false;
+		}
+		
+		public bool ReportRuntimeError() {
+			if (String.IsNullOrEmpty(RuntimeError)) return false;
+			IOHelper.Print(StringUtils.Format("Runtime error: {0} [{1} line {2}]",
+			  RuntimeError, CurrentFunction.Name, PC - 1));
+			return true;
 		}
 
 		public Value Execute(FuncDef entry) {
@@ -276,6 +292,26 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						UInt16 constIdx = BytecodeUtil.BCu(instruction);
 						localStack[a] = curConstants[constIdx];
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.LOADV_rA_rB_kC: { // CPP: VM_CASE(LOADV_rA_rB_kC) {
+						// R[A] = R[B], but verify that register B has name matching constants[C]
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						Byte c = BytecodeUtil.Cu(instruction);
+
+						// Check if the source register has the expected name
+						Value expectedName = curConstants[c];
+						Value actualName = names[baseIndex + b];
+						if (!value_identical(expectedName, actualName)) {
+							// For now, just print an error
+							RaiseRuntimeError(StringUtils.Format("Undefined identifier '{0}'",
+								expectedName, actualName));
+							localStack[a] = make_null();
+						} else {
+							localStack[a] = localStack[b];
+						}
 						break; // CPP: VM_NEXT();
 					}
 
@@ -851,8 +887,9 @@ namespace MiniScript {
 				}
 //*** END CS_ONLY ***
 			}
+			// CPP: VM_DISPATCH_BOTTOM();
 
-			// Update instance variables after loop exit (shouldn't normally reach here)
+			// Update instance variables after loop exit (e.g. from error condition)
 			PC = pc;
 			BaseIndex = baseIndex;
 			_currentFuncIndex = currentFuncIndex;

@@ -8,7 +8,7 @@ The VM in this prototype is register (rather than stack) based.  Instructions ar
 
 Our internal opcode names include a verb/mnemonic, and a description of how the three operand bytes (A, B, and C) are used.  This allows us to overload the same verb with different variants that use the operands in different ways, and make it easy to remember what's going on with each one.
 
-### Basic loading, data, and math
+### Basic loading and data handling
 
 | Mnemonic | Description |
 | --- | --- |
@@ -16,19 +16,23 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | LOAD_rA_rB | R[A] := R[B] (C unused) |
 | LOAD_rA_iBC | R[A] := BC (16-bit signed value) |
 | LOAD_rA_kBC | R[A] := constants[BC] (load from constants table) |
+| LOADV_rA_rB_kC | R[A] := R[B], but verify that register B has name matching constants[C] |
 | ASSIGN_rA_rB_kC | R[A] := R[B] and name[A] := constants[C] (copy value and assign variable name) |
 | NAME_rA_kBC | name[A] := constants[BC] (assign variable name without changing value) |
-| ADD_rA_rB_rC | R[A] := R[B] + R[C] |
-| SUB_rA_rB_rC | R[A] := R[B] - R[C] |
-| MULT_rA_rB_rC | R[A] := R[B] * R[C] |
-| DIV_rA_rB_rC | R[A] := R[B] / R[C] |
-| MOD_rA_rB_rC | R[A] := R[B] % R[C] |
 | LIST_rA_iBC | R[A] := new list with capacity BC |
 | MAP_rA_iBC | R[A] := new map with initial capacity BC |
 | PUSH_rA_rB | push R[B] onto list R[A] |
 | INDEX_rA_rB_rC | R[A] := R[B][R[C]] (get element R[C] from list R[B]) |
 | IDXSET_rA_rB_rC | R[A][R[B]] := R[C] (set element R[B] of list R[A] to R[C]) |
 | LOCALS_rA | R[A] := new VarMap for local variables (r0-r4) |
+
+### Math
+
+| ADD_rA_rB_rC | R[A] := R[B] + R[C] |
+| SUB_rA_rB_rC | R[A] := R[B] - R[C] |
+| MULT_rA_rB_rC | R[A] := R[B] * R[C] |
+| DIV_rA_rB_rC | R[A] := R[B] / R[C] |
+| MOD_rA_rB_rC | R[A] := R[B] % R[C] |
 
 ### Boolean Storage
 

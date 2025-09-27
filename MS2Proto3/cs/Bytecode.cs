@@ -9,6 +9,7 @@ namespace MiniScript {
 		LOAD_rA_rB,
 		LOAD_rA_iBC,
 		LOAD_rA_kBC,
+		LOADV_rA_rB_kC,
 		ASSIGN_rA_rB_kC,
 		NAME_rA_kBC,
 		ADD_rA_rB_rC,
@@ -105,6 +106,7 @@ namespace MiniScript {
 				case Opcode.LOAD_rA_rB:     return "LOAD_rA_rB";
 				case Opcode.LOAD_rA_iBC:    return "LOAD_rA_iBC";
 				case Opcode.LOAD_rA_kBC:    return "LOAD_rA_kBC";
+				case Opcode.LOADV_rA_rB_kC: return "LOADV_rA_rB_kC";
 				case Opcode.ASSIGN_rA_rB_kC:return "ASSIGN_rA_rB_kC";
 				case Opcode.NAME_rA_kBC:    return "NAME_rA_kBC";
 				case Opcode.ADD_rA_rB_rC:   return "ADD_rA_rB_rC";
@@ -164,6 +166,7 @@ namespace MiniScript {
 			if (s == "LOAD_rA_rB")      return Opcode.LOAD_rA_rB;
 			if (s == "LOAD_rA_iBC")     return Opcode.LOAD_rA_iBC;
 			if (s == "LOAD_rA_kBC")     return Opcode.LOAD_rA_kBC;
+			if (s == "LOADV_rA_rB_kC")  return Opcode.LOADV_rA_rB_kC;
 			if (s == "ASSIGN_rA_rB_kC") return Opcode.ASSIGN_rA_rB_kC;
 			if (s == "NAME_rA_kBC")     return Opcode.NAME_rA_kBC;
 			if (s == "ADD_rA_rB_rC")    return Opcode.ADD_rA_rB_rC;

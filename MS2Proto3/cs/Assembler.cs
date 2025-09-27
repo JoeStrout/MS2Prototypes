@@ -192,6 +192,23 @@ namespace MiniScript {
 					instruction = BytecodeUtil.INS_AB(Opcode.LOAD_rA_iBC, dest, immediate);
 				}
 
+			} else if (mnemonic == "LOADV") {
+				// LOADV r1, r2, "varname"  -->  LOADV_rA_rB_kC
+				// Load value from r2 into r1, but verify that r2 has name matching varname
+				if (parts.Count != 4) {
+					Error("Syntax error: LOADV requires exactly 3 operands");
+					return 0;
+				}
+				Byte dest = ParseRegister(parts[1]);
+				Byte src = ParseRegister(parts[2]);
+
+				Value constantValue = ParseAsConstant(parts[3]);
+				if (!is_string(constantValue)) Error("Variable name must be a string");
+				Int32 constIdx = AddConstant(constantValue);
+				if (constIdx > 255) Error("Constant index out of range for LOADV opcode");
+				if (HasError) return 0;
+				instruction = BytecodeUtil.INS_ABC(Opcode.LOADV_rA_rB_kC, dest, src, (Byte)constIdx);
+
 			} else if (mnemonic == "ASSIGN") {
 				// ASSIGN r1, r2, k3  -->  ASSIGN_rA_rB_kC
 				// Copy value from r2 to r1, and assign variable name from constants[3]

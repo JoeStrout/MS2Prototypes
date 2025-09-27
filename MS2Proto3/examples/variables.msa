@@ -36,9 +36,8 @@
 	
 	RETURN
 
-# testFoo prepares "foo" and a (wrong) "answer",
-# then calls fooAnswerTest(locals), and checks
-# the result.
+# testFoo prepares "foo" and a (wrong) "answer", then calls fooAnswerTest(locals),
+# which should stuff the correct value into "answer".
 @testFoo:
 	# answer = -1  (using ASSIGN)
 	LOAD r0, -1
@@ -57,7 +56,31 @@
 	CALLFN 3, "print"
 	
 	RETURN
+
+# Define a function that removes "x" from any map passed in.
+@removeX:
+	LOAD r1, "x"
+	CALLFN 0, "remove"
+	RETURN
 	
+# Now, this function creates a variable "x", but then passes locals
+# to @removeX, which removes it.  A subsequent access of variable "x"
+# (through LOADV, which MiniScript should use for any non-invoking
+# variable reference) should then fail.
+@testAccessAfterRemoval:
+	LOAD r1, 123
+	NAME r1, "x"
+	LOAD r2, 456
+	NAME r2, "y"
+	
+	LOADV r0, r1, "x"    # should work (as x is defined now)
+	
+	LOCALS r3
+	CALLF 3, @removeX    # undefines x
+	
+	LOADV r0, r1, "x"    # should throw an error
+	RETURN
+
 
 @main:
 	LOAD r0, 42
@@ -71,6 +94,8 @@
 	CALLF 3, @returnLocalsTest   # call returnLocalsTest, get result in r3
 	CALLFN 3, "print"            # print result
 	
-	CALLF 3, @testFoo            # call testFoo
+	CALLF 3, @testFoo
+	
+	CALLF 3, @testAccessAfterRemoval
 	
 	RETURN

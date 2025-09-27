@@ -25,6 +25,7 @@
 	X(LOAD_rA_rB) \
 	X(LOAD_rA_iBC) \
 	X(LOAD_rA_kBC) \
+	X(LOADV_rA_rB_kC) \
 	X(ASSIGN_rA_rB_kC) \
 	X(NAME_rA_kBC) \
 	X(ADD_rA_rB_rC) \
@@ -84,11 +85,13 @@
 
 	#define VM_DISPATCH_TOP() vm_dispatch_top:
 	#define VM_DISPATCH_BEGIN() \
+		if (!IsRunning) goto vm_dispatch_bottom; \
 		goto *vm_labels[(int)opcode];
 
 	#define VM_CASE(OP)     L_##OP:
 	#define VM_NEXT()       goto vm_dispatch_top
-	#define VM_DISPATCH_END() 
+	#define VM_DISPATCH_END()
+	#define VM_DISPATCH_BOTTOM() vm_dispatch_bottom:
 #else
 	#define VM_DISPATCH_TOP() /* unused */
 	#define VM_DISPATCH_BEGIN() \
@@ -96,4 +99,5 @@
 	#define VM_CASE(OP)        case Opcode::OP:
 	#define VM_NEXT()          break;
 	#define VM_DISPATCH_END()  default: IOHelper::Print("unknown opcode"); return make_null(); }
+	#define VM_DISPATCH_BOTTOM()
 #endif

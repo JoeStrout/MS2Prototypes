@@ -15,6 +15,7 @@ namespace MiniScript {
 				case Opcode.LOAD_rA_rB:
 				case Opcode.LOAD_rA_iBC:
 				case Opcode.LOAD_rA_kBC:   return "LOAD";
+				case Opcode.LOADV_rA_rB_kC: return "LOADV";
 				case Opcode.ASSIGN_rA_rB_kC: return "ASSIGN";
 				case Opcode.NAME_rA_kBC:   return "NAME";
 				case Opcode.ADD_rA_rB_rC:  return "ADD";
@@ -208,6 +209,7 @@ namespace MiniScript {
         				(Int32)BytecodeUtil.Cu(instruction));
 				// rA, rB, kC
 				case Opcode.ASSIGN_rA_rB_kC:
+				case Opcode.LOADV_rA_rB_kC:
 					return StringUtils.Format("{0} r{1}, r{2}, k{3}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),
