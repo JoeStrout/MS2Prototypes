@@ -60,7 +60,7 @@ namespace MiniScript {
 		/// standard map behavior.
 		/// </summary>
 		public override Value Get(Value key) {
-			if (_regMap.TryGetValue(key, out int regIndex)) {
+			if (is_string(key) && _regMap.TryGetValue(key, out int regIndex)) {
 				// Check if register is assigned (has non-null name)
 				if (!_names[regIndex].IsNull) return _registers[regIndex];
 			}
@@ -74,7 +74,7 @@ namespace MiniScript {
 		/// in the register and mark as assigned. Otherwise, use standard map storage.
 		/// </summary>
 		public override bool Set(Value key, Value value) {
-			if (_regMap.TryGetValue(key, out int regIndex)) {
+			if (is_string(key) && _regMap.TryGetValue(key, out int regIndex)) {
 				// Store in register and mark as assigned
 				_registers[regIndex] = value;
 				_names[regIndex] = key;
@@ -90,7 +90,7 @@ namespace MiniScript {
 		/// Otherwise, use standard map removal.
 		/// </summary>
 		public override bool Remove(Value key) {
-			if (_regMap.TryGetValue(key, out int regIndex)) {
+			if (is_string(key) && _regMap.TryGetValue(key, out int regIndex)) {
 				// Clear assignment by setting name to null
 				_names[regIndex] = make_null();
 				return true;
@@ -104,7 +104,7 @@ namespace MiniScript {
 		/// Check if a key exists. For register-mapped keys, check if assigned.
 		/// </summary>
 		public override bool HasKey(Value key) {
-			if (_regMap.TryGetValue(key, out int regIndex)) {
+			if (is_string(key) && _regMap.TryGetValue(key, out int regIndex)) {
 				// Key exists if register is assigned
 				return !_names[regIndex].IsNull;
 			}

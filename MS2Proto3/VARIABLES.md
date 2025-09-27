@@ -14,13 +14,11 @@ This document attempts to develop an approach to making all this work, while mai
 
 The VM maintains a stack of Values.  Each call frame gets a section of this stack, which maps to its Register 0, Register 1, ... Register N.  Assembly instructions like `LOAD r1, 42` load a value (42) into a particular slot in this stack (the slot which is Register 1 for the current call frame).
 
-We will need to extend this stack with some extra data for each slot:
+We will need to extend this stack with one extra value for each slot: the **name** of the local variable associated with that slot, if any.  This is set only while that variable has a value assigned.
 
-1. The **name** of the local variable associated with that slot, if any; this is set only while that variable has a value assigned.
+A MiniScript assignment statement actually assigns the name string to the target register (in addition to copying the value).
 
-In this design, an assignment statement would actually assign the name string to the register (in addition to copying the value).  But as all the identifiers in the code would be in the constants table already, this is no harder (and probably no slower) than setting the flag.  This might be more efficient than having a separate "assigned" flag.  It also leaves open the possibility of reusing a register for different variables at different times, if we can determine (e.g. through static analysis) than an older variable is no longer needed).
-
-(Note: variable lifetime analysis is totally doable, since unless a function either (1) makes use of `locals`, or (2) defines an inner `function`, there is no way any other code can access its locals.)
+This leaves open the possibility of reusing a register for different variables at different times, if we can determine (e.g. through static analysis) than an older variable is no longer needed.  (Note: variable lifetime analysis is totally doable, since unless a function either (1) makes use of `locals`, or (2) defines an inner `function`, there is no way any other code can access its locals.)
 
 ## VarMaps
 
@@ -44,25 +42,33 @@ The rarity of each case is noted.  We assume that in ordinary code, the common c
 ### Variable assignment (common)
 
 MiniScript code:
+
 ```
 x = 42
 ```
 
 #### Concept
 
-The compiler has mapped `x` to some register, let's say **r7**.  In the register metadata, this slot will have a **name** of "x", and the **assigned** flag may or may not be set.  This assignment simply stores the RHS value in the slot, and sets **assigned** to true.
+The compiler has decided to store `x` in some register, let's say **r7**.  This assignment simply stores the RHS value in the slot, and sets the register name to "x".  In assembly code, there are two ways it might do this: an ASSIGN opcode that stores the value and name at the same time; or a LOAD followed by a NAME.
 
 #### Assembly
 
 ```
-LOAD r7, 42    # load the value into the register named "x"
-SETASN r7      # set the assigned flag for this slot to true
+LOAD r12, 42          # load the value into a temp register
+ASSIGN r7, r12, "x"   # copy value into register 7 and name it "x"
 ```
 
+or:
+
+```
+LOAD r7, 42    # load the value into the register 7
+NAME r7, "x"   # ensure register 7 is named "x"
+```
 
 ### `@`-protected variable read (rare-ish)
 
 MiniScript code:
+
 ```
 _ = @x
 ```
@@ -71,20 +77,31 @@ Possibly an ordinary read (e.g. `_ = x`) could fall into this situation too, if 
 
 #### Concept
 
-The compiler has mapped `x` to some register, let's say **r7**.  In the register metadata, this slot will have a **name** of "x", and the **assigned** flag may or may not be set.  In compiling the expression on the RHS of this example, we would want to get the value of `x` into some temp register, let's say **r13**.  Because of `@` (or if, through some static analysis, we know that `x` cannot hold a function reference), we don't want to invoke any function; we just want to get the value as it is stored.
+The compiler has mapped `x` to some register, let's say **r7**.  In the register metadata, this slot will have a **name** of "x", assuming the variable has already been set and not subsequently cleared.  In compiling the expression on the RHS of this example, we would want to get the value of `x` into some temp register, let's say **r13**.  Because of `@` (or if, through some static analysis, we know that `x` cannot hold a function reference), we don't want to invoke any function; we just want to get the value as it is stored.
 
-We can do this directly with a `LOAD` opcode, but that opcode should note that this is a named register, and execute a somewhat longer path.  So `LOAD` will look like:
+So this is basically a `LOAD`, but we need to correctly handle the case where the variable has been cleared (for example, we have passed `locals` to some function that removed the "x" index).  MiniScript code illustrating this scenario:
 
-1. If the source register is not named, use its value as-is.
-2. If it is named, see if its **assigned** flag is set.
-  a. If set, use its value as-is.
-  b. If not set, then look for the same name in the _outer_ stack frame, and then in _globals_.
-  c. Use the value found, or if not found, throw an undefined-identifier error.
+```
+noXForYou = function(m)
+  m.remove "x"
+end function
+x = 42
+noXForYou locals
+x
+--> Runtime Error: Undefined Identifier: 'x' is unknown in this context
+```
+
+To handle this, we will have a `LOADV` opcode, similar to `LOAD` except that it validates the name of the register it is loading from:
+
+1. If the source register name matches the LOADV name, use its value as-is.
+2. If not, then look for the same name in the _outer_ stack frame, and then in _globals_. Use the value found, or if not found, throw an undefined-identifier error.
+
+Note that this design leaves only 8 bits for the name constant; thus no function context can have more than 256 variable names, and the compiler will need to sort these to the start of the constants list.
 
 #### Assembly
 
 ```
-LOAD r13, r7    # get value from r7 (x) into r13 (a temp register)
+LOADV r13, r7, "x"    # get value from r7 (named x) into r13 (a temp register)
 ```
 
 ### Ordinary variable read (common)
@@ -96,16 +113,16 @@ _ = x
 
 #### Concept
 
-This is very similar to above, except that in case `x` is a function reference, we want to actually invoke that function (with no parameters) and use the return value.  We'll do this with a special opcode, `LOADC` (load-and-call).  This will go through the same process as `LOAD` (above) to find the value, and if the value found is not a function reference, it stores it in the target register just like `LOAD`.  But if it *is* a function reference, then it invokes that function, and stores the result, similar to a `CALLF` + `LOAD`.
+This is very similar to above, except that in case `x` is a function reference, we want to actually invoke that function (with no parameters) and use the return value.  We'll do this with a special opcode, `LOADC` (load-and-call).  This will go through the same process as `LOADV` (above) to find the value, and if the value found is not a function reference, it stores it in the target register just like `LOADV`.  But if it *is* a function reference, then it invokes that function, and stores the result, similar to a `CALLF` + `LOAD`.
 
-Note that just like CALLF, we have to define how big our stack frame is, and where the invoked function can put its own **r0** (potentially clobbering anything beyond that point in the stack).  That's the `19` in the `LOAD` call above.  Since functions always store their return value in **r0**, from the point of view of this code, it will find that value in **r19**, which `LOADC` then copies into the target register **r13**.
+This opcode needs the same arguments as LOADV: where to store the value (*destRegister*), where to get the value or function reference (*srcRegister*), and the name that identifies the variable we are trying to load (*name*).  That uses up all the space for fields in our opcode; so how do we know where to tell the called function to start its registers in the stack?  I think we'll need to use the `maxRegs` property of the FuncDef (of the current function, not the one we're calling).  The compiler/assembler will need to keep track of the highest register referenced in any way by the code, and then implicit calls will start their registers at `maxRegs+1`.
 
-In order to do that copy after the call, the call stack will need to include an extra bit of data that means "upon return to this frame, copy from *srcRegister* to *destRegister*".
+In order to copy the result into *destRegister* after the call, the call stack will need to include an extra piece of data that means "upon return to this frame, copy from *maxRegs+1* to *destRegister*".
 
 #### Assembly
 
 ```
-LOADC r13, r7, 19   # get value from r7 (x), copying result from r19 to r13
+LOADC r13, r7, "x"   # get value from r7 (x), calling if needed, and store in r13
 ```
 
 ### Explicit assignment to local via locals (rare-ish)
@@ -176,8 +193,6 @@ LOCALS r18       # get `locals` into r18 (second parameter)
 CALLFN 17, "fill"  # call "fill" with args starting at r17
 CALLFN 17, "print" # call "print" with result of previous call
 ```
-
-(Note that we haven't yet defined how we're going to call functions by name in code... here I'm imagining a `CALLFN` opcode that works like `CALLF`, but takes a function name.)
 
 ### Assignment of outer variable (rare)
 
