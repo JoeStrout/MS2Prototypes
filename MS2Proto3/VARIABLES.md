@@ -198,7 +198,10 @@ CALLFN 17, "print" # call "print" with result of previous call
 
 Care must be taken here: the `outer` scope is not the previous stack frame, but rather, the stack frame that was current when the function was initially defined.
 
-So, part of the code behind the `function` keyword will grab the VarMap of the current  function, and store it as the `outer` context of the new function.  Note that if that function is invoked while the outer function is still on the stack, then it will be able to read and write live variables.  If the outer function exists before the new function is invoked, that's OK too; in this case the VarMap will have gathered its values and be acting like an ordinary map.
+So, part of the code behind the `function` keyword will grab the VarMap of the current  function, and store it as the `outer` context of the new function.  Note that if that function is invoked while the outer function is still on the stack, then it will be able to read and write live variables.  If the outer function exits before the new function is invoked, that's OK too; in this case the VarMap will have gathered its values and be acting like an ordinary map.
+
+In assembly code, I think we'll need a special opcode just for this.  Maybe SETOUT, given a function reference, takes the local VarMap and stuffs it into that FuncDef.
+
 
 ### Assignment of global variable (common-ish)
 

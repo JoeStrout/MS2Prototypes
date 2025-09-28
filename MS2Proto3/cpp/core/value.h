@@ -53,17 +53,15 @@ typedef struct ValueMap {
 
 // NaN-boxing masks and constants
 #define NANISH_MASK        0xffff000000000000ULL
-#define NANISH             0x7ffc000000000000ULL
-#define INTEGER_MASK       0x7ffc000000000000ULL
-#define MAP_MASK           0xfffb000000000000ULL
-#define STRING_MASK        0xfffe000000000000ULL
+#define NULL_VALUE         0xfff1000000000000ULL  // our lowest reserved NaN pattern
+#define INTEGER_MASK       0xfffa000000000000ULL
+#define FUNCREF_MASK       0xfffb000000000000ULL
+#define MAP_MASK           0xfffc000000000000ULL
 #define LIST_MASK          0xfffd000000000000ULL
+#define STRING_MASK        0xfffe000000000000ULL  // (specifically, heap string)
+#define TINY_STRING_MASK   0xffff000000000000ULL
 
-// Tiny string support - uses STRING_MASK with special encoding
-#define TINY_STRING_MASK   0xffff000000000000ULL  // Top bit set for tiny strings
 #define TINY_STRING_MAX_LEN 5                     // Max 5 chars in 40 bits (bits 8-47)
-
-#define NULL_VALUE         0x7ffe000000000000ULL
 
 static inline bool value_identical(Value a, Value b) {
 	return a == b;
@@ -79,15 +77,22 @@ static inline bool is_int(Value v) {
 }
 
 static inline bool is_tiny_string(Value v) {
-    return (v & TINY_STRING_MASK) == TINY_STRING_MASK;
+    return (v & NANISH_MASK) == TINY_STRING_MASK;
 }
 
 static inline bool is_heap_string(Value v) {
-    return (v & STRING_MASK) == STRING_MASK && !is_tiny_string(v);
+    return (v & NANISH_MASK) == STRING_MASK;
 }
 
 static inline bool is_string(Value v) {
-    return is_tiny_string(v) || is_heap_string(v);
+	// Because of the particular bit patterns chosen, instead of:
+    //return is_tiny_string(v) || is_heap_string(v);
+    // ...we can do just:
+    return (v & STRING_MASK) == STRING_MASK;
+}
+
+static inline bool is_funcref(Value v) {
+    return (v & NANISH_MASK) == FUNCREF_MASK;
 }
 
 static inline bool is_list(Value v) {
@@ -99,9 +104,9 @@ static inline bool is_map(Value v) {
 }
 
 static inline bool is_double(Value v) {
-    // A value is a double if it doesn't have any of our NaN-boxing type masks
-    // This means it's a normal IEEE 754 double value
-    return !is_null(v) && !is_int(v) && !is_tiny_string(v) && !is_heap_string(v) && !is_list(v) && !is_map(v);
+	uint64_t top16 = v & NANISH_MASK;
+	// Check if it's outside our reserved NaN range
+	return top16 < NULL_VALUE;  // Since NULL_VALUE is your lowest boxed type
 }
 
 static inline bool is_number(Value v) {

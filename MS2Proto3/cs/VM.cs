@@ -306,6 +306,7 @@ namespace MiniScript {
 						Value actualName = names[baseIndex + b];
 						if (!value_identical(expectedName, actualName)) {
 							// For now, just print an error
+							// ToDo: check outer and globals!
 							RaiseRuntimeError(StringUtils.Format("Undefined identifier '{0}'",
 								expectedName, actualName));
 							localStack[a] = make_null();

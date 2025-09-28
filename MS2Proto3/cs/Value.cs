@@ -29,12 +29,13 @@ namespace MiniScript {
 		// ==== TAGS & MASKS (EDIT TO MATCH YOUR C EXACTLY) =====================
 		// High 16 bits used to tag NaN-ish payloads.
 		private const ulong NANISH_MASK  = 0xFFFF_0000_0000_0000UL; // choose to match C
-		private const ulong INTEGER_MASK = 0x7FFC_0000_0000_0000UL; // C int tag
+		private const ulong NULL_VALUE   = 0xFFF1_0000_0000_0000UL; // null singleton (our lowest reserved NaN pattern)
+		private const ulong INTEGER_MASK = 0xFFFA_0000_0000_0000UL; // C int tag
+		private const ulong FUNCREF_MASK = 0xFFFB_0000_0000_0000UL; // function reference tag
+		private const ulong MAP_MASK	 = 0xFFFC_0000_0000_0000UL; // map tag
+		private const ulong LIST_MASK	 = 0xFFFD_0000_0000_0000UL; // list tag
 		private const ulong STRING_MASK  = 0xFFFE_0000_0000_0000UL; // heap string tag
-		private const ulong LIST_MASK	= 0xFFFD_0000_0000_0000UL; // list tag
-		private const ulong MAP_MASK	 = 0xFFFB_0000_0000_0000UL; // map tag
-		private const ulong TINY_MASK	= 0xFFFF_0000_0000_0000UL; // tiny string tag (shared with NANish)
-		private const ulong NULL_VALUE   = 0x7FFE_0000_0000_0000UL; // null singleton
+		private const ulong TINY_MASK	 = 0xFFFF_0000_0000_0000UL; // tiny string tag (shared with NANish)
 
 		// ==== CONSTRUCTORS ====================================================
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -87,18 +88,25 @@ namespace MiniScript {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Value FromFuncRef(object funcRef) {
+			int h = HandlePool.Add(funcRef);
+			return FromHandle(FUNCREF_MASK, h);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value FromHandle(ulong tagMask, int handle)
 			=> new(tagMask | (uint)handle);
 
 		// ==== TYPE PREDICATES =================================================
 		public bool IsNull   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _u == NULL_VALUE; }
 		public bool IsInt	{ [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == INTEGER_MASK; }
-		public bool IsTiny   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & TINY_MASK) == TINY_MASK && (_u & NANISH_MASK) != STRING_MASK && (_u & NANISH_MASK) != LIST_MASK && (_u & NANISH_MASK) != MAP_MASK && (_u & NANISH_MASK) != INTEGER_MASK && _u != NULL_VALUE; }
-		public bool IsHeapString { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == STRING_MASK && !IsTiny; }
-		public bool IsString { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => IsTiny || IsHeapString; }
+		public bool IsTiny   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & TINY_MASK) == TINY_MASK && (_u & NANISH_MASK) != STRING_MASK && (_u & NANISH_MASK) != LIST_MASK && (_u & NANISH_MASK) != MAP_MASK && (_u & NANISH_MASK) != INTEGER_MASK && (_u & NANISH_MASK) != FUNCREF_MASK && _u != NULL_VALUE; }
+		public bool IsHeapString { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == STRING_MASK; }
+		public bool IsString { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & STRING_MASK) == STRING_MASK; }
+		public bool IsFuncRef { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == FUNCREF_MASK; }
 		public bool IsList   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == LIST_MASK; }
 		public bool IsMap	{ [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == MAP_MASK; }
-		public bool IsDouble { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => !IsNull && !IsInt && !IsString && !IsList && !IsMap; }
+		public bool IsDouble { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) < NULL_VALUE; }
 
 		// ==== ACCESSORS =======================================================
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -440,6 +448,9 @@ namespace MiniScript {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value make_empty_map() => make_map(8);
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Value make_funcref(object funcRef) => Value.FromFuncRef(funcRef);
+
 		public static int map_count(Value map_val) {
 			if (!map_val.IsMap) return 0;
 			var valueMap = HandlePool.Get(map_val.Handle()) as ValueMap;
@@ -520,6 +531,9 @@ namespace MiniScript {
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool is_list(Value v) => v.IsList;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool is_funcref(Value v) => v.IsFuncRef;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool is_tiny_string(Value v) => v.IsTiny;
