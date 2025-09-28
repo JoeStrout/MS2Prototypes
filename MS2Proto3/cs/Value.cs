@@ -28,21 +28,21 @@ namespace MiniScript {
 
 		// ==== TAGS & MASKS (EDIT TO MATCH YOUR C EXACTLY) =====================
 		// High 16 bits used to tag NaN-ish payloads.
-		private const ulong NANISH_MASK  = 0xFFFF_0000_0000_0000UL; // choose to match C
-		private const ulong NULL_VALUE   = 0xFFF1_0000_0000_0000UL; // null singleton (our lowest reserved NaN pattern)
-		private const ulong INTEGER_MASK = 0xFFFA_0000_0000_0000UL; // C int tag
-		private const ulong FUNCREF_MASK = 0xFFFB_0000_0000_0000UL; // function reference tag
-		private const ulong MAP_MASK	 = 0xFFFC_0000_0000_0000UL; // map tag
-		private const ulong LIST_MASK	 = 0xFFFD_0000_0000_0000UL; // list tag
-		private const ulong STRING_MASK  = 0xFFFE_0000_0000_0000UL; // heap string tag
-		private const ulong TINY_MASK	 = 0xFFFF_0000_0000_0000UL; // tiny string tag (shared with NANish)
+		private const ulong NANISH_MASK     = 0xFFFF_0000_0000_0000UL;
+		private const ulong NULL_VALUE      = 0xFFF1_0000_0000_0000UL; // null singleton (our lowest reserved NaN pattern)
+		private const ulong INTEGER_TAG     = 0xFFFA_0000_0000_0000UL; // Int32 tag
+		private const ulong FUNCREF_TAG     = 0xFFFB_0000_0000_0000UL; // function reference tag
+		private const ulong MAP_TAG         = 0xFFFC_0000_0000_0000UL; // map tag
+		private const ulong LIST_TAG        = 0xFFFD_0000_0000_0000UL; // list tag
+		private const ulong STRING_TAG      = 0xFFFE_0000_0000_0000UL; // heap string tag
+		private const ulong TINY_STRING_TAG = 0xFFFF_0000_0000_0000UL; // tiny string tag
 
 		// ==== CONSTRUCTORS ====================================================
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value Null() => new(NULL_VALUE);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Value FromInt(int i) => new(INTEGER_MASK | (uint)i);
+		public static Value FromInt(int i) => new(INTEGER_TAG | (uint)i);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value FromDouble(double d) {
@@ -52,12 +52,12 @@ namespace MiniScript {
 		}
 
 		// Tiny ASCII string: stores length (low 8 bits) + up to 5 bytes data in bits 8..48.
-		// High bits carry TINY_MASK so the tag check is a single AND/compare.
+		// High bits carry TINY_STRING_TAG so the tag check is a single AND/compare.
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value FromTinyAscii(ReadOnlySpan<byte> s) {
 			int len = s.Length;
 			if ((uint)len > 5u) throw new ArgumentOutOfRangeException(nameof(s), "Tiny string max 5 bytes");
-			ulong u = TINY_MASK | (ulong)((uint)len & 0xFFU);
+			ulong u = TINY_STRING_TAG | (ulong)((uint)len & 0xFFU);
 			for (int i = 0; i < len; i++) {
 				u |= (ulong)((byte)s[i]) << (8 * (i + 1));
 			}
@@ -72,25 +72,25 @@ namespace MiniScript {
 				return FromTinyAscii(tmp[..s.Length]);
 			}
 			int h = HandlePool.Add(s);
-			return FromHandle(STRING_MASK, h);
+			return FromHandle(STRING_TAG, h);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value FromList(object list) { // typically List<Value> or a custom IList
 			int h = HandlePool.Add(list);
-			return FromHandle(LIST_MASK, h);
+			return FromHandle(LIST_TAG, h);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value FromMap(object map) {// typically Dictionary<Value,Value> or custom
 			int h = HandlePool.Add(map);
-			return FromHandle(MAP_MASK, h);
+			return FromHandle(MAP_TAG, h);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value FromFuncRef(object funcRef) {
 			int h = HandlePool.Add(funcRef);
-			return FromHandle(FUNCREF_MASK, h);
+			return FromHandle(FUNCREF_TAG, h);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -99,13 +99,13 @@ namespace MiniScript {
 
 		// ==== TYPE PREDICATES =================================================
 		public bool IsNull   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _u == NULL_VALUE; }
-		public bool IsInt	{ [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == INTEGER_MASK; }
-		public bool IsTiny   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & TINY_MASK) == TINY_MASK && (_u & NANISH_MASK) != STRING_MASK && (_u & NANISH_MASK) != LIST_MASK && (_u & NANISH_MASK) != MAP_MASK && (_u & NANISH_MASK) != INTEGER_MASK && (_u & NANISH_MASK) != FUNCREF_MASK && _u != NULL_VALUE; }
-		public bool IsHeapString { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == STRING_MASK; }
-		public bool IsString { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & STRING_MASK) == STRING_MASK; }
-		public bool IsFuncRef { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == FUNCREF_MASK; }
-		public bool IsList   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == LIST_MASK; }
-		public bool IsMap	{ [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == MAP_MASK; }
+		public bool IsInt	{ [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == INTEGER_TAG; }
+		public bool IsTiny   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & TINY_STRING_TAG) == TINY_STRING_TAG && (_u & NANISH_MASK) != STRING_TAG && (_u & NANISH_MASK) != LIST_TAG && (_u & NANISH_MASK) != MAP_TAG && (_u & NANISH_MASK) != INTEGER_TAG && (_u & NANISH_MASK) != FUNCREF_TAG && _u != NULL_VALUE; }
+		public bool IsHeapString { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == STRING_TAG; }
+		public bool IsString { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & STRING_TAG) == STRING_TAG; }
+		public bool IsFuncRef { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == FUNCREF_TAG; }
+		public bool IsList   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == LIST_TAG; }
+		public bool IsMap	{ [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == MAP_TAG; }
 		public bool IsDouble { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) < NULL_VALUE; }
 
 		// ==== ACCESSORS =======================================================

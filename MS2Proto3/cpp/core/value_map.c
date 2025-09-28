@@ -30,7 +30,7 @@ Value make_map(int initial_capacity) {
         map->entries[i].hash = 0;
     }
 
-    return MAP_MASK | ((uintptr_t)map & 0xFFFFFFFFFFFFULL);
+    return MAP_TAG | ((uintptr_t)map & 0xFFFFFFFFFFFFULL);
 }
 
 Value make_empty_map(void) {
@@ -478,7 +478,7 @@ Value map_to_string(Value map_val) {
 Value make_varmap(Value* registers, Value* names, int firstIndex, int count) {
     // Create regular map structure
     ValueMap* map = (ValueMap*)gc_allocate(sizeof(ValueMap));
-    Value result = MAP_MASK | ((uintptr_t)map & 0xFFFFFFFFFFFFULL);
+    Value result = MAP_TAG | ((uintptr_t)map & 0xFFFFFFFFFFFFULL);
     map->count = 0;
     map->capacity = 8;
     map->entries = (MapEntry*)gc_allocate(8 * sizeof(MapEntry));

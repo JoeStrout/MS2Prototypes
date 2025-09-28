@@ -42,7 +42,7 @@ static char tiny_string_buffer[TINY_STRING_MAX_LEN + 1];
 // String accessor functions
 Value make_tiny_string(const char* str, int len) {
     // Create the value with proper type mask
-    Value v = TINY_STRING_MASK;
+    Value v = TINY_STRING_TAG;
     
     // Get pointer to the 6-byte data area and store length-prefixed string
     char* data = GET_VALUE_DATA_PTR(&v);
@@ -53,7 +53,7 @@ Value make_tiny_string(const char* str, int len) {
         data[1 + i] = str[i];
     }
     
-    // Remaining bytes are already zero from TINY_STRING_MASK initialization
+    // Remaining bytes are already zero from TINY_STRING_TAG initialization
     // INVARIANT: All unused payload bytes in tiny strings are guaranteed to be zero
     
     return v;
@@ -218,7 +218,7 @@ Value make_string_interned(const char* str) {
 		// (ToDo: maybe use a MemPool allocator instead, so we can free them eventually?)
         StringStorage* s = ss_create(str, malloc);
         s->hash = hash;  // Store computed hash
-        Value new_string = STRING_MASK | ((uintptr_t)s & 0xFFFFFFFFFFFFULL);
+        Value new_string = STRING_TAG | ((uintptr_t)s & 0xFFFFFFFFFFFFULL);
         
         // Add to intern table
         intern_string(new_string);
@@ -231,7 +231,7 @@ Value make_string_interned(const char* str) {
         s->lenC = -1; // Compute character count later when needed
         s->hash = 0;  // ...and same for hash
         strcpy(s->data, str);
-        return STRING_MASK | ((uintptr_t)s & 0xFFFFFFFFFFFFULL);
+        return STRING_TAG | ((uintptr_t)s & 0xFFFFFFFFFFFFULL);
     }
 }
 
@@ -301,7 +301,7 @@ Value string_concat(Value a, Value b) {
         memcpy(result_str->data, sa, lenB_a);
         memcpy(result_str->data + lenB_a, sb, lenB_b);
         result_str->data[total_lenB] = '\0';
-        result = STRING_MASK | ((uintptr_t)result_str & 0xFFFFFFFFFFFFULL);
+        result = STRING_TAG | ((uintptr_t)result_str & 0xFFFFFFFFFFFFULL);
     }
     
     GC_POP_SCOPE();

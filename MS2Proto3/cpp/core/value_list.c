@@ -12,7 +12,7 @@ Value make_list(int initial_capacity) {
     ValueList* list = (ValueList*)gc_allocate(sizeof(ValueList) + initial_capacity * sizeof(Value));
     list->count = 0;
     list->capacity = initial_capacity;
-    return LIST_MASK | ((uintptr_t)list & 0xFFFFFFFFFFFFULL);
+    return LIST_TAG | ((uintptr_t)list & 0xFFFFFFFFFFFFULL);
 }
 
 Value make_empty_list(void) {
@@ -176,7 +176,7 @@ Value list_with_expanded_capacity(Value list_val) {
         new_list->items[i] = old_list->items[i];
     }
     
-    return LIST_MASK | ((uintptr_t)new_list & 0xFFFFFFFFFFFFULL);
+    return LIST_TAG | ((uintptr_t)new_list & 0xFFFFFFFFFFFFULL);
 }
 
 void list_resize(Value list_val, int new_capacity) {

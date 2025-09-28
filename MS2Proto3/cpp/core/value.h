@@ -52,14 +52,14 @@ typedef struct ValueMap {
 } ValueMap;
 
 // NaN-boxing masks and constants
-#define NANISH_MASK        0xffff000000000000ULL
-#define NULL_VALUE         0xfff1000000000000ULL  // our lowest reserved NaN pattern
-#define INTEGER_MASK       0xfffa000000000000ULL
-#define FUNCREF_MASK       0xfffb000000000000ULL
-#define MAP_MASK           0xfffc000000000000ULL
-#define LIST_MASK          0xfffd000000000000ULL
-#define STRING_MASK        0xfffe000000000000ULL  // (specifically, heap string)
-#define TINY_STRING_MASK   0xffff000000000000ULL
+#define NANISH_MASK       0xffff000000000000ULL
+#define NULL_VALUE        0xfff1000000000000ULL  // our lowest reserved NaN pattern
+#define INTEGER_TAG       0xfffa000000000000ULL
+#define FUNCREF_TAG       0xfffb000000000000ULL
+#define MAP_TAG           0xfffc000000000000ULL
+#define LIST_TAG          0xfffd000000000000ULL
+#define STRING_TAG        0xfffe000000000000ULL  // (specifically, heap string)
+#define TINY_STRING_TAG   0xffff000000000000ULL
 
 #define TINY_STRING_MAX_LEN 5                     // Max 5 chars in 40 bits (bits 8-47)
 
@@ -73,34 +73,34 @@ static inline bool is_null(Value v) {
 }
 
 static inline bool is_int(Value v) {
-    return (v & NANISH_MASK) == INTEGER_MASK;
+    return (v & NANISH_MASK) == INTEGER_TAG;
 }
 
 static inline bool is_tiny_string(Value v) {
-    return (v & NANISH_MASK) == TINY_STRING_MASK;
+    return (v & NANISH_MASK) == TINY_STRING_TAG;
 }
 
 static inline bool is_heap_string(Value v) {
-    return (v & NANISH_MASK) == STRING_MASK;
+    return (v & NANISH_MASK) == STRING_TAG;
 }
 
 static inline bool is_string(Value v) {
 	// Because of the particular bit patterns chosen, instead of:
     //return is_tiny_string(v) || is_heap_string(v);
     // ...we can do just:
-    return (v & STRING_MASK) == STRING_MASK;
+    return (v & STRING_TAG) == STRING_TAG;
 }
 
 static inline bool is_funcref(Value v) {
-    return (v & NANISH_MASK) == FUNCREF_MASK;
+    return (v & NANISH_MASK) == FUNCREF_TAG;
 }
 
 static inline bool is_list(Value v) {
-    return (v & NANISH_MASK) == LIST_MASK;
+    return (v & NANISH_MASK) == LIST_TAG;
 }
 
 static inline bool is_map(Value v) {
-    return (v & NANISH_MASK) == MAP_MASK;
+    return (v & NANISH_MASK) == MAP_TAG;
 }
 
 static inline bool is_double(Value v) {
@@ -121,7 +121,7 @@ static inline Value make_null(void) {
 }
 
 static inline Value make_int(int32_t i) {
-    return INTEGER_MASK | (uint64_t)(uint32_t)i;
+    return INTEGER_TAG | (uint64_t)(uint32_t)i;
 }
 
 static inline Value make_double(double d) {
