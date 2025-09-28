@@ -16,6 +16,8 @@ namespace MiniScript {
 				case Opcode.LOAD_rA_iBC:
 				case Opcode.LOAD_rA_kBC:   return "LOAD";
 				case Opcode.LOADV_rA_rB_kC: return "LOADV";
+				case Opcode.LOADC_rA_rB_kC: return "LOADC";
+				case Opcode.FUNCREF_iA_iBC: return "FUNCREF";
 				case Opcode.ASSIGN_rA_rB_kC: return "ASSIGN";
 				case Opcode.NAME_rA_kBC:   return "NAME";
 				case Opcode.ADD_rA_rB_rC:  return "ADD";
@@ -118,6 +120,7 @@ namespace MiniScript {
         		case Opcode.LOAD_rA_iBC:
         		case Opcode.LIST_rA_iBC:
         		case Opcode.MAP_rA_iBC:
+        		case Opcode.FUNCREF_iA_iBC:
         		case Opcode.IFLT_rA_iBC:
 				case Opcode.IFLE_rA_iBC:
 				case Opcode.IFEQ_rA_iBC:
@@ -210,6 +213,7 @@ namespace MiniScript {
 				// rA, rB, kC
 				case Opcode.ASSIGN_rA_rB_kC:
 				case Opcode.LOADV_rA_rB_kC:
+				case Opcode.LOADC_rA_rB_kC:
 					return StringUtils.Format("{0} r{1}, r{2}, k{3}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),
@@ -223,7 +227,7 @@ namespace MiniScript {
 		// Disassemble the given function.  If detailed=true, include extra
 		// details for debugging, like line numbers and instruction hex code.
 		public static void Disassemble(FuncDef funcDef, List<String> output, Boolean detailed=true) {
-			output.Add(StringUtils.Format("Local var registers: {0}", funcDef.VarRegs));
+			output.Add(StringUtils.Format("Local var registers: {0}", funcDef.MaxRegs));
 			output.Add(StringUtils.Format("Constants ({0}):", funcDef.Constants.Count));
 			for (Int32 i = 0; i < funcDef.Constants.Count; i++) {
 				output.Add(StringUtils.Format("   {0}. {1}", i, funcDef.Constants[i]));

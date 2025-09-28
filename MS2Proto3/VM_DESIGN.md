@@ -17,6 +17,8 @@ Our internal opcode names include a verb/mnemonic, and a description of how the 
 | LOAD_rA_iBC | R[A] := BC (16-bit signed value) |
 | LOAD_rA_kBC | R[A] := constants[BC] (load from constants table) |
 | LOADV_rA_rB_kC | R[A] := R[B], but verify that register B has name matching constants[C] |
+| LOADC_rA_rB_kC | R[A] := R[B], but verify name matches constants[C] and call if funcref |
+| FUNCREF_iA_iBC | R[A] := make_funcref(BC) (create function reference to function BC) |
 | ASSIGN_rA_rB_kC | R[A] := R[B] and name[A] := constants[C] (copy value and assign variable name) |
 | NAME_rA_kBC | name[A] := constants[BC] (assign variable name without changing value) |
 | LIST_rA_iBC | R[A] := new list with capacity BC |

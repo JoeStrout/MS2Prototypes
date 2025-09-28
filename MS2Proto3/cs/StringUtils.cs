@@ -174,6 +174,11 @@ namespace MiniScript {
 				oss << "}";
 				return String(oss.str().c_str(), pool);
 			}
+			if (is_funcref(v)) {
+				std::ostringstream oss;
+				oss << "FuncRef(" << funcref_index(v) << ")";
+				return String(oss.str().c_str(), pool);
+			}
 			std::ostringstream oss;
 			oss << "<value:0x" << std::hex << v << ">";
 			return String(oss.str().c_str(), pool);

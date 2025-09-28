@@ -88,10 +88,7 @@ namespace MiniScript {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Value FromFuncRef(object funcRef) {
-			int h = HandlePool.Add(funcRef);
-			return FromHandle(FUNCREF_TAG, h);
-		}
+		public static Value FromFuncRef(int funcIndex) => new(FUNCREF_TAG | (uint)funcIndex);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value FromHandle(ulong tagMask, int handle)
@@ -111,6 +108,9 @@ namespace MiniScript {
 		// ==== ACCESSORS =======================================================
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public int AsInt() => (int)_u;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public int AsFuncRefIndex() => (int)_u;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public double AsDouble() {
@@ -174,6 +174,9 @@ namespace MiniScript {
 				}
 
 				return "{" + string.Join(", ", items) + "}";
+			}
+			if (IsFuncRef) {
+				return $"FuncRef({AsFuncRefIndex()})";
 			}
 			return "<value>";
 		}
@@ -449,7 +452,10 @@ namespace MiniScript {
 		public static Value make_empty_map() => make_map(8);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Value make_funcref(object funcRef) => Value.FromFuncRef(funcRef);
+		public static Value make_funcref(Int32 funcIndex) => Value.FromFuncRef(funcIndex);
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Int32 funcref_index(Value v) => v.AsFuncRefIndex();
 
 		public static int map_count(Value map_val) {
 			if (!map_val.IsMap) return 0;

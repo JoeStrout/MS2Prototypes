@@ -132,6 +132,10 @@ static inline Value make_double(double d) {
     return v;
 }
 
+static inline Value make_funcref(int32_t funcIndex) {
+    return FUNCREF_TAG | (uint64_t)(uint32_t)funcIndex;
+}
+
 // Map creation functions (forward declarations for value_map.h)
 extern Value make_map(int initial_capacity);
 extern Value make_empty_map(void);
@@ -146,6 +150,10 @@ static inline double as_double(Value v) {
     double d;
     memcpy(&d, &v, sizeof d);   // aliasing-safe bit copy
     return d;
+}
+
+static inline int32_t funcref_index(Value v) {
+    return (int32_t)v;
 }
 
 // Map extraction function (forward declaration for value_map.h)

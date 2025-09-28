@@ -10,6 +10,8 @@ namespace MiniScript {
 		LOAD_rA_iBC,
 		LOAD_rA_kBC,
 		LOADV_rA_rB_kC,
+		LOADC_rA_rB_kC,
+		FUNCREF_iA_iBC,
 		ASSIGN_rA_rB_kC,
 		NAME_rA_kBC,
 		ADD_rA_rB_rC,
@@ -107,6 +109,8 @@ namespace MiniScript {
 				case Opcode.LOAD_rA_iBC:    return "LOAD_rA_iBC";
 				case Opcode.LOAD_rA_kBC:    return "LOAD_rA_kBC";
 				case Opcode.LOADV_rA_rB_kC: return "LOADV_rA_rB_kC";
+				case Opcode.LOADC_rA_rB_kC: return "LOADC_rA_rB_kC";
+				case Opcode.FUNCREF_iA_iBC: return "FUNCREF_iA_iBC";
 				case Opcode.ASSIGN_rA_rB_kC:return "ASSIGN_rA_rB_kC";
 				case Opcode.NAME_rA_kBC:    return "NAME_rA_kBC";
 				case Opcode.ADD_rA_rB_rC:   return "ADD_rA_rB_rC";
@@ -167,6 +171,8 @@ namespace MiniScript {
 			if (s == "LOAD_rA_iBC")     return Opcode.LOAD_rA_iBC;
 			if (s == "LOAD_rA_kBC")     return Opcode.LOAD_rA_kBC;
 			if (s == "LOADV_rA_rB_kC")  return Opcode.LOADV_rA_rB_kC;
+			if (s == "LOADC_rA_rB_kC")  return Opcode.LOADC_rA_rB_kC;
+			if (s == "FUNCREF_iA_iBC")  return Opcode.FUNCREF_iA_iBC;
 			if (s == "ASSIGN_rA_rB_kC") return Opcode.ASSIGN_rA_rB_kC;
 			if (s == "NAME_rA_kBC")     return Opcode.NAME_rA_kBC;
 			if (s == "ADD_rA_rB_rC")    return Opcode.ADD_rA_rB_rC;
@@ -225,11 +231,11 @@ namespace MiniScript {
 		public String Name = "";
 		public List<UInt32> Code = new List<UInt32>();
 		public List<Value> Constants = new List<Value>();
-		public UInt16 VarRegs = 0; // how many registers must be scanned to find local vars
+		public UInt16 MaxRegs = 0; // how many registers to reserve for this function
 		
-		public void NoteNamedRegister(Int32 registerNumber) {
+		public void ReserveRegister(Int32 registerNumber) {
 			UInt16 impliedCount = (UInt16)(registerNumber + 1);
-			if (VarRegs < impliedCount) VarRegs = impliedCount;
+			if (MaxRegs < impliedCount) MaxRegs = impliedCount;
 		}
 		
 		// Conversion to bool: returns true if function has a name

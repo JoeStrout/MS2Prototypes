@@ -168,7 +168,7 @@ namespace MiniScript {
 			callStackTop = 0;
 			RuntimeError = "";
 
-			EnsureFrame(BaseIndex, CurrentFunction.VarRegs);
+			EnsureFrame(BaseIndex, CurrentFunction.MaxRegs);
 
 			if (DebugMode) {
 				IOHelper.Print(StringUtils.Format("VM Reset: Executing {0} out of {1} functions", mainFunc.Name, functions.Count));
@@ -316,6 +316,70 @@ namespace MiniScript {
 						break; // CPP: VM_NEXT();
 					}
 
+					case Opcode.LOADC_rA_rB_kC: { // CPP: VM_CASE(LOADC_rA_rB_kC) {
+						// R[A] = R[B], but verify that register B has name matching constants[C]
+						// and call the function if the value is a function reference
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						Byte c = BytecodeUtil.Cu(instruction);
+
+						// Check if the source register has the expected name
+						Value expectedName = curConstants[c];
+						Value actualName = names[baseIndex + b];
+						if (!value_identical(expectedName, actualName)) {
+							// For now, just print an error
+							// ToDo: check outer and globals!
+							RaiseRuntimeError(StringUtils.Format("Undefined identifier '{0}'",
+								expectedName, actualName));
+							localStack[a] = make_null();
+						} else {
+							Value val = localStack[b];
+							if (!is_funcref(val)) {
+								// Simple case: value is not a funcref, so just copy it
+								localStack[a] = val;
+							} else {
+								// Harder case: value is a funcref, which we must invoke,
+								// and then copy the result into localStack[a] upon return.
+								Int32 funcIndex = funcref_index(val);
+								if (funcIndex >= functions.Count) {
+									IOHelper.Print("CALLF to invalid func");
+									return make_null();
+								}
+								
+								FuncDef callee = functions[funcIndex];
+		
+								// Push return info
+								if (callStackTop >= callStack.Count) {
+									IOHelper.Print("Call stack overflow");
+									return make_null();
+								}
+								callStack[callStackTop] = new CallInfo(pc, baseIndex, currentFuncIndex);
+								callStackTop++;
+		
+								// Switch to callee frame: base slides to argument window
+								baseIndex += curFunc.MaxRegs;
+								pc = 0; // Start at beginning of callee code
+								curFunc = callee; // Switch to callee function
+								codeCount = curFunc.Code.Count;
+								curCode = curFunc.Code; // CPP: curCode = &curFunc.Code[0];
+								curConstants = curFunc.Constants; // CPP: curConstants = &curFunc.Constants[0];
+								currentFuncIndex = funcIndex; // Switch to callee function index
+		
+								EnsureFrame(baseIndex, callee.MaxRegs);
+							}
+							localStack[a] = val;
+						}
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.FUNCREF_iA_iBC: { // CPP: VM_CASE(FUNCREF_iA_iBC) {
+						// R[A] := make_funcref(BC)
+						Byte a = BytecodeUtil.Au(instruction);
+						Int16 funcIndex = BytecodeUtil.BCs(instruction);
+						localStack[a] = make_funcref(funcIndex);
+						break; // CPP: VM_NEXT();
+					}
+
 					case Opcode.ASSIGN_rA_rB_kC: { // CPP: VM_CASE(ASSIGN_rA_rB_kC) {
 						// R[A] = R[B] and names[baseIndex + A] = constants[C]
 						Byte a = BytecodeUtil.Au(instruction);
@@ -447,7 +511,7 @@ namespace MiniScript {
 						CallInfo frame = callStack[callStackTop]; // CPP: CallInfo& frame = callStack[callStackTop];
 						if (is_null(frame.LocalVarMap)) {
 							// Create a new VarMap with references to VM's stack and names arrays
-							UInt16 regCount = curFunc.VarRegs;
+							UInt16 regCount = curFunc.MaxRegs;
 							if (regCount == 0) {
 								// We have no local vars at all!  Make an ordinary map.
 								frame.LocalVarMap = make_map(4);	// This is safe, right?
@@ -819,7 +883,7 @@ namespace MiniScript {
 						callStackTop++;
 
 						// Switch to callee frame: base slides to argument window
-						baseIndex = baseIndex + a;
+						baseIndex += a;
 						pc = 0; // Start at beginning of callee code
 						curFunc = callee; // Switch to callee function
 						codeCount = curFunc.Code.Count;
@@ -827,7 +891,7 @@ namespace MiniScript {
 						curConstants = curFunc.Constants; // CPP: curConstants = &curFunc.Constants[0];
 						currentFuncIndex = funcIndex; // Switch to callee function index
 
-						EnsureFrame(baseIndex, callee.VarRegs);
+						EnsureFrame(baseIndex, callee.MaxRegs);
 						break; // CPP: VM_NEXT();
 					}
 					
@@ -845,6 +909,7 @@ namespace MiniScript {
 
 					case Opcode.RETURN: { // CPP: VM_CASE(RETURN) {
 						// Return value convention: value is in base[0]
+						Value result = stack[baseIndex];
 						if (callStackTop == 0) {
 							// Returning from main function: update instance vars and set IsRunning = false
 							PC = pc;
@@ -852,7 +917,7 @@ namespace MiniScript {
 							_currentFuncIndex = currentFuncIndex;
 							CurrentFunction = curFunc;
 							IsRunning = false;
-							return stack[baseIndex];
+							return result;
 						}
 						
 						// If current call frame had a locals VarMap, gather it up
@@ -872,6 +937,16 @@ namespace MiniScript {
 						codeCount = curFunc.Code.Count;
 						curCode = curFunc.Code; // CPP: curCode = &curFunc.Code[0];
 						curConstants = curFunc.Constants; // CPP: curConstants = &curFunc.Constants[0];
+						
+						// If previous instruction was a LOADC, then finish its job now
+						// (by copying result into the target register)
+						if (pc > 0) {
+							UInt32 prevInst = curCode[pc - 1];
+							if ((Opcode)BytecodeUtil.OP(prevInst) == Opcode.LOADC_rA_rB_kC) {
+								Byte a = BytecodeUtil.Au(prevInst);
+								stack[baseIndex+a] = result;
+							}
+						}
 						break; // CPP: VM_NEXT();
 					}
 

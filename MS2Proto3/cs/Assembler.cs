@@ -172,7 +172,8 @@ namespace MiniScript {
 				String source = parts[2];   // "r6", "42", "3.14", "hello", or "k20" 
 								
 				Byte dest = ParseRegister(destReg);
-				
+				Current.ReserveRegister(dest);
+
 				if (source[0] == 'r') {
 					// LOAD r2, r5  -->  LOAD_rA_rB
 					Byte srcReg = ParseRegister(source);
@@ -200,6 +201,7 @@ namespace MiniScript {
 					return 0;
 				}
 				Byte dest = ParseRegister(parts[1]);
+				Current.ReserveRegister(dest);
 				Byte src = ParseRegister(parts[2]);
 
 				Value constantValue = ParseAsConstant(parts[3]);
@@ -209,6 +211,36 @@ namespace MiniScript {
 				if (HasError) return 0;
 				instruction = BytecodeUtil.INS_ABC(Opcode.LOADV_rA_rB_kC, dest, src, (Byte)constIdx);
 
+			} else if (mnemonic == "LOADC") {
+				// LOADC r1, r2, "varname"  -->  LOADC_rA_rB_kC
+				// Load value from r2 into r1, but verify name matches varname and call if funcref
+				if (parts.Count != 4) {
+					Error("Syntax error: LOADC requires exactly 3 operands");
+					return 0;
+				}
+				Byte dest = ParseRegister(parts[1]);
+				Current.ReserveRegister(dest);
+				Byte src = ParseRegister(parts[2]);
+
+				Value constantValue = ParseAsConstant(parts[3]);
+				if (!is_string(constantValue)) Error("Variable name must be a string");
+				Int32 constIdx = AddConstant(constantValue);
+				if (constIdx > 255) Error("Constant index out of range for LOADC opcode");
+				if (HasError) return 0;
+				instruction = BytecodeUtil.INS_ABC(Opcode.LOADC_rA_rB_kC, dest, src, (Byte)constIdx);
+
+			} else if (mnemonic == "FUNCREF") {
+				// FUNCREF r1, 5  -->  FUNCREF_iA_iBC
+				// Store make_funcref(funcIndex) into register A
+				if (parts.Count != 3) {
+					Error("Syntax error: FUNCREF requires exactly 2 operands");
+					return 0;
+				}
+				Byte dest = ParseRegister(parts[1]);
+				Current.ReserveRegister(dest);
+				Int16 funcIdx = (Int16)FindFunctionIndex(parts[2]);
+				instruction = BytecodeUtil.INS_AB(Opcode.FUNCREF_iA_iBC, dest, funcIdx);
+
 			} else if (mnemonic == "ASSIGN") {
 				// ASSIGN r1, r2, k3  -->  ASSIGN_rA_rB_kC
 				// Copy value from r2 to r1, and assign variable name from constants[3]
@@ -217,6 +249,7 @@ namespace MiniScript {
 					return 0;
 				}
 				Byte dest = ParseRegister(parts[1]);
+				Current.ReserveRegister(dest);
 				Byte src = ParseRegister(parts[2]);
 
 				Value constantValue = ParseAsConstant(parts[3]);
@@ -225,7 +258,7 @@ namespace MiniScript {
 				if (constIdx > 255) Error("Constant index out of range for ASSIGN opcode");
 				if (HasError) return 0;
 				instruction = BytecodeUtil.INS_ABC(Opcode.ASSIGN_rA_rB_kC, dest, src, (Byte)constIdx);
-				Current.NoteNamedRegister(dest);
+				Current.ReserveRegister(dest);
 
 			} else if (mnemonic == "NAME") {
 				// NAME r1, "varname"  -->  NAME_rA_kBC
@@ -243,7 +276,7 @@ namespace MiniScript {
 				if (constIdx > 65535) Error("Constant index out of range for NAME opcode");
 				if (HasError) return 0;
 				instruction = BytecodeUtil.INS_AB(Opcode.NAME_rA_kBC, dest, (Int16)constIdx);
-				Current.NoteNamedRegister(dest);
+				Current.ReserveRegister(dest);
 
 			} else if (mnemonic == "ADD") {
 				if (parts.Count != 4) {
@@ -251,6 +284,7 @@ namespace MiniScript {
 					return 0;
 				}
 				Byte dest = ParseRegister(parts[1]);
+				Current.ReserveRegister(dest);
 				if (HasError) return 0;
 				Byte src1 = ParseRegister(parts[2]);
 				if (HasError) return 0;
@@ -261,6 +295,7 @@ namespace MiniScript {
 			} else if (mnemonic == "SUB") {
 				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
+				Current.ReserveRegister(dest);
 				Byte src1 = ParseRegister(parts[2]);
 				Byte src2 = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.SUB_rA_rB_rC, dest, src1, src2);
@@ -268,6 +303,7 @@ namespace MiniScript {
 			} else if (mnemonic == "MULT") {
 				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
+				Current.ReserveRegister(dest);
 				Byte src1 = ParseRegister(parts[2]);
 				Byte src2 = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.MULT_rA_rB_rC, dest, src1, src2);
@@ -275,6 +311,7 @@ namespace MiniScript {
 			} else if (mnemonic == "DIV") {
 				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
+				Current.ReserveRegister(dest);
 				Byte src1 = ParseRegister(parts[2]);
 				Byte src2 = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.DIV_rA_rB_rC, dest, src1, src2);
@@ -282,6 +319,7 @@ namespace MiniScript {
 			} else if (mnemonic == "MOD") {
 				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
+				Current.ReserveRegister(dest);
 				Byte src1 = ParseRegister(parts[2]);
 				Byte src2 = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.MOD_rA_rB_rC, dest, src1, src2);
@@ -289,12 +327,14 @@ namespace MiniScript {
 			} else if (mnemonic == "LIST") {
 				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
+				Current.ReserveRegister(dest);
 				Int16 capacity = ParseInt16(parts[2]);
 				instruction = BytecodeUtil.INS_AB(Opcode.LIST_rA_iBC, dest, capacity);
 
 			} else if (mnemonic == "MAP") {
 				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
+				Current.ReserveRegister(dest);
 				Int16 capacity = ParseInt16(parts[2]);
 				instruction = BytecodeUtil.INS_AB(Opcode.MAP_rA_iBC, dest, capacity);
 
@@ -307,6 +347,7 @@ namespace MiniScript {
 			} else if (mnemonic == "INDEX") {
 				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 				Byte dest = ParseRegister(parts[1]);
+				Current.ReserveRegister(dest);
 				Byte listReg = ParseRegister(parts[2]);
 				Byte indexReg = ParseRegister(parts[3]);
 				instruction = BytecodeUtil.INS_ABC(Opcode.INDEX_rA_rB_rC, dest, listReg, indexReg);
@@ -321,6 +362,7 @@ namespace MiniScript {
 			} else if (mnemonic == "LOCALS") {
 				if (parts.Count != 2) { Error("Syntax error: LOCALS requires exactly 1 operand"); return 0; }
 				Byte reg = ParseRegister(parts[1]);
+				Current.ReserveRegister(reg);
 				instruction = BytecodeUtil.INS_A(Opcode.LOCALS_rA, reg);
 
 			} else if (mnemonic == "JUMP") {
@@ -346,6 +388,7 @@ namespace MiniScript {
 					if (parts[2][0] == 'r') {
 						// LT r5, r3, r2  -->  LT_rA_rB_rC
 						Byte reg1 = ParseRegister(parts[1]);
+						Current.ReserveRegister(reg1);
 						Byte reg2 = ParseRegister(parts[2]);
 						Byte reg3 = ParseRegister(parts[3]);
 						instruction = BytecodeUtil.INS_ABC(Opcode.LT_rA_rB_rC, reg1, reg2, reg3);
@@ -353,6 +396,7 @@ namespace MiniScript {
 					else{
 						// LT r5, 15, r2  -->  LT_rA_iB_rC
 						Byte reg1 = ParseRegister(parts[1]);
+						Current.ReserveRegister(reg1);
 						Byte immediate = ParseByte(parts[2]);
 						Byte reg3 = ParseRegister(parts[3]);
 						instruction = BytecodeUtil.INS_ABC(Opcode.LT_rA_iB_rC, reg1, immediate, reg3);
@@ -360,6 +404,7 @@ namespace MiniScript {
 				} else {
 					// LT r5, r3, 15  -->  LT_rA_rB_iC
 					Byte reg1 = ParseRegister(parts[1]);
+					Current.ReserveRegister(reg1);
 					Byte reg2 = ParseRegister(parts[2]);
 					Byte immediate = ParseByte(parts[3]);
 					instruction = BytecodeUtil.INS_ABC(Opcode.LT_rA_rB_iC, reg1, reg2, immediate);
@@ -372,6 +417,7 @@ namespace MiniScript {
 					if (parts[2][0] == 'r') {
 						// LT r5, r3, r2  -->  LT_rA_rB_rC
 						Byte reg1 = ParseRegister(parts[1]);
+						Current.ReserveRegister(reg1);
 						Byte reg2 = ParseRegister(parts[2]);
 						Byte reg3 = ParseRegister(parts[3]);
 						instruction = BytecodeUtil.INS_ABC(Opcode.LE_rA_rB_rC, reg1, reg2, reg3);
@@ -379,6 +425,7 @@ namespace MiniScript {
 					else{
 						// LT r5, 15, r2  -->  LT_rA_iB_rC
 						Byte reg1 = ParseRegister(parts[1]);
+						Current.ReserveRegister(reg1);
 						Byte immediate = ParseByte(parts[2]);
 						Byte reg3 = ParseRegister(parts[3]);
 						instruction = BytecodeUtil.INS_ABC(Opcode.LE_rA_iB_rC, reg1, immediate, reg3);
@@ -386,6 +433,7 @@ namespace MiniScript {
 				} else {
 					// LT r5, r3, 15  -->  LT_rA_rB_iC
 					Byte reg1 = ParseRegister(parts[1]);
+					Current.ReserveRegister(reg1);
 					Byte reg2 = ParseRegister(parts[2]);
 					Byte immediate = ParseByte(parts[3]);
 					instruction = BytecodeUtil.INS_ABC(Opcode.LE_rA_rB_iC, reg1, reg2, immediate);
@@ -395,6 +443,7 @@ namespace MiniScript {
 				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 
 				Byte reg1 = ParseRegister(parts[1]);
+				Current.ReserveRegister(reg1);
 				Byte reg2 = ParseRegister(parts[2]);
 
 				if (parts[3][0] == 'r') {
@@ -411,6 +460,7 @@ namespace MiniScript {
 				if (parts.Count != 4) { Error("Syntax error"); return 0; }
 
 				Byte reg1 = ParseRegister(parts[1]);
+				Current.ReserveRegister(reg1);
 				Byte reg2 = ParseRegister(parts[2]);
 
 				if (parts[3][0] == 'r') {

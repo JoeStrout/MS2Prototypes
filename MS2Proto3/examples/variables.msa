@@ -81,6 +81,24 @@
 	LOADV r0, r1, "x"    # should throw an error
 	RETURN
 
+# Simulate implicit invocation of a function stored in a variable.
+# MiniScript code:
+#		ultimateAnswer = function; return 42; end function
+#		testImplicit = function
+#			x = @ultimateAnswer
+#			return x	// should return 42
+#		end function
+
+@ultimateAnswer:
+	LOAD r0, 42                  # return 42
+	RETURN
+
+@testImplicit:
+	FUNCREF r1, @ultimateAnswer
+	NAME r1, "x"                 # x = @ultimateAnswer
+	LOADC r0, r1, "x"            # return x
+	RETURN
+
 
 @main:
 	LOAD r0, 42
@@ -95,7 +113,11 @@
 	CALLFN 3, "print"            # print result
 	
 	CALLF 3, @testFoo
-	
-	CALLF 3, @testAccessAfterRemoval
+
+	CALLF 3, @testImplicit
+	LOAD r0, r3
+
+# Uncomment this to test runtime "undefined identifier" error:	
+#	CALLF 3, @testAccessAfterRemoval
 	
 	RETURN
