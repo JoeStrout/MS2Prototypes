@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include "hashing.h"
@@ -132,8 +133,36 @@ static inline Value make_double(double d) {
     return v;
 }
 
-static inline Value make_funcref(int32_t funcIndex) {
-    return FUNCREF_TAG | (uint64_t)(uint32_t)funcIndex;
+// ValueFuncRef represents a function reference with closure support
+typedef struct {
+    int32_t funcIndex;    // Index into the VM's functions array identifying the FuncDef
+    Value outerVars;      // VarMap containing captured outer variables, or null if none
+} ValueFuncRef;
+
+// Forward declare GC allocation function
+extern void* gc_allocate(size_t size);
+
+static inline ValueFuncRef* as_funcref(Value v) {
+    if (!is_funcref(v)) return NULL;
+    return (ValueFuncRef*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
+}
+
+static inline Value make_funcref(int32_t funcIndex, Value outerVars) {
+    // Create ValueFuncRef using GC allocation
+    ValueFuncRef* funcRefObj = (ValueFuncRef*)gc_allocate(sizeof(ValueFuncRef));
+    funcRefObj->funcIndex = funcIndex;
+    funcRefObj->outerVars = outerVars;
+    return FUNCREF_TAG | ((uintptr_t)funcRefObj & 0xFFFFFFFFFFFFULL);
+}
+
+static inline int32_t funcref_index(Value v) {
+    ValueFuncRef* funcRefObj = as_funcref(v);
+    return funcRefObj ? funcRefObj->funcIndex : -1;
+}
+
+static inline Value funcref_outer_vars(Value v) {
+    ValueFuncRef* funcRefObj = as_funcref(v);
+    return funcRefObj ? funcRefObj->outerVars : make_null();
 }
 
 // Map creation functions (forward declarations for value_map.h)
@@ -150,10 +179,6 @@ static inline double as_double(Value v) {
     double d;
     memcpy(&d, &v, sizeof d);   // aliasing-safe bit copy
     return d;
-}
-
-static inline int32_t funcref_index(Value v) {
-    return (int32_t)v;
 }
 
 // Map extraction function (forward declaration for value_map.h)

@@ -319,7 +319,7 @@ Converter.processNonmethodLine = function
 	// constructor declaration
 	if self.match("≤scope:w≥ ≤name:w≥(≤params≥)",
 	  "≤scope≥: ≤name≥(≤params≥);",
-	  "≤className≥::≤name≥(≤params≥)") then
+	  "≤className≥::≤name≥(≤paramNamesOnly≥)") then
 		self.context = Context.METHOD
 		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
@@ -412,6 +412,9 @@ Converter.tweakSyntax = function(line)
 	line = line.replace(".MinValue", "MinValue")
 	line = line.replace(".MaxValue", "MaxValue")
 	
+	// Output parameters on method calls
+	line = line.replace("(out ", "(&")
+	line = line.replace(", out ", ", &")
 	
 	return line
 end function
@@ -489,7 +492,7 @@ Converter.convertClass = function(sourcePath)
 		return
 	end if
 	totalLines = self.hLines.len + self.cppLines.len
-	print "≤fileNameBase≥.cs --> ≤fileNameBase≥.h/.cpp (≤totalLines≥ lines)".fill(locals)
+	print "≤fileNameBase≥.cs --> ≤fileNameBase≥.g.h/.cpp (≤totalLines≥ lines)".fill(locals)
 
 	self.hLines.push ""
 	self.hLines.push "#endif // " + guardSymbol

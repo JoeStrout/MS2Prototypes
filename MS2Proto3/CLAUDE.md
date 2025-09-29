@@ -108,6 +108,12 @@ tools/build.sh cpp off  # Force switch-based
 - **Memory management:** Use GC_PROTECT for runtime Values, MemPool for host app data
 - **Coding standards:** See [CS_CODING_STANDARDS.md](CS_CODING_STANDARDS.md)
 
+## Communication Style
+
+Answer in a calm tone; avoid exclamation marks.  Be careful not to prematurely declare success; instead, plainly describe what you believe to be done.
+
+Whenever you're not sure what is wanted, or how best to approach something, stop and ask for clarification.
+
 ## Next Steps (Milestone 4)
 - Implement maps and lists with supporting opcodes
 - Add closure support and tail call optimization  

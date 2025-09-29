@@ -127,6 +127,44 @@ Value map_get(Value map_val, Value key) {
     return make_null();
 }
 
+bool map_try_get(Value map_val, Value key, Value* out_value) {
+    ValueMap* map = as_map(map_val);
+    if (!map) {
+        if (out_value) *out_value = make_null();
+        return false;
+    }
+
+    // VarMap check - zero overhead for regular maps
+    if (map->varmap_data != NULL) {
+        VarMapData* vdata = map->varmap_data;
+        // Check register mappings first
+        for (int i = 0; i < vdata->reg_map_count; i++) {
+            if (value_equal(vdata->reg_map_keys[i], key)) {
+                int reg_index = vdata->reg_map_indices[i];
+                if (!is_null(vdata->names[reg_index])) {
+                    if (out_value) *out_value = vdata->registers[reg_index];
+                    return true;
+                }
+                // Unassigned register means key doesn't exist
+                if (out_value) *out_value = make_null();
+                return false;
+            }
+        }
+        // Fall through to regular map lookup
+    }
+
+    uint32_t hash = value_hash(key);
+    int index = find_entry(map, key, hash);
+
+    if (index >= 0 && map->entries[index].occupied) {
+        if (out_value) *out_value = map->entries[index].value;
+        return true;
+    }
+
+    if (out_value) *out_value = make_null();
+    return false;
+}
+
 static bool base_map_set(Value map_val, Value key, Value value) {
     ValueMap* map = as_map(map_val);
     if (!map) return false;

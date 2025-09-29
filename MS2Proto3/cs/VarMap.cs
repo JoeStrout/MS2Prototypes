@@ -33,15 +33,11 @@ namespace MiniScript {
 		private Dictionary<Value, int> _regMap = new Dictionary<Value, int>(new ValueEqualityComparer());
 		private List<Value> _registers;  // Reference to VM's register array
 		private List<Value> _names;      // Reference to VM's register names array
-		private int _firstIndex;         // First index where locals may be found
-		private int _lastIndex;          // Last index where locals may be found
 
 		public VarMap(List<Value> registers, List<Value> names, int firstIdx, int lastIdx) {
 			_registers = registers;
 			_names = names;
-			_firstIndex = firstIdx;
-			_lastIndex = lastIdx;
-			for (int i = _firstIndex; i <= _lastIndex; i++) {
+			for (int i = firstIdx; i <= lastIdx; i++) {
 				if (!_names[i].IsNull) _regMap[_names[i]] = i;
 			}
 		}
@@ -132,6 +128,8 @@ namespace MiniScript {
 
 			// Clear all register mappings
 			_regMap.Clear();
+			
+			IOHelper.Print($"Gathered VarMap: {this}");
 		}
 
 		/// <summary>

@@ -88,7 +88,10 @@ namespace MiniScript {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Value FromFuncRef(int funcIndex) => new(FUNCREF_TAG | (uint)funcIndex);
+		public static Value FromFuncRef(ValueFuncRef funcRefObj) {
+			int h = HandlePool.Add(funcRefObj);
+			return FromHandle(FUNCREF_TAG, h);
+		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value FromHandle(ulong tagMask, int handle)
@@ -110,7 +113,7 @@ namespace MiniScript {
 		public int AsInt() => (int)_u;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public int AsFuncRefIndex() => (int)_u;
+		public ValueFuncRef AsFuncRefObject() => HandlePool.Get(Handle()) as ValueFuncRef;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public double AsDouble() {
@@ -176,7 +179,9 @@ namespace MiniScript {
 				return "{" + string.Join(", ", items) + "}";
 			}
 			if (IsFuncRef) {
-				return $"FuncRef({AsFuncRefIndex()})";
+				var funcRefObj = AsFuncRefObject();
+				if (funcRefObj == null) return "<funcref?>";
+				return funcRefObj.ToString();
 			}
 			return "<value>";
 		}
@@ -380,6 +385,9 @@ namespace MiniScript {
 	// so we don't have two ways to do things in the C# code (only one of which
 	// actually works in any transpiled code).
 	public static class ValueHelpers {
+	
+		public static Value NULL_VALUE = Value.Null();
+	
 		// Core value creation functions (matching value.h)
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value make_null() => Value.Null();
@@ -452,10 +460,22 @@ namespace MiniScript {
 		public static Value make_empty_map() => make_map(8);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Value make_funcref(Int32 funcIndex) => Value.FromFuncRef(funcIndex);
+		public static Value make_funcref(Int32 funcIndex) => Value.FromFuncRef(new ValueFuncRef(funcIndex));
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Int32 funcref_index(Value v) => v.AsFuncRefIndex();
+		public static Value make_funcref(Int32 funcIndex, Value outerVars) => Value.FromFuncRef(new ValueFuncRef(funcIndex, outerVars));
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Int32 funcref_index(Value v) {
+			var funcRefObj = v.AsFuncRefObject();
+			return funcRefObj?.FuncIndex ?? -1;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Value funcref_outer_vars(Value v) {
+			var funcRefObj = v.AsFuncRefObject();
+			return funcRefObj?.OuterVars ?? make_null();
+		}
 
 		public static int map_count(Value map_val) {
 			if (!map_val.IsMap) return 0;
@@ -467,6 +487,19 @@ namespace MiniScript {
 			if (!map_val.IsMap) return make_null();
 			var valueMap = HandlePool.Get(map_val.Handle()) as ValueMap;
 			return valueMap?.Get(key) ?? make_null();
+		}
+
+		public static bool map_try_get(Value map_val, Value key, out Value value) {
+			value = make_null();
+			if (!map_val.IsMap) return false;
+			var valueMap = HandlePool.Get(map_val.Handle()) as ValueMap;
+			if (valueMap == null) return false;
+
+			if (valueMap.HasKey(key)) {
+				value = valueMap.Get(key);
+				return true;
+			}
+			return false;
 		}
 
 		public static bool map_set(Value map_val, Value key, Value value) {

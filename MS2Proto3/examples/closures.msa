@@ -1,0 +1,49 @@
+# MiniScript code:
+#	makeCounter = function(name)
+#		f = function
+#			print name
+#		end function
+#		return @f
+#	end function
+#
+#	f1 = makeCounter("one")
+#	f2 = makeCounter("two")
+#	f1  // prints "one"
+#	f2  // prints "two"
+
+@fDef:
+	LOADV r0, r0, "name"  # won't match here, so will search outer
+	CALLFN 0, "print"     # print value we found
+	RETURN
+
+@makeCounter:
+	ASSIGN r1, r0, "name"	
+	FUNCREF r0, @fDef
+	RETURN
+
+@main:
+	FUNCREF r1, @makeCounter
+	NAME r1, "makeCounter"    # makeCounter = function(...)
+	
+	LOAD r4, "one"            # f1 = makeCounter("one")
+	CALL r2, r4, r1
+	NAME r2, "f1"
+	
+	LOAD r4, "two"            # f2 = makeCounter("two")
+	CALL r3, r4, r1
+	NAME r3, "f2"
+	
+	# HACK: We run into trouble with stale names from previous function calls
+	# left on the stack, which then look like valid locals to subsequent
+	# function calls.  We need to clear those names either upon call, or upon
+	# return... but in a way that doesn't kill our function-call performance.
+	# For now, hacking around it with:
+	NAME r5, ""
+	
+	LOADC r0, r2, "f1"        # f1
+	LOADC r0, r3, "f2"        # f2
+
+	LOAD r0, "Closure test complete."
+	CALLFN 0, "print"
+	RETURN
+

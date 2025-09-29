@@ -139,6 +139,7 @@ namespace MiniScript {
 			if (is_string(v)) return "str";
 			if (is_list(v)) return "lst";
 			if (is_map(v)) return "map";
+			if (is_funcref(v)) return "fun";
 			return "unk";
 		}
 

@@ -16,20 +16,30 @@ using static MiniScript.ValueHelpers;
 namespace MiniScript {
 
 	// Call stack frame (return info)
-	public struct CallInfo {
+	public class CallInfo {
 		public Int32 ReturnPC;        // where to continue in caller (PC index)
 		public Int32 ReturnBase;      // caller's base pointer (stack index)
 		public Int32 ReturnFuncIndex; // caller's function index in functions list
 		public Int32 CopyResultToReg; // register number to copy result to, or -1
 		public Value LocalVarMap;     // VarMap representing locals, if any
+		public Value OuterVarMap;     // VarMap representing outer variables (closure context)
 
-		public CallInfo(Int32 returnPC, Int32 returnBase, Int32 returnFuncIndex,
-		                Int32 copyToReg=-1) {
+		public CallInfo(Int32 returnPC, Int32 returnBase, Int32 returnFuncIndex, Int32 copyToReg=-1) {
 			ReturnPC = returnPC;
 			ReturnBase = returnBase;
 			ReturnFuncIndex = returnFuncIndex;
 			CopyResultToReg = copyToReg;
 			LocalVarMap = make_null();
+			OuterVarMap = NULL_VALUE;
+		}
+
+		public CallInfo(Int32 returnPC, Int32 returnBase, Int32 returnFuncIndex, Int32 copyToReg, Value outerVars) {
+			ReturnPC = returnPC;
+			ReturnBase = returnBase;
+			ReturnFuncIndex = returnFuncIndex;
+			CopyResultToReg = copyToReg;
+			LocalVarMap = make_null();
+			OuterVarMap = outerVars;
 		}
 	}
 
@@ -307,14 +317,11 @@ namespace MiniScript {
 						// Check if the source register has the expected name
 						Value expectedName = curConstants[c];
 						Value actualName = names[baseIndex + b];
-						if (!value_identical(expectedName, actualName)) {
-							// For now, just print an error
-							// ToDo: check outer and globals!
-							RaiseRuntimeError(StringUtils.Format("Undefined identifier '{0}'",
-								expectedName, actualName));
-							localStack[a] = make_null();
-						} else {
+						if (value_identical(expectedName, actualName)) {
 							localStack[a] = localStack[b];
+						} else {
+							// Variable not found in current scope, look in outer context
+							localStack[a] = LookupVariable(expectedName);
 						}
 						break; // CPP: VM_NEXT();
 					}
@@ -329,57 +336,72 @@ namespace MiniScript {
 						// Check if the source register has the expected name
 						Value expectedName = curConstants[c];
 						Value actualName = names[baseIndex + b];
-						if (!value_identical(expectedName, actualName)) {
-							// For now, just print an error
-							// ToDo: check outer and globals!
-							RaiseRuntimeError(StringUtils.Format("Undefined identifier '{0}'",
-								expectedName, actualName));
-							localStack[a] = make_null();
+						Value val;
+						if (value_identical(expectedName, actualName)) {
+							val = localStack[b];
 						} else {
-							Value val = localStack[b];
-							if (!is_funcref(val)) {
-								// Simple case: value is not a funcref, so just copy it
-								localStack[a] = val;
-							} else {
-								// Harder case: value is a funcref, which we must invoke,
-								// and then copy the result into localStack[a] upon return.
-								Int32 funcIndex = funcref_index(val);
-								if (funcIndex >= functions.Count) {
-									IOHelper.Print("CALLF to invalid func");
-									return make_null();
-								}
-								
-								FuncDef callee = functions[funcIndex];
-		
-								// Push return info
-								if (callStackTop >= callStack.Count) {
-									IOHelper.Print("Call stack overflow");
-									return make_null();
-								}
-								callStack[callStackTop] = new CallInfo(pc, baseIndex, currentFuncIndex, a);
-								callStackTop++;
-		
-								// Switch to callee frame: base slides to argument window
-								baseIndex += curFunc.MaxRegs;
-								pc = 0; // Start at beginning of callee code
-								curFunc = callee; // Switch to callee function
-								codeCount = curFunc.Code.Count;
-								curCode = curFunc.Code; // CPP: curCode = &curFunc.Code[0];
-								curConstants = curFunc.Constants; // CPP: curConstants = &curFunc.Constants[0];
-								currentFuncIndex = funcIndex; // Switch to callee function index
-		
-								EnsureFrame(baseIndex, callee.MaxRegs);
-							}
+							// Variable not found in current scope, look in outer context
+							val = LookupVariable(expectedName);
+						}
+
+						if (!is_funcref(val)) {
+							// Simple case: value is not a funcref, so just copy it
 							localStack[a] = val;
+						} else {
+							// Harder case: value is a funcref, which we must invoke,
+							// and then copy the result into localStack[a] upon return.
+							Int32 funcIndex = funcref_index(val);
+							if (funcIndex < 0 || funcIndex >= functions.Count) {
+								IOHelper.Print("LOADC to invalid func");
+								return make_null();
+							}
+
+							FuncDef callee = functions[funcIndex];
+							Value outerVars = funcref_outer_vars(val);
+
+							// Push return info with closure context
+							if (callStackTop >= callStack.Count) {
+								IOHelper.Print("Call stack overflow");
+								return make_null();
+							}
+							callStack[callStackTop] = new CallInfo(pc, baseIndex, currentFuncIndex, a, outerVars);
+							callStackTop++;
+
+							// Switch to callee frame: base slides to argument window
+							baseIndex += curFunc.MaxRegs;
+							pc = 0; // Start at beginning of callee code
+							curFunc = callee; // Switch to callee function
+							codeCount = curFunc.Code.Count;
+							curCode = curFunc.Code; // CPP: curCode = &curFunc.Code[0];
+							curConstants = curFunc.Constants; // CPP: curConstants = &curFunc.Constants[0];
+							currentFuncIndex = funcIndex; // Switch to callee function index
+
+							EnsureFrame(baseIndex, callee.MaxRegs);
 						}
 						break; // CPP: VM_NEXT();
 					}
 
 					case Opcode.FUNCREF_iA_iBC: { // CPP: VM_CASE(FUNCREF_iA_iBC) {
-						// R[A] := make_funcref(BC)
+						// R[A] := make_funcref(BC) with closure context
 						Byte a = BytecodeUtil.Au(instruction);
 						Int16 funcIndex = BytecodeUtil.BCs(instruction);
-						localStack[a] = make_funcref(funcIndex);
+
+						// Capture our locals as the context
+						CallInfo frame = callStack[callStackTop]; // CPP: CallInfo& frame = callStack[callStackTop];
+						if (is_null(frame.LocalVarMap)) {
+							// Create a new VarMap with references to VM's stack and names arrays
+							UInt16 regCount = curFunc.MaxRegs;
+							if (regCount == 0) {
+								// We have no local vars at all!  Make an ordinary map.
+								frame.LocalVarMap = make_map(4);	// This is safe, right?
+							} else {
+								frame.LocalVarMap = 
+								  make_varmap(stack, names, baseIndex, regCount); // CPP: make_varmap(&stack[0], &names[0], baseIndex, regCount);
+							}
+						}
+
+						// Create function reference with closure context
+						localStack[a] = make_funcref(funcIndex, frame.LocalVarMap);
 						break; // CPP: VM_NEXT();
 					}
 
@@ -934,12 +956,13 @@ namespace MiniScript {
 							return make_null();
 						}
 						FuncDef callee = functions[funcIndex];
+						Value outerVars = funcref_outer_vars(funcRefValue);
 
 						if (callStackTop >= callStack.Count) {
 							IOHelper.Print("Call stack overflow");
 							return make_null();
 						}
-						callStack[callStackTop] = new CallInfo(pc, baseIndex, currentFuncIndex, a);
+						callStack[callStackTop] = new CallInfo(pc, baseIndex, currentFuncIndex, a, outerVars);
 						callStackTop++;
 
 						// Set up call frame starting at baseIndex + b
@@ -1020,6 +1043,26 @@ namespace MiniScript {
 				// Simple error handling - just print and continue
 				IOHelper.Print("Stack overflow error");
 			}
+		}
+
+		private Value LookupVariable(Value varName) {
+			// Look up a variable in outer context (and eventually globals)
+			// Returns the value if found, or null if not found
+			if (callStackTop > 0) {
+				CallInfo currentFrame = callStack[callStackTop - 1];  // Current frame, not next frame
+				if (!is_null(currentFrame.OuterVarMap)) {
+					Value outerValue;
+					if (map_try_get(currentFrame.OuterVarMap, varName, out outerValue)) {
+						return outerValue;
+					}
+				}
+			}
+
+			// ToDo: check globals!
+
+			// Variable not found anywhere
+			RaiseRuntimeError(StringUtils.Format("Undefined identifier '{0}'", varName));
+			return make_null();
 		}
 		
 		private static readonly Value FuncNamePrint = make_string("print");
