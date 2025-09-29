@@ -771,6 +771,15 @@ namespace MiniScript {
 				}
 				Int32 constIdx = AddConstant(constantValue);
 				instruction = BytecodeUtil.INS_AB(Opcode.CALLFN_iA_kBC, reserveRegs, (Int16)constIdx);
+
+			} else if (mnemonic == "CALL") {
+				if (parts.Count != 4) { Error("Syntax error: CALL requires exactly 3 operands"); return 0; }
+				Byte destReg = ParseRegister(parts[1]);
+				Current.ReserveRegister(destReg);
+				Byte stackReg = ParseRegister(parts[2]);
+				Byte funcRefReg = ParseRegister(parts[3]);
+				instruction = BytecodeUtil.INS_ABC(Opcode.CALL_rA_rB_rC, destReg, stackReg, funcRefReg);
+
 			} else if (mnemonic == "RETURN") {
 				instruction = BytecodeUtil.INS(Opcode.RETURN);
 			

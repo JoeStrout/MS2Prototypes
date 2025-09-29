@@ -6,9 +6,17 @@
 	RETURN
 
 @main:
+	# Direct call via CALLF... something the compiler probably won't be able to do:
 	LOAD r0, 4
 	LOAD r1, 3
 	CALLF 0, @add   # should get 7 in r0
-	LOAD r1, 6
-	MULT r0, r0, r1  # multiply by 6 to get 42
+	
+	# Call via a FuncRef: more like what compiled code would do
+	FUNCREF r2, @add
+	NAME r2, "add"
+	LOAD r3, 4        # 1st parameter: 4
+	LOAD r4, 2        # 2nd parameter: 2
+	CALL r1, r3, r2   # invoke add (in r2), with params at r3, storing result in r1 
+	
+	MULT r0, r0, r1  # multiply r0 and r1 to get 42
 	RETURN

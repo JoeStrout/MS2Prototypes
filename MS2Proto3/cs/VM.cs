@@ -20,12 +20,15 @@ namespace MiniScript {
 		public Int32 ReturnPC;        // where to continue in caller (PC index)
 		public Int32 ReturnBase;      // caller's base pointer (stack index)
 		public Int32 ReturnFuncIndex; // caller's function index in functions list
+		public Int32 CopyResultToReg; // register number to copy result to, or -1
 		public Value LocalVarMap;     // VarMap representing locals, if any
 
-		public CallInfo(Int32 returnPC, Int32 returnBase, Int32 returnFuncIndex) {
+		public CallInfo(Int32 returnPC, Int32 returnBase, Int32 returnFuncIndex,
+		                Int32 copyToReg=-1) {
 			ReturnPC = returnPC;
 			ReturnBase = returnBase;
 			ReturnFuncIndex = returnFuncIndex;
+			CopyResultToReg = copyToReg;
 			LocalVarMap = make_null();
 		}
 	}
@@ -353,7 +356,7 @@ namespace MiniScript {
 									IOHelper.Print("Call stack overflow");
 									return make_null();
 								}
-								callStack[callStackTop] = new CallInfo(pc, baseIndex, currentFuncIndex);
+								callStack[callStackTop] = new CallInfo(pc, baseIndex, currentFuncIndex, a);
 								callStackTop++;
 		
 								// Switch to callee frame: base slides to argument window
@@ -907,6 +910,50 @@ namespace MiniScript {
 						break; // CPP: VM_NEXT();
 					}
 
+					case Opcode.CALL_rA_rB_rC: { // CPP: VM_CASE(CALL_rA_rB_rC) {
+						// Invoke the FuncRef in R[C], with a stack frame starting at our register B,
+						// and upon return, copy the result from r[B] to r[A].
+						//
+						// A: destination register for result
+						// B: stack frame start register for callee
+						// C: register containing FuncRef to call
+						Byte a = BytecodeUtil.Au(instruction);
+						Byte b = BytecodeUtil.Bu(instruction);
+						Byte c = BytecodeUtil.Cu(instruction);
+
+						Value funcRefValue = localStack[c];
+						if (!is_funcref(funcRefValue)) {
+							IOHelper.Print("CALL: Value in register is not a function reference");
+							localStack[a] = funcRefValue;
+							break; // CPP: VM_NEXT();
+						}
+
+						Int32 funcIndex = funcref_index(funcRefValue);
+						if (funcIndex < 0 || funcIndex >= functions.Count) {
+							IOHelper.Print("CALL: Invalid function index in FuncRef");
+							return make_null();
+						}
+						FuncDef callee = functions[funcIndex];
+
+						if (callStackTop >= callStack.Count) {
+							IOHelper.Print("Call stack overflow");
+							return make_null();
+						}
+						callStack[callStackTop] = new CallInfo(pc, baseIndex, currentFuncIndex, a);
+						callStackTop++;
+
+						// Set up call frame starting at baseIndex + b
+						baseIndex += b;
+						pc = 0; // Start at beginning of callee code
+						curFunc = callee; // Switch to callee function
+						codeCount = curFunc.Code.Count;
+						curCode = curFunc.Code; // CPP: curCode = &curFunc.Code[0];
+						curConstants = curFunc.Constants; // CPP: curConstants = &curFunc.Constants[0];
+						currentFuncIndex = funcIndex; // Switch to callee function index
+						EnsureFrame(baseIndex, callee.MaxRegs);
+						break; // CPP: VM_NEXT();
+					}
+
 					case Opcode.RETURN: { // CPP: VM_CASE(RETURN) {
 						// Return value convention: value is in base[0]
 						Value result = stack[baseIndex];
@@ -938,14 +985,8 @@ namespace MiniScript {
 						curCode = curFunc.Code; // CPP: curCode = &curFunc.Code[0];
 						curConstants = curFunc.Constants; // CPP: curConstants = &curFunc.Constants[0];
 						
-						// If previous instruction was a LOADC, then finish its job now
-						// (by copying result into the target register)
-						if (pc > 0) {
-							UInt32 prevInst = curCode[pc - 1];
-							if ((Opcode)BytecodeUtil.OP(prevInst) == Opcode.LOADC_rA_rB_kC) {
-								Byte a = BytecodeUtil.Au(prevInst);
-								stack[baseIndex+a] = result;
-							}
+						if (callInfo.CopyResultToReg >= 0) {
+							stack[baseIndex + callInfo.CopyResultToReg] = result;
 						}
 						break; // CPP: VM_NEXT();
 					}

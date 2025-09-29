@@ -66,6 +66,7 @@ namespace MiniScript {
 				case Opcode.IFNE_rA_iBC:   return "IFNE";
 				case Opcode.CALLF_iA_iBC:  return "CALLF";
 				case Opcode.CALLFN_iA_kBC: return "CALLFN";
+				case Opcode.CALL_rA_rB_rC: return "CALL";
 				case Opcode.RETURN:        return "RETURN";
 				default:
 					return "Unknown opcode";
@@ -75,7 +76,7 @@ namespace MiniScript {
 		public static String ToString(UInt32 instruction) {
 			Opcode opcode = (Opcode)BytecodeUtil.OP(instruction);
 			String mnemonic = AssemOp(opcode);
-			mnemonic = (mnemonic + "    ").Left(6);
+			mnemonic = (mnemonic + "     ").Left(7);
 			
 			// In the following switch, we group opcodes according
 			// to their operand usage.
@@ -165,6 +166,7 @@ namespace MiniScript {
 				case Opcode.NE_rA_rB_rC:
 				case Opcode.INDEX_rA_rB_rC:
 				case Opcode.IDXSET_rA_rB_rC:
+				case Opcode.CALL_rA_rB_rC:
         			return StringUtils.Format("{0} r{1}, r{2}, r{3}",
         				mnemonic,
         				(Int32)BytecodeUtil.Au(instruction),

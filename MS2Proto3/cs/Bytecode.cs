@@ -60,6 +60,7 @@ namespace MiniScript {
 		IFNE_rA_iBC,
 		CALLF_iA_iBC,
 		CALLFN_iA_kBC,
+		CALL_rA_rB_rC,
 		RETURN,
 		OP__COUNT  // Not an opcode, but rather how many opcodes we have.
 	}
@@ -159,6 +160,7 @@ namespace MiniScript {
 				case Opcode.IFNE_rA_iBC:    return "IFLT_rA_iBC";
 				case Opcode.CALLF_iA_iBC:   return "CALLF_iA_iBC";
 				case Opcode.CALLFN_iA_kBC:  return "CALLFN_iA_kBC";
+				case Opcode.CALL_rA_rB_rC:  return "CALL_rA_rB_rC";
 				case Opcode.RETURN:         return "RETURN";
 				default:
 					return "Unknown opcode";
@@ -221,6 +223,7 @@ namespace MiniScript {
 			if (s == "IFNE_rA_iBC")     return Opcode.IFNE_rA_iBC;
 			if (s == "CALLF_iA_iBC")    return Opcode.CALLF_iA_iBC;
 			if (s == "CALLFN_iA_kBC")   return Opcode.CALLFN_iA_kBC;
+			if (s == "CALL_rA_rB_rC")   return Opcode.CALL_rA_rB_rC;
 			if (s == "RETURN")          return Opcode.RETURN;
 			return Opcode.NOOP;
 		}
