@@ -114,11 +114,5 @@ Answer in a calm tone; avoid exclamation marks.  Be careful not to prematurely d
 
 Whenever you're not sure what is wanted, or how best to approach something, stop and ask for clarification.
 
-## Next Steps (Milestone 4)
-- Implement maps and lists with supporting opcodes
-- Add closure support and tail call optimization  
-- Complete opcode set implementation
-- Performance benchmarking vs. MiniScript 1.0 target (100X-500X faster)
-
 ---
 *This context file helps maintain continuity across Claude Code sessions. Update as major features are implemented or architectural changes are made.*
