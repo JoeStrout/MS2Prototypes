@@ -13,7 +13,7 @@
 
 - Our FuncDef objects will include parameter names and default values.  (In MiniScript assembly, these can be specified with a ".param" directive.)
 - A function invocation without arguments (a very common case) is a simple CALL opcode, specifying where on the stack the callee's register window should begin.  Execution of that CALL opcode will initialize all arguments to their default values and clear subsequent registers as needed.
-- To invoke a function with arguments, we emit a block of opcodes that are all executed at once.  These begin with a ARGBLOCK opcode, which specifies how many argument instructions follow; then an ARG opcode for each one; and finally the CALL opcode.
+- To invoke a function with arguments, we emit a block of opcodes that are all executed at once.  These begin with a ARGBLK opcode, which specifies how many argument instructions follow; then an ARG opcode for each one; and finally the CALL opcode.
 
 ## Example
 
@@ -33,13 +33,13 @@ To call `add(40, 2)` might look like this:
 
 ```
 	LOADV r0, r0, "add"   # find funcref from identifier "add", store in r0
-	ARGBLOCK 2
+	ARGBLK 2
 	ARG 40
 	ARG 2
 	CALL r1, r4, r0    # call func in r0, with window at r4, storing result in r1
 ```
 
-When the VM hits the `ARGBLOCK 2` instruction, it does a bunch of things:
+When the VM hits the `ARGBLK 2` instruction, it does a bunch of things:
 
 1. Look ahead 2 additional instructions (past the current PC, which would already be on ARG 40) to find the CALL.  
 2. Look up the FuncDef, discovering that it has three parameters.  If argCount > paramCount, throw a runtime error.  (No error in this example since 2 <= 3.)
@@ -56,4 +56,4 @@ When, inside the @add function, the VM hits the RETURN statement:
 
 ## No Arguments?
 
-If there are no arguments, then we don't have an `ARGBLOCK` instruction; the VM would see a naked `CALL`.  In this case it can skip steps 1-3 above, but still do steps 4-6.  Return handling is unchanged.
+If there are no arguments, then we don't have an `ARGBLK` instruction; the VM would see a naked `CALL`.  In this case it can skip steps 1-3 above, but still do steps 4-6.  Return handling is unchanged.

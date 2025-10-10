@@ -792,14 +792,14 @@ namespace MiniScript {
 					instruction = BytecodeUtil.INS_AB(Opcode.IFNE_rA_iBC, reg1, immediate);
 				}
 
-			} else if (mnemonic == "ARGBLOCK") {
-				if (parts.Count != 2) { Error("Syntax error: ARGBLOCK requires exactly 1 operand"); return 0; }
+			} else if (mnemonic == "ARGBLK") {
+				if (parts.Count != 2) { Error("Syntax error: ARGBLK requires exactly 1 operand"); return 0; }
 				Int32 argCount = ParseInt32(parts[1]);
 				if (argCount < 0 || argCount > 0xFFFFFF) {
-					Error("ARGBLOCK argument count out of range");
+					Error("ARGBLK argument count out of range");
 					return 0;
 				}
-				instruction = BytecodeUtil.INS(Opcode.ARGBLOCK_iABC) | (UInt32)(argCount & 0xFFFFFF);
+				instruction = BytecodeUtil.INS(Opcode.ARGBLK_iABC) | (UInt32)(argCount & 0xFFFFFF);
 
 			} else if (mnemonic == "ARG") {
 				if (parts.Count != 2) { Error("Syntax error: ARG requires exactly 1 operand"); return 0; }

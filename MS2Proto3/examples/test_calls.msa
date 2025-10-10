@@ -15,10 +15,14 @@
 	
 	# Call via a FuncRef: more like what compiled code would do
 	FUNCREF r2, @add
-	NAME r2, "add"
-	LOAD r3, 4        # 1st parameter: 4
-	LOAD r4, 2        # 2nd parameter: 2
-	CALL r1, r3, r2   # invoke add (in r2), with params at r3, storing result in r1 
+	NAME r2, "add"        # add = function(x,y=1) ...
+	LOAD r3, 5
+    NAME r3, "foo"        # foo = 5
+
+	ARGBLK 2        # set up a call, with 2 arguments
+	ARG r3
+	ARG 1
+	CALL r1, r5, r2   # invoke add (in r2), with params at r5, storing result in r1 
 	
 	MULT r0, r0, r1  # multiply r0 and r1 to get 42
 	RETURN

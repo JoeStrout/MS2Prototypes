@@ -230,7 +230,7 @@ namespace MiniScript {
 					Int32 immediate = BytecodeUtil.ABCs(argInstruction);
 					argValue = make_int(immediate);
 				} else {
-					RaiseRuntimeError("Expected ARG opcode in ARGBLOCK");
+					RaiseRuntimeError("Expected ARG opcode in ARGBLK");
 					return -1;
 				}
 
@@ -241,7 +241,7 @@ namespace MiniScript {
 				currentPC++;
 			}
 
-			return currentPC; // Points to the CALL instruction
+			return currentPC + 1; // Return PC after the CALL instruction
 		}
 
 		// Helper for call setup (FUNCTION_CALLS.md steps 4-6):
@@ -950,7 +950,7 @@ namespace MiniScript {
 						break; // CPP: VM_NEXT();
 					}
 
-					case Opcode.ARGBLOCK_iABC: { // CPP: VM_CASE(ARGBLOCK_iABC) {
+					case Opcode.ARGBLK_iABC: { // CPP: VM_CASE(ARGBLK_iABC) {
 						// Begin argument block with specified count
 						// ABC: number of ARG instructions that follow
 						Int32 argCount = BytecodeUtil.ABCs(instruction);
@@ -958,7 +958,7 @@ namespace MiniScript {
 						// Look ahead to find the CALL instruction (argCount instructions ahead)
 						Int32 callPC = pc + argCount;
 						if (callPC >= codeCount) {
-							RaiseRuntimeError("ARGBLOCK: CALL instruction out of range");
+							RaiseRuntimeError("ARGBLK: CALL instruction out of range");
 							return make_null();
 						}
 						UInt32 callInstruction = curCode[callPC];
@@ -977,20 +977,20 @@ namespace MiniScript {
 
 							Value funcRefValue = localStack[c];
 							if (!is_funcref(funcRefValue)) {
-								RaiseRuntimeError("ARGBLOCK/CALL: Not a function reference");
+								RaiseRuntimeError("ARGBLK/CALL: Not a function reference");
 								return make_null();
 							}
 
 							Int32 funcIndex = funcref_index(funcRefValue);
 							if (funcIndex < 0 || funcIndex >= functions.Count) {
-								RaiseRuntimeError("ARGBLOCK/CALL: Invalid function index");
+								RaiseRuntimeError("ARGBLK/CALL: Invalid function index");
 								return make_null();
 							}
 							callee = functions[funcIndex];
 							calleeBase = baseIndex + b;
 							resultReg = a;
 						} else {
-							RaiseRuntimeError("ARGBLOCK must be followed by CALL");
+							RaiseRuntimeError("ARGBLK must be followed by CALL");
 							return make_null();
 						}
 
@@ -1009,7 +1009,7 @@ namespace MiniScript {
 
 						Int32 funcIndex2 = funcref_index(localStack[BytecodeUtil.Cu(callInstruction)]);
 						Value outerVars = funcref_outer_vars(localStack[BytecodeUtil.Cu(callInstruction)]);
-						callStack[callStackTop] = new CallInfo(callPC, baseIndex, currentFuncIndex, resultReg, outerVars);
+						callStack[callStackTop] = new CallInfo(nextPC, baseIndex, currentFuncIndex, resultReg, outerVars);
 						callStackTop++;
 
 						baseIndex = calleeBase;
@@ -1025,17 +1025,17 @@ namespace MiniScript {
 
 					case Opcode.ARG_rA: { // CPP: VM_CASE(ARG_rA) {
 						// The VM should never encounter this opcode on its own; it will
-						// be processed as part of the ARGBLOCK opcode.  So if we get
+						// be processed as part of the ARGBLK opcode.  So if we get
 						// here, it's an error.
-						RaiseRuntimeError("Internal error: ARG without ARGBLOCK");
+						RaiseRuntimeError("Internal error: ARG without ARGBLK");
 						return make_null();
 					}
 
 					case Opcode.ARG_iABC: { // CPP: VM_CASE(ARG_iABC) {
 						// The VM should never encounter this opcode on its own; it will
-						// be processed as part of the ARGBLOCK opcode.  So if we get
+						// be processed as part of the ARGBLK opcode.  So if we get
 						// here, it's an error.
-						RaiseRuntimeError("Internal error: ARG without ARGBLOCK");
+						RaiseRuntimeError("Internal error: ARG without ARGBLK");
 						return make_null();
 					}
 
@@ -1111,7 +1111,7 @@ namespace MiniScript {
 						FuncDef callee = functions[funcIndex];
 						Value outerVars = funcref_outer_vars(funcRefValue);
 
-						// For naked CALL (without ARGBLOCK): set up parameters with defaults
+						// For naked CALL (without ARGBLK): set up parameters with defaults
 						Int32 calleeBase = baseIndex + b;
 						SetupCallFrame(0, calleeBase, callee); // 0 arguments, use all defaults
 

@@ -65,7 +65,7 @@ namespace MiniScript {
 				case Opcode.IFEQ_rA_iBC:   return "IFEQ";
 				case Opcode.IFNE_rA_rB:
 				case Opcode.IFNE_rA_iBC:   return "IFNE";
-				case Opcode.ARGBLOCK_iABC: return "ARGBLOCK";
+				case Opcode.ARGBLK_iABC:   return "ARGBLK";
 				case Opcode.ARG_rA:
 				case Opcode.ARG_iABC:      return "ARG";
 				case Opcode.CALLF_iA_iBC:  return "CALLF";
@@ -144,7 +144,7 @@ namespace MiniScript {
         				(Int32)BytecodeUtil.ABs(instruction),
         				(Int32)BytecodeUtil.Cu(instruction));
         		// iABC (24-bit immediate)
-				case Opcode.ARGBLOCK_iABC:
+				case Opcode.ARGBLK_iABC:
 				case Opcode.ARG_iABC:
         			return StringUtils.Format("{0} {1}",
         				mnemonic,
