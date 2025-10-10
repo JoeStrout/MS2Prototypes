@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 // CPP: #include "Bytecode.g.h"
+// CPP: #include "FuncDef.g.h"
 // CPP: #include "StringUtils.g.h"
 
 namespace MiniScript {
@@ -64,6 +65,9 @@ namespace MiniScript {
 				case Opcode.IFEQ_rA_iBC:   return "IFEQ";
 				case Opcode.IFNE_rA_rB:
 				case Opcode.IFNE_rA_iBC:   return "IFNE";
+				case Opcode.ARGBLOCK_iABC: return "ARGBLOCK";
+				case Opcode.ARG_rA:
+				case Opcode.ARG_iABC:      return "ARG";
 				case Opcode.CALLF_iA_iBC:  return "CALLF";
 				case Opcode.CALLFN_iA_kBC: return "CALLFN";
 				case Opcode.CALL_rA_rB_rC: return "CALL";
@@ -139,6 +143,17 @@ namespace MiniScript {
         				mnemonic,
         				(Int32)BytecodeUtil.ABs(instruction),
         				(Int32)BytecodeUtil.Cu(instruction));
+        		// iABC (24-bit immediate)
+				case Opcode.ARGBLOCK_iABC:
+				case Opcode.ARG_iABC:
+        			return StringUtils.Format("{0} {1}",
+        				mnemonic,
+        				(Int32)BytecodeUtil.ABCs(instruction));
+        		// rA only
+				case Opcode.ARG_rA:
+        			return StringUtils.Format("{0} r{1}",
+        				mnemonic,
+        				(Int32)BytecodeUtil.Au(instruction));
         		// iA, iBC
 				case Opcode.CALLF_iA_iBC:
         			return StringUtils.Format("{0} {1}, {2}",
@@ -252,7 +267,7 @@ namespace MiniScript {
 		public static List<String> Disassemble(List<FuncDef> functions, Boolean detailed=true) {
 			List<String> result = new List<String>();
 			for (Int32 i = 0; i < functions.Count; i++) {
-				result.Add(StringUtils.Format("{0} (function {1}):", functions[i].Name, i));
+				result.Add(StringUtils.Format("{0} [function {1}]:", functions[i].ToString(), i));
 				Disassemble(functions[i], result, detailed);
 				result.Add("");
 			}

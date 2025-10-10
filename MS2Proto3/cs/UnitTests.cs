@@ -62,7 +62,7 @@ namespace MiniScript {
 		
 		public static Boolean TestDisassembler() {
 			return
-				AssertEqual(Disassembler.ToString(0x01050A00), "LOAD   r5, r10");
+				AssertEqual(Disassembler.ToString(0x01050A00), "LOAD    r5, r10");
 		}
 		
 		public static Boolean TestAssembler() {

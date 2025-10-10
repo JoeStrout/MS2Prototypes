@@ -5,7 +5,7 @@
 - We can never know at compile time what parameters the callee expects.
 - Caller may pass fewer arguments than callee expects; the remaining parameters get default values.
 - Caller may pass more arguments than callee expects; this should raise a runtime error.
-- Arguments are (at least for now) always passed by position; we do not support named parameters.
+- Arguments are always passed by position; we do not support named parameters.
 - Callee stack space beyond the argument registers must be cleared at least enough to ensure that it never encounters stale data.  This includes both register values, and register (local variable) names.
 - We want call overhead to be as low as possible (this has been a key performance bottleneck in MiniScript 1.x).
 
@@ -46,7 +46,7 @@ When the VM hits the `ARGBLOCK 2` instruction, it does a bunch of things:
 3. Advance the pc quickly through the ARG instructions, copying those values into registers r4 and r5, while naming them `a` and `b` from the FuncDef info.
 4. Set up additional parameters, in this case, store 0 in r6 and name it `c`.
 5. Clear any additional registers the callee needs (in this case, none are needed).
-6. Shift the register window to what's currently r4, and push the new CallInfo onto the call stack.  (This call info includes the @add bytecode, and a note to store the result in r1.)
+6. Shift the register window to what's currently r4, and push the new CallInfo onto the call stack.  (This call info includes the bytecode for the @add function, and a note to store the result in r1.)
 
 When, inside the @add function, the VM hits the RETURN statement:
 
@@ -57,7 +57,3 @@ When, inside the @add function, the VM hits the RETURN statement:
 ## No Arguments?
 
 If there are no arguments, then we don't have an `ARGBLOCK` instruction; the VM would see a naked `CALL`.  In this case it can skip steps 1-3 above, but still do steps 4-6.  Return handling is unchanged.
-
-## Named Parameters?
-
-If we decide to add support for named parameters, then we'll just have an alternate form of the ARG opcode that includes a name, e.g. `ARG 7, "c"`.  We'll require such named arguments to come after any unnamed ones, and the VM will validate and store those values as part of the above call process.

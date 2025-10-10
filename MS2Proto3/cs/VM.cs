@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 // CPP: #include "value_list.h"
 // CPP: #include "value_string.h"
 // CPP: #include "Bytecode.g.h"
+// CPP: #include "FuncDef.g.h"
 // CPP: #include "IOHelper.g.h"
 // CPP: #include "Disassembler.g.h"
 // CPP: #include "StringUtils.g.h"
@@ -198,6 +199,69 @@ namespace MiniScript {
 			IOHelper.Print(StringUtils.Format("Runtime error: {0} [{1} line {2}]",
 			  RuntimeError, CurrentFunction.Name, PC - 1));
 			return true;
+		}
+
+		// Helper for argument processing (FUNCTION_CALLS.md steps 1-3):
+		// Process ARG instructions, validate argument count, and set up parameter registers.
+		// Returns the PC after the CALL instruction, or -1 on error.
+		private Int32 ProcessArguments(Int32 argCount, Int32 startPC, Int32 callerBase, Int32 calleeBase, FuncDef callee, ref List<UInt32> code) {
+			Int32 paramCount = callee.ParamNames.Count;
+
+			// Step 1: Validate argument count
+			if (argCount > paramCount) {
+				RaiseRuntimeError(StringUtils.Format("Too many arguments: got {0}, expected {1}",
+				                  argCount, paramCount));
+				return -1;
+			}
+
+			// Step 2-3: Process ARG instructions, copying values to parameter registers
+			Int32 currentPC = startPC;
+			for (Int32 i = 0; i < argCount; i++) {
+				UInt32 argInstruction = code[currentPC];
+				Opcode argOp = (Opcode)BytecodeUtil.OP(argInstruction);
+
+				Value argValue = make_null();
+				if (argOp == Opcode.ARG_rA) {
+					// Argument from register
+					Byte srcReg = BytecodeUtil.Au(argInstruction);
+					argValue = stack[callerBase + srcReg];
+				} else if (argOp == Opcode.ARG_iABC) {
+					// Argument immediate value
+					Int32 immediate = BytecodeUtil.ABCs(argInstruction);
+					argValue = make_int(immediate);
+				} else {
+					RaiseRuntimeError("Expected ARG opcode in ARGBLOCK");
+					return -1;
+				}
+
+				// Copy argument value to callee's parameter register and assign name
+				stack[calleeBase + i] = argValue;
+				names[calleeBase + i] = callee.ParamNames[i];
+
+				currentPC++;
+			}
+
+			return currentPC; // Points to the CALL instruction
+		}
+
+		// Helper for call setup (FUNCTION_CALLS.md steps 4-6):
+		// Initialize remaining parameters with defaults and clear callee's registers.
+		private void SetupCallFrame(Int32 argCount, Int32 calleeBase, FuncDef callee) {
+			Int32 paramCount = callee.ParamNames.Count;
+
+			// Step 4: Set up remaining parameters with default values
+			for (Int32 i = argCount; i < paramCount; i++) {
+				stack[calleeBase + i] = callee.ParamDefaults[i];
+				names[calleeBase + i] = callee.ParamNames[i];
+			}
+
+			// Step 5: Clear remaining registers (beyond parameters)
+			for (Int32 i = paramCount; i < callee.MaxRegs; i++) {
+				stack[calleeBase + i] = make_null();
+				names[calleeBase + i] = make_null();
+			}
+
+			// Step 6 is handled by the caller (pushing CallInfo, switching frame, etc.)
 		}
 
 		public Value Execute(FuncDef entry) {
@@ -886,6 +950,95 @@ namespace MiniScript {
 						break; // CPP: VM_NEXT();
 					}
 
+					case Opcode.ARGBLOCK_iABC: { // CPP: VM_CASE(ARGBLOCK_iABC) {
+						// Begin argument block with specified count
+						// ABC: number of ARG instructions that follow
+						Int32 argCount = BytecodeUtil.ABCs(instruction);
+
+						// Look ahead to find the CALL instruction (argCount instructions ahead)
+						Int32 callPC = pc + argCount;
+						if (callPC >= codeCount) {
+							RaiseRuntimeError("ARGBLOCK: CALL instruction out of range");
+							return make_null();
+						}
+						UInt32 callInstruction = curCode[callPC];
+						Opcode callOp = (Opcode)BytecodeUtil.OP(callInstruction);
+
+						// Extract call parameters based on opcode type
+						FuncDef callee = null; // CPP: FuncDef callee;
+						Int32 calleeBase = 0;
+						Int32 resultReg = -1;
+
+						if (callOp == Opcode.CALL_rA_rB_rC) {
+							// CALL r[A], r[B], r[C]: invoke funcref in r[C], frame at r[B], result to r[A]
+							Byte a = BytecodeUtil.Au(callInstruction);
+							Byte b = BytecodeUtil.Bu(callInstruction);
+							Byte c = BytecodeUtil.Cu(callInstruction);
+
+							Value funcRefValue = localStack[c];
+							if (!is_funcref(funcRefValue)) {
+								RaiseRuntimeError("ARGBLOCK/CALL: Not a function reference");
+								return make_null();
+							}
+
+							Int32 funcIndex = funcref_index(funcRefValue);
+							if (funcIndex < 0 || funcIndex >= functions.Count) {
+								RaiseRuntimeError("ARGBLOCK/CALL: Invalid function index");
+								return make_null();
+							}
+							callee = functions[funcIndex];
+							calleeBase = baseIndex + b;
+							resultReg = a;
+						} else {
+							RaiseRuntimeError("ARGBLOCK must be followed by CALL");
+							return make_null();
+						}
+
+						// Process arguments using helper
+						Int32 nextPC = ProcessArguments(argCount, pc, baseIndex, calleeBase, callee, ref curFunc.Code);
+						if (nextPC < 0) return make_null(); // Error already raised
+
+						// Set up call frame using helper
+						SetupCallFrame(argCount, calleeBase, callee);
+
+						// Now execute the CALL (step 6): push CallInfo and switch to callee
+						if (callStackTop >= callStack.Count) {
+							RaiseRuntimeError("Call stack overflow");
+							return make_null();
+						}
+
+						Int32 funcIndex2 = funcref_index(localStack[BytecodeUtil.Cu(callInstruction)]);
+						Value outerVars = funcref_outer_vars(localStack[BytecodeUtil.Cu(callInstruction)]);
+						callStack[callStackTop] = new CallInfo(callPC, baseIndex, currentFuncIndex, resultReg, outerVars);
+						callStackTop++;
+
+						baseIndex = calleeBase;
+						pc = 0; // Start at beginning of callee code
+						curFunc = callee; // Switch to callee function
+						codeCount = curFunc.Code.Count;
+						curCode = curFunc.Code; // CPP: curCode = &curFunc.Code[0];
+						curConstants = curFunc.Constants; // CPP: curConstants = &curFunc.Constants[0];
+						currentFuncIndex = funcIndex2;
+						EnsureFrame(baseIndex, callee.MaxRegs);
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.ARG_rA: { // CPP: VM_CASE(ARG_rA) {
+						// The VM should never encounter this opcode on its own; it will
+						// be processed as part of the ARGBLOCK opcode.  So if we get
+						// here, it's an error.
+						RaiseRuntimeError("Internal error: ARG without ARGBLOCK");
+						return make_null();
+					}
+
+					case Opcode.ARG_iABC: { // CPP: VM_CASE(ARG_iABC) {
+						// The VM should never encounter this opcode on its own; it will
+						// be processed as part of the ARGBLOCK opcode.  So if we get
+						// here, it's an error.
+						RaiseRuntimeError("Internal error: ARG without ARGBLOCK");
+						return make_null();
+					}
+
 					case Opcode.CALLF_iA_iBC: { // CPP: VM_CASE(CALLF_iA_iBC) {
 						// A: arg window start (callee executes with base = base + A)
 						// BC: function index
@@ -958,6 +1111,10 @@ namespace MiniScript {
 						FuncDef callee = functions[funcIndex];
 						Value outerVars = funcref_outer_vars(funcRefValue);
 
+						// For naked CALL (without ARGBLOCK): set up parameters with defaults
+						Int32 calleeBase = baseIndex + b;
+						SetupCallFrame(0, calleeBase, callee); // 0 arguments, use all defaults
+
 						if (callStackTop >= callStack.Count) {
 							IOHelper.Print("Call stack overflow");
 							return make_null();
@@ -966,7 +1123,7 @@ namespace MiniScript {
 						callStackTop++;
 
 						// Set up call frame starting at baseIndex + b
-						baseIndex += b;
+						baseIndex = calleeBase;
 						pc = 0; // Start at beginning of callee code
 						curFunc = callee; // Switch to callee function
 						codeCount = curFunc.Code.Count;

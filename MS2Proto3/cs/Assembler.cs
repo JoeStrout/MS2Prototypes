@@ -3,6 +3,7 @@ using System.Collections.Generic;
 // CPP: #include "value.h"
 // CPP: #include "value_string.h"
 // CPP: #include "Bytecode.g.h"
+// CPP: #include "FuncDef.g.h"
 // CPP: #include "StringUtils.g.h"
 // CPP: #include <climits>
 
@@ -155,10 +156,50 @@ namespace MiniScript {
 
 			// If there is no instruction on this line, return 0
 			if (parts.Count == 0) return 0;
-			
+
 			String mnemonic = parts[0];
 			UInt32 instruction = 0;
-			
+
+			// Handle .param directive (not an instruction, but a function parameter definition)
+			if (mnemonic == ".param") {
+				// .param paramName
+				// .param paramName=defaultValue
+				if (parts.Count < 2) {
+					Error("Syntax error: .param requires a parameter name");
+					return 0;
+				}
+
+				String paramSpec = parts[1];
+				String paramName;
+				Value defaultValue = make_null();
+
+				// Check if there's a default value (e.g., "b=1")
+				Int32 equalsPos = -1;
+				for (Int32 i = 0; i < paramSpec.Length; i++) {
+					if (paramSpec[i] == '=') {
+						equalsPos = i;
+						break;
+					}
+				}
+
+				if (equalsPos >= 0) {
+					// Has default value
+					paramName = paramSpec.Substring(0, equalsPos);
+					String defaultStr = paramSpec.Substring(equalsPos + 1);
+					defaultValue = ParseAsConstant(defaultStr);
+				} else {
+					// No default value (defaults to null)
+					paramName = paramSpec;
+				}
+
+				// Add parameter to current function (store name as Value string)
+				// ToDo: make simple, consistent conversion functions between String and Value, and use everywhere.
+				Current.ParamNames.Add(make_string(paramName)); // CPP: Current.ParamNames.Add(make_string(paramName.c_str()));
+				Current.ParamDefaults.Add(defaultValue);
+
+				return 0; // Directives don't produce instructions
+			}
+
 			if (mnemonic == "NOOP") {
 				instruction = BytecodeUtil.INS(Opcode.NOOP);
 				
@@ -751,6 +792,33 @@ namespace MiniScript {
 					instruction = BytecodeUtil.INS_AB(Opcode.IFNE_rA_iBC, reg1, immediate);
 				}
 
+			} else if (mnemonic == "ARGBLOCK") {
+				if (parts.Count != 2) { Error("Syntax error: ARGBLOCK requires exactly 1 operand"); return 0; }
+				Int32 argCount = ParseInt32(parts[1]);
+				if (argCount < 0 || argCount > 0xFFFFFF) {
+					Error("ARGBLOCK argument count out of range");
+					return 0;
+				}
+				instruction = BytecodeUtil.INS(Opcode.ARGBLOCK_iABC) | (UInt32)(argCount & 0xFFFFFF);
+
+			} else if (mnemonic == "ARG") {
+				if (parts.Count != 2) { Error("Syntax error: ARG requires exactly 1 operand"); return 0; }
+				String arg = parts[1];
+
+				if (arg[0] == 'r') {
+					// ARG r5  -->  ARG_rA
+					Byte reg = ParseRegister(arg);
+					instruction = BytecodeUtil.INS_A(Opcode.ARG_rA, reg);
+				} else {
+					// ARG 42  -->  ARG_iABC (immediate value, up to 24 bits)
+					Int32 immediate = ParseInt32(arg);
+					if (immediate < -16777215 || immediate > 16777215) {
+						Error("ARG immediate value out of range for 24-bit signed integer");
+						return 0;
+					}
+					instruction = BytecodeUtil.INS(Opcode.ARG_iABC) | (UInt32)(immediate & 0xFFFFFF);
+				}
+
 			} else if (mnemonic == "CALLF") {
 				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 				Byte reserveRegs = (Byte)ParseInt16(parts[1]);	// ToDo: check range before typecast
@@ -760,7 +828,7 @@ namespace MiniScript {
 					return 0;
 				}
 				instruction = BytecodeUtil.INS_AB(Opcode.CALLF_iA_iBC, reserveRegs, funcIdx);
-				
+
 			} else if (mnemonic == "CALLFN") {
 				if (parts.Count != 3) { Error("Syntax error"); return 0; }
 				Byte reserveRegs = (Byte)ParseInt16(parts[1]);	// ToDo: check range before typecast

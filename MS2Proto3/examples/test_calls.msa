@@ -2,6 +2,8 @@
 # Tests CALLF and RETURN instructions
 
 @add:
+	.param x=0
+	.param y=1
 	ADD r0, r0, r1   # return r0 + r1
 	RETURN
 

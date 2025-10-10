@@ -164,7 +164,7 @@ Converter.processLine = function(line)
 	if self.failed then return
 	
 	// Standard syntax transformations
-	self.line = self.tweakSyntax(line)
+	self.line = self.tweakSyntax(line, self.context)
 
 	if self.context == Context.METHOD then
 		self.processMethodLine
@@ -352,6 +352,15 @@ Converter.processNonmethodLine = function
 		return
 	end if
 	
+	// override method declaration
+	if self.match("≤scope:w≥ override ≤rtype:w≥ ≤name:w≥(≤params≥)",
+	  "≤scope≥: ≤rtype≥ ≤name≥(≤params≥);",
+	  "≤rtype≥ ≤className≥::≤name≥(≤paramNamesOnly≥)") then
+	  	if self.m.scope == "static" then return self.fail("scope qualifier required on static method")
+		self.context = Context.METHOD
+		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
+		return
+	end if
 end function
 
 // Process a line of code within a method.
@@ -373,7 +382,7 @@ end function
 
 // Converter.tweakSyntax: do simple syntax transformations that can be done
 // within pretty much any line of code.
-Converter.tweakSyntax = function(line)
+Converter.tweakSyntax = function(line, context)
 	// local array declaration
 	m = line.match("≤type:w≥[] ≤name≥ = new ≤type2:w≥[≤count≥];")
 	if m then return "≤type≥ ≤name≥[≤count≥];".fill(m)	  
@@ -416,6 +425,27 @@ Converter.tweakSyntax = function(line)
 	line = line.replace("(out ", "(&")
 	line = line.replace(", out ", ", &")
 	
+	// Reference parameters or arguments
+	if context == Context.CLASS then
+		// ref Type foo  -->  Type& foo
+		lastPos = -1
+		while true
+			pos = line.indexOf("(ref ", lastPos)
+			if pos == null then pos = line.indexOf(" ref ", lastPos);
+			if pos == null then break
+			//if lastPos < 0 then print "BEFORE: " + line
+			spacePos = line.indexOf(" ", pos + 5)
+			if spacePos == null then break
+			line = line[:pos+1] + line[pos+5:spacePos] + "& " + line[spacePos+1:]
+			//print "AFTER: " + line
+			lastPos = pos
+		end while
+	else if context == Context.METHOD then
+		// Within a method, just delete " ref "
+		line = line.replace("(ref ", "(")
+		line = line.replace(" ref ", " ")
+	end if
+
 	return line
 end function
 

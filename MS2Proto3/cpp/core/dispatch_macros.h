@@ -74,6 +74,9 @@
 	X(IFEQ_rA_iBC) \
 	X(IFNE_rA_rB) \
 	X(IFNE_rA_iBC) \
+	X(ARGBLOCK_iABC) \
+	X(ARG_rA) \
+	X(ARG_iABC) \
 	X(CALLF_iA_iBC) \
 	X(CALLFN_iA_kBC) \
 	X(CALL_rA_rB_rC) \

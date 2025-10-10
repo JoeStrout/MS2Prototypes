@@ -61,13 +61,29 @@ namespace MiniScript {
 			if (text.Length >= width) return text.Substring(0, width);
 			return text + Spaces(width - text.Length);
 		}
-		
+
 		public static String Str(List<String> list) {
 			if (list == null) return "null"; // CPP: // (null not possible)
 			if (list.Count == 0) return "[]";
 			return new String("[\"") + String.Join("\", \"", list) + "\"]";
 		}
-		
+
+		// Convert a Value to its representation (quoted string for strings, plain for others)
+		// This is used when displaying values in source code form.
+		public static String makeRepr(Value v) {
+			// CPP: return makeRepr(0, v).c_str();
+			//*** BEGIN CS_ONLY ***
+			if (ValueHelpers.is_string(v)) {
+				String str = ValueHelpers.as_cstring(v);
+				// Replace quotes: " becomes ""
+				String escaped = str.Replace("\"", "\"\"");
+				// Wrap in quotes
+				return "\"" + escaped + "\"";
+			}
+			return v.ToString();
+			//*** END CS_ONLY ***
+		}
+
 		//*** BEGIN CS_ONLY ***
 		public static string Left(this string s, int n) {
 			if (String.IsNullOrEmpty(s)) return "";
@@ -125,7 +141,7 @@ namespace MiniScript {
 		public: static String FormatList(const String& fmt, const List<String>& values);
 
 		// --- stringify helpers -> String in the same pool as fmt ---
-		private:
+		public:
 		inline static String makeString(uint8_t, const String& s) { 
 			return s;
 		}

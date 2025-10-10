@@ -58,6 +58,9 @@ namespace MiniScript {
 		IFEQ_rA_iBC,
 		IFNE_rA_rB,
 		IFNE_rA_iBC,
+		ARGBLOCK_iABC,
+		ARG_rA,
+		ARG_iABC,
 		CALLF_iA_iBC,
 		CALLFN_iA_kBC,
 		CALL_rA_rB_rC,
@@ -158,6 +161,9 @@ namespace MiniScript {
 				case Opcode.IFEQ_rA_iBC:    return "IFEQ_rA_iBC";
 				case Opcode.IFNE_rA_rB:     return "IFLT_rA_rB";
 				case Opcode.IFNE_rA_iBC:    return "IFLT_rA_iBC";
+				case Opcode.ARGBLOCK_iABC:  return "ARGBLOCK_iABC";
+				case Opcode.ARG_rA:         return "ARG_rA";
+				case Opcode.ARG_iABC:       return "ARG_iABC";
 				case Opcode.CALLF_iA_iBC:   return "CALLF_iA_iBC";
 				case Opcode.CALLFN_iA_kBC:  return "CALLFN_iA_kBC";
 				case Opcode.CALL_rA_rB_rC:  return "CALL_rA_rB_rC";
@@ -221,35 +227,15 @@ namespace MiniScript {
 			if (s == "IFEQ_rA_iBC")     return Opcode.IFEQ_rA_iBC;
 			if (s == "IFNE_rA_rB")      return Opcode.IFNE_rA_rB;
 			if (s == "IFNE_rA_iBC")     return Opcode.IFNE_rA_iBC;
+			if (s == "ARGBLOCK_iABC")   return Opcode.ARGBLOCK_iABC;
+			if (s == "ARG_rA")          return Opcode.ARG_rA;
+			if (s == "ARG_iABC")        return Opcode.ARG_iABC;
 			if (s == "CALLF_iA_iBC")    return Opcode.CALLF_iA_iBC;
 			if (s == "CALLFN_iA_kBC")   return Opcode.CALLFN_iA_kBC;
 			if (s == "CALL_rA_rB_rC")   return Opcode.CALL_rA_rB_rC;
 			if (s == "RETURN")          return Opcode.RETURN;
 			return Opcode.NOOP;
 		}
-	}
-	
-	// Function definition: code, constants, and how many registers it needs
-	public class FuncDef {
-		public String Name = "";
-		public List<UInt32> Code = new List<UInt32>();
-		public List<Value> Constants = new List<Value>();
-		public UInt16 MaxRegs = 0; // how many registers to reserve for this function
-		
-		public void ReserveRegister(Int32 registerNumber) {
-			UInt16 impliedCount = (UInt16)(registerNumber + 1);
-			if (MaxRegs < impliedCount) MaxRegs = impliedCount;
-		}
-		
-		// Conversion to bool: returns true if function has a name
-		/*** BEGIN H_ONLY ***
-		public: operator bool() { return Name != ""; }
-		*** END H_ONLY ***/
-		//*** BEGIN CS_ONLY ***
-		public static implicit operator bool(FuncDef funcDef) {
-			return funcDef != null && !String.IsNullOrEmpty(funcDef.Name);
-		}
-		//*** END CS_ONLY ***
 	}
 
 }

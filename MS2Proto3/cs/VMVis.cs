@@ -3,6 +3,7 @@ using static MiniScript.ValueHelpers;
 // CPP: #include "value.h"
 // CPP: #include "value_list.h"
 // CPP: #include "Bytecode.g.h"
+// CPP: #include "FuncDef.g.h"
 // CPP: #include "IOHelper.g.h"
 // CPP: #include "VM.g.h"
 // CPP: #include "StringUtils.g.h"
