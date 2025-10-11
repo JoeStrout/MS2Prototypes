@@ -42,6 +42,35 @@ namespace MiniScript {
 			LocalVarMap = make_null();
 			OuterVarMap = outerVars;
 		}
+
+		//*** BEGIN CS_ONLY ***
+		public Value GetLocalVarMap(List<Value> registers, List<Value> names, int baseIdx, int regCount) {
+			if (is_null(LocalVarMap)) {
+				// Create a new VarMap with references to VM's stack and names arrays
+				if (regCount == 0) {
+					// We have no local vars at all!  Make an ordinary map.
+					LocalVarMap = make_map(4);	// This is safe, right?
+				} else {
+					LocalVarMap = make_varmap(registers, names, baseIdx, regCount);
+				}
+			}
+			return LocalVarMap;
+		}
+		//*** END CS_ONLY ***
+		/*** BEGIN H_ONLY ***
+		inline Value GetLocalVarMap(List<Value>& registers, List<Value>& names, int baseIdx, int regCount) {
+			if (is_null(LocalVarMap)) {
+				// Create a new VarMap with references to VM's stack and names arrays
+				if (regCount == 0) {
+					// We have no local vars at all!  Make an ordinary map.
+					LocalVarMap = make_map(4);	// This is safe, right?
+				} else {
+					LocalVarMap = make_varmap(&registers[0], &names[0], baseIdx, regCount);
+				}
+			}
+			return LocalVarMap;
+		}
+		*** END H_ONLY ***/
 	}
 
 	// VM state
@@ -122,28 +151,6 @@ namespace MiniScript {
 		public void RegisterFunction(FuncDef funcDef) {
 			functions.Add(funcDef);
 		}
-
-		// Run a program: store all functions, find @main, and execute it
-//		public Value Run(List<FuncDef> allFunctions) {
-//			// Store all functions for CALLF instructions, and find @main
-//			FuncDef mainFunc = new FuncDef();
-//			functions.Clear();
-//			for (Int32 i = 0; i < allFunctions.Count; i++) {
-//				functions.Add(allFunctions[i]);
-//				if (functions[i].Name == "@main") mainFunc = functions[i];
-//			}
-//			
-//			if (!mainFunc) {
-//				IOHelper.Print("ERROR: No @main function found in VM.Run");
-//				return make_null();
-//			}
-//			
-//			// Execute @main
-//			if (DebugMode) {
-//				IOHelper.Print(StringUtils.Format("Executing {0} out of {1} functions", mainFunc.Name, functions.Count));
-//			}
-//			return Execute(mainFunc);
-//		}
 
 		public void Reset(List<FuncDef> allFunctions) {
 			// Store all functions for CALLF instructions, and find @main
@@ -460,22 +467,10 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 						Int16 funcIndex = BytecodeUtil.BCs(instruction);
 
-						// Capture our locals as the context
+						// Create function reference with our locals as the closure context
 						CallInfo frame = callStack[callStackTop]; // CPP: CallInfo& frame = callStack[callStackTop];
-						if (is_null(frame.LocalVarMap)) {
-							// Create a new VarMap with references to VM's stack and names arrays
-							UInt16 regCount = curFunc.MaxRegs;
-							if (regCount == 0) {
-								// We have no local vars at all!  Make an ordinary map.
-								frame.LocalVarMap = make_map(4);	// This is safe, right?
-							} else {
-								frame.LocalVarMap = 
-								  make_varmap(stack, names, baseIndex, regCount); // CPP: make_varmap(&stack[0], &names[0], baseIndex, regCount);
-							}
-						}
-
-						// Create function reference with closure context
-						localStack[a] = make_funcref(funcIndex, frame.LocalVarMap);
+						Value locals = frame.GetLocalVarMap(stack, names, baseIndex, curFunc.MaxRegs);
+						localStack[a] = make_funcref(funcIndex, locals);
 						break; // CPP: VM_NEXT();
 					}
 
@@ -575,9 +570,14 @@ namespace MiniScript {
 						Value index = localStack[c];
 
 						if (is_list(container)) {
+							// ToDo: add a list_try_get and use it here, like we do with map below
 							localStack[a] = list_get(container, as_int(index));
 						} else if (is_map(container)) {
-							localStack[a] = map_get(container, index);
+							Value result;
+							if (!map_try_get(container, index, out result)) {
+								RaiseRuntimeError(StringUtils.Format("Key Not Found: '{0}' not found in map", index));
+							}
+							localStack[a] = result;
 						} else {
 							RaiseRuntimeError(StringUtils.Format("Can't index into {0}", container));
 							localStack[a] = make_null();
@@ -609,19 +609,7 @@ namespace MiniScript {
 						Byte a = BytecodeUtil.Au(instruction);
 
 						CallInfo frame = callStack[callStackTop]; // CPP: CallInfo& frame = callStack[callStackTop];
-						if (is_null(frame.LocalVarMap)) {
-							// Create a new VarMap with references to VM's stack and names arrays
-							UInt16 regCount = curFunc.MaxRegs;
-							if (regCount == 0) {
-								// We have no local vars at all!  Make an ordinary map.
-								frame.LocalVarMap = make_map(4);	// This is safe, right?
-							} else {
-								frame.LocalVarMap =
-								  make_varmap(stack, names, baseIndex, regCount); // CPP: make_varmap(&stack[0], &names[0], baseIndex, regCount);
-							}
-						}
-
-						localStack[a] = frame.LocalVarMap;
+						localStack[a] = frame.GetLocalVarMap(stack, names, baseIndex, curFunc.MaxRegs);
 						names[baseIndex+a] = make_null();
 						break; // CPP: VM_NEXT();
 					}
@@ -640,7 +628,9 @@ namespace MiniScript {
 						// Create VarMap for global variables and store in R[A]
 						// TODO: Implement global variable map access
 						Byte a = BytecodeUtil.Au(instruction);
-						localStack[a] = make_null();
+						Int32 globalRegCount = functions[callStack[0].ReturnFuncIndex].MaxRegs;
+						localStack[a] = callStack[0].GetLocalVarMap(stack, names, 0, globalRegCount);
+						names[baseIndex+a] = make_null();
 						break; // CPP: VM_NEXT();
 					}
 

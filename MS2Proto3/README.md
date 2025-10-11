@@ -45,8 +45,9 @@ All the management is done by the `tools/build.sh` shell script.  (You will need
 
 Here are some of the things we'll need to solve, implement, or clean up as we wrap up Milestone 4 and move to production code.
 
-- Finish support for `locals`, `outer`, and `globals`, including all edge cases.
+- Think about how a REPL can work, if it adds more globals *after* somebody has already captured globals into a LocalVarMap.
 - Get all performance-critical code in the VM execution loop inlined.
+- Look for ways to improve the transpiler to eliminate as many `// CPP:` special cases as possible.
 - See how much we can unify (transpile) the Value code from C# to C, since their memory layout should be the same.  (Without sacrificing the C rather than C++ interface!)
 - Ensure that all our type operations behave the same as in MiniScript 1.0: proper fuzzy-logic operators, multiplication of strings/lists by fractional values, etc.
 - Audit and/or measure use of the two heap managers (MemPool and GC), and ensure that these are being used correctly & consistently.

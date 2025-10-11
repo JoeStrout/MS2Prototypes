@@ -95,8 +95,8 @@ public class App {
 				IOHelper.Print(StringUtils.Format("Found {0} functions:", assembler.Functions.Count));
 				for (Int32 i = 0; i < assembler.Functions.Count; i++) {
 					FuncDef func = assembler.Functions[i];
-					IOHelper.Print(StringUtils.Format("  {0}: {1} instructions, {2} constants", 
-						func.Name, func.Code.Count, func.Constants.Count));
+					IOHelper.Print(StringUtils.Format("  {0}: {1} instructions, {2} constants, MaxRegs={3}", 
+						func.Name, func.Code.Count, func.Constants.Count, func.MaxRegs));
 				}
 				
 				IOHelper.Print("");
