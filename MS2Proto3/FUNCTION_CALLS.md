@@ -19,13 +19,15 @@
 
 Here's a function that takes three parameters, `a`, `b`, and `c`, with default values of `None`, `1`, and `0` respectively.  It returns the sum.
 
+Note: r0 is reserved for the return value. Parameters start at r1.
+
 ```
 @add:
 	.param a
 	.param b=1
 	.param c=0
-	ADD r0, r0, r1
-	ADD r0, r0, r2
+	ADD r0, r1, r2
+	ADD r0, r0, r3
 	RETURN
 ```
 
@@ -41,11 +43,11 @@ To call `add(40, 2)` might look like this:
 
 When the VM hits the `ARGBLK 2` instruction, it does a bunch of things:
 
-1. Look ahead 2 additional instructions (past the current PC, which would already be on ARG 40) to find the CALL.  
+1. Look ahead 2 additional instructions (past the current PC, which would already be on ARG 40) to find the CALL.
 2. Look up the FuncDef, discovering that it has three parameters.  If argCount > paramCount, throw a runtime error.  (No error in this example since 2 <= 3.)
-3. Advance the pc quickly through the ARG instructions, copying those values into registers r4 and r5, while naming them `a` and `b` from the FuncDef info.
-4. Set up additional parameters, in this case, store 0 in r6 and name it `c`.
-5. Clear any additional registers the callee needs (in this case, none are needed).
+3. Advance the pc quickly through the ARG instructions, copying those values into registers r5 and r6 (callee's r1 and r2), while naming them `a` and `b` from the FuncDef info.
+4. Set up additional parameters, in this case, store 0 in r7 (callee's r3) and name it `c`.
+5. Clear any additional registers the callee needs, including r4 (callee's r0, the return value slot).
 6. Shift the register window to what's currently r4, and push the new CallInfo onto the call stack.  (This call info includes the bytecode for the @add function, and a note to store the result in r1.)
 
 When, inside the @add function, the VM hits the RETURN statement:

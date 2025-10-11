@@ -41,6 +41,8 @@
 	X(INDEX_rA_rB_rC) \
 	X(IDXSET_rA_rB_rC) \
 	X(LOCALS_rA) \
+	X(OUTER_rA) \
+	X(GLOBALS_rA) \
 	X(JUMP_iABC) \
 	X(LT_rA_rB_rC) \
 	X(LT_rA_rB_iC) \

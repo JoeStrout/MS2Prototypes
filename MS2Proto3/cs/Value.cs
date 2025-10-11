@@ -714,7 +714,6 @@ namespace MiniScript {
 		}
 
 		public virtual bool Set(Value key, Value value) {
-			IOHelper.Print($"base Set({key}, {value})");
 			_items[key] = value;
 			return true;
 		}

@@ -25,6 +25,8 @@ namespace MiniScript {
 		INDEX_rA_rB_rC,
 		IDXSET_rA_rB_rC,
 		LOCALS_rA,
+		OUTER_rA,
+		GLOBALS_rA,
 		JUMP_iABC,
 		LT_rA_rB_rC,
 		LT_rA_rB_iC,
@@ -128,6 +130,8 @@ namespace MiniScript {
 				case Opcode.INDEX_rA_rB_rC: return "INDEX_rA_rB_rC";
 				case Opcode.IDXSET_rA_rB_rC:return "IDXSET_rA_rB_rC";
 				case Opcode.LOCALS_rA:      return "LOCALS_rA";
+				case Opcode.OUTER_rA:       return "OUTER_rA";
+				case Opcode.GLOBALS_rA:     return "GLOBALS_rA";
 				case Opcode.JUMP_iABC:      return "JUMP_iABC";
 				case Opcode.LT_rA_rB_rC:    return "LT_rA_rB_rC";
 				case Opcode.LT_rA_rB_iC:    return "LT_rA_rB_iC";
@@ -194,6 +198,8 @@ namespace MiniScript {
 			if (s == "INDEX_rA_rB_rC")  return Opcode.INDEX_rA_rB_rC;
 			if (s == "IDXSET_rA_rB_rC") return Opcode.IDXSET_rA_rB_rC;
 			if (s == "LOCALS_rA")       return Opcode.LOCALS_rA;
+			if (s == "OUTER_rA")        return Opcode.OUTER_rA;
+			if (s == "GLOBALS_rA")      return Opcode.GLOBALS_rA;
 			if (s == "JUMP_iABC")       return Opcode.JUMP_iABC;
 			if (s == "LT_rA_rB_rC")     return Opcode.LT_rA_rB_rC;
 			if (s == "LT_rA_rB_iC")     return Opcode.LT_rA_rB_iC;

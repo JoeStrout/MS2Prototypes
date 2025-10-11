@@ -127,9 +127,7 @@ namespace MiniScript {
 			}
 
 			// Clear all register mappings
-			_regMap.Clear();
-			
-			IOHelper.Print($"Gathered VarMap: {this}");
+			_regMap.Clear();			
 		}
 
 		/// <summary>

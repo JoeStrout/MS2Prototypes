@@ -31,6 +31,8 @@ namespace MiniScript {
 				case Opcode.INDEX_rA_rB_rC: return "INDEX";
 				case Opcode.IDXSET_rA_rB_rC: return "IDXSET";
 				case Opcode.LOCALS_rA:     return "LOCALS";
+				case Opcode.OUTER_rA:      return "OUTER";
+				case Opcode.GLOBALS_rA:    return "GLOBALS";
 				case Opcode.SUB_rA_rB_rC:  return "SUB";
 				case Opcode.JUMP_iABC:     return "JUMP";
 				case Opcode.LT_rA_rB_rC:
@@ -93,6 +95,8 @@ namespace MiniScript {
 				// One Operand:
 				// rA
 				case Opcode.LOCALS_rA:
+				case Opcode.OUTER_rA:
+				case Opcode.GLOBALS_rA:
 					return StringUtils.Format("{0} r{1}",
 						mnemonic,
 						(Int32)BytecodeUtil.Au(instruction));

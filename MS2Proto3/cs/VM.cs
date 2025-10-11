@@ -215,6 +215,7 @@ namespace MiniScript {
 			}
 
 			// Step 2-3: Process ARG instructions, copying values to parameter registers
+			// Note: Parameters start at r1 (r0 is reserved for return value)
 			Int32 currentPC = startPC;
 			for (Int32 i = 0; i < argCount; i++) {
 				UInt32 argInstruction = code[currentPC];
@@ -235,8 +236,9 @@ namespace MiniScript {
 				}
 
 				// Copy argument value to callee's parameter register and assign name
-				stack[calleeBase + i] = argValue;
-				names[calleeBase + i] = callee.ParamNames[i];
+				// Parameters start at r1, so offset by 1
+				stack[calleeBase + 1 + i] = argValue;
+				names[calleeBase + 1 + i] = callee.ParamNames[i];
 
 				currentPC++;
 			}
@@ -246,17 +248,21 @@ namespace MiniScript {
 
 		// Helper for call setup (FUNCTION_CALLS.md steps 4-6):
 		// Initialize remaining parameters with defaults and clear callee's registers.
+		// Note: Parameters start at r1 (r0 is reserved for return value)
 		private void SetupCallFrame(Int32 argCount, Int32 calleeBase, FuncDef callee) {
 			Int32 paramCount = callee.ParamNames.Count;
 
 			// Step 4: Set up remaining parameters with default values
+			// Parameters start at r1, so offset by 1
 			for (Int32 i = argCount; i < paramCount; i++) {
-				stack[calleeBase + i] = callee.ParamDefaults[i];
-				names[calleeBase + i] = callee.ParamNames[i];
+				stack[calleeBase + 1 + i] = callee.ParamDefaults[i];
+				names[calleeBase + 1 + i] = callee.ParamNames[i];
 			}
 
-			// Step 5: Clear remaining registers (beyond parameters)
-			for (Int32 i = paramCount; i < callee.MaxRegs; i++) {
+			// Step 5: Clear remaining registers (r0, and any beyond parameters)
+			stack[calleeBase] = make_null();
+			names[calleeBase] = make_null();
+			for (Int32 i = paramCount + 1; i < callee.MaxRegs; i++) {
 				stack[calleeBase + i] = make_null();
 				names[calleeBase + i] = make_null();
 			}
@@ -433,6 +439,10 @@ namespace MiniScript {
 
 							// Switch to callee frame: base slides to argument window
 							baseIndex += curFunc.MaxRegs;
+							for (Int32 i = 0; i < callee.MaxRegs; i++) { // clear registers (ugh)
+								stack[baseIndex + i] = make_null();
+								names[baseIndex + i] = make_null();
+							}
 							pc = 0; // Start at beginning of callee code
 							curFunc = callee; // Switch to callee function
 							codeCount = curFunc.Code.Count;
@@ -569,7 +579,7 @@ namespace MiniScript {
 						} else if (is_map(container)) {
 							localStack[a] = map_get(container, index);
 						} else {
-							// TODO: Add error handling for unsupported types
+							RaiseRuntimeError(StringUtils.Format("Can't index into {0}", container));
 							localStack[a] = make_null();
 						}
 						break; // CPP: VM_NEXT();
@@ -588,15 +598,16 @@ namespace MiniScript {
 							list_set(container, as_int(index), value);
 						} else if (is_map(container)) {
 							map_set(container, index, value);
+						} else {
+							RaiseRuntimeError(StringUtils.Format("Can't set indexed value in {0}", container));
 						}
-						// TODO: Add error handling for unsupported types
 						break; // CPP: VM_NEXT();
 					}
 
 					case Opcode.LOCALS_rA: { // CPP: VM_CASE(LOCALS_rA) {
 						// Create VarMap for local variables and store in R[A]
 						Byte a = BytecodeUtil.Au(instruction);
-						
+
 						CallInfo frame = callStack[callStackTop]; // CPP: CallInfo& frame = callStack[callStackTop];
 						if (is_null(frame.LocalVarMap)) {
 							// Create a new VarMap with references to VM's stack and names arrays
@@ -605,13 +616,31 @@ namespace MiniScript {
 								// We have no local vars at all!  Make an ordinary map.
 								frame.LocalVarMap = make_map(4);	// This is safe, right?
 							} else {
-								frame.LocalVarMap = 
+								frame.LocalVarMap =
 								  make_varmap(stack, names, baseIndex, regCount); // CPP: make_varmap(&stack[0], &names[0], baseIndex, regCount);
 							}
 						}
 
 						localStack[a] = frame.LocalVarMap;
 						names[baseIndex+a] = make_null();
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.OUTER_rA: { // CPP: VM_CASE(OUTER_rA) {
+						// Create VarMap for outer variables and store in R[A]
+						// TODO: Implement outer variable map access
+						Byte a = BytecodeUtil.Au(instruction);
+						CallInfo frame = callStack[callStackTop-1]; // CPP: CallInfo& frame = callStack[callStackTop-1];
+						localStack[a] = frame.OuterVarMap;
+						names[baseIndex+a] = make_null();
+						break; // CPP: VM_NEXT();
+					}
+
+					case Opcode.GLOBALS_rA: { // CPP: VM_CASE(GLOBALS_rA) {
+						// Create VarMap for global variables and store in R[A]
+						// TODO: Implement global variable map access
+						Byte a = BytecodeUtil.Au(instruction);
+						localStack[a] = make_null();
 						break; // CPP: VM_NEXT();
 					}
 

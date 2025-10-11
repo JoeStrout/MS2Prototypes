@@ -406,6 +406,18 @@ namespace MiniScript {
 				Current.ReserveRegister(reg);
 				instruction = BytecodeUtil.INS_A(Opcode.LOCALS_rA, reg);
 
+			} else if (mnemonic == "OUTER") {
+				if (parts.Count != 2) { Error("Syntax error: OUTER requires exactly 1 operand"); return 0; }
+				Byte reg = ParseRegister(parts[1]);
+				Current.ReserveRegister(reg);
+				instruction = BytecodeUtil.INS_A(Opcode.OUTER_rA, reg);
+
+			} else if (mnemonic == "GLOBALS") {
+				if (parts.Count != 2) { Error("Syntax error: GLOBALS requires exactly 1 operand"); return 0; }
+				Byte reg = ParseRegister(parts[1]);
+				Current.ReserveRegister(reg);
+				instruction = BytecodeUtil.INS_A(Opcode.GLOBALS_rA, reg);
+
 			} else if (mnemonic == "JUMP") {
 				if (parts.Count != 2) { Error("Syntax error"); return 0; }
 				String target = parts[1];
