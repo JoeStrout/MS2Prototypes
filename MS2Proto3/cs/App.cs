@@ -9,6 +9,8 @@ using static MiniScript.ValueHelpers;
 // CPP: #include "gc.h"
 // CPP: #include "dispatch_macros.h"
 // CPP: #include "VMVis.g.h"
+// CPP: #include "StringPool.h"
+// CPP: #include "MemPoolShim.g.h"
 // CPP: using namespace MiniScript;
 
 public class App {
@@ -18,6 +20,10 @@ public class App {
 	public static void Main(string[] args) {
 		// CPP: gc_init();
 	
+		// Use a temp pool for reading the file, processing command-line arguments, and other setup
+		Byte tempPool = MemPoolShim.GetUnusedPool();
+		MemPoolShim.SetDefaultStringPool(tempPool);
+
 		//*** BEGIN CS_ONLY ***
 		// The args passed to the C# main program do not include the program path.
 		// To get an arg list like what C++ gets, we must do:
@@ -72,8 +78,10 @@ public class App {
 			if (debugMode) IOHelper.Print(StringUtils.Format("Assembling {0} lines...", lines.Count));
 			Assembler assembler = new Assembler();
 			
-			// Use multi-function assembly with @function: label support
+			// Assemble the code, with permanent strings stored in pool 0
+			MemPoolShim.SetDefaultStringPool(0);
 			assembler.Assemble(lines);
+			MemPoolShim.SetDefaultStringPool(tempPool);
 			
 			// Check for assembly errors
 			if (assembler.HasError) {
@@ -103,6 +111,10 @@ public class App {
 				IOHelper.Print("Executing @main with VM...");
 			}
 			
+			// Release our temp pool, and switch back to pool 0 to run the program.
+			MemPoolShim.ClearStringPool(MemPoolShim.GetDefaultStringPool());
+			MemPoolShim.SetDefaultStringPool(0);
+
 			// Run the program
 			VM vm = new VM();
 			vm.Reset(assembler.Functions);
@@ -114,8 +126,22 @@ public class App {
 				while (vm.IsRunning) {
 					vis.UpdateDisplay();
 					String cmd = IOHelper.Input("Command: ");
-					if (!String.IsNullOrEmpty(cmd) && cmd[0] == 'q') return;
-					result = vm.Run(1);
+					if (String.IsNullOrEmpty(cmd)) cmd = "step";
+					if (cmd[0] == 'q') return;
+					if (cmd[0] == 's') {
+						result = vm.Run(1);
+						continue;
+					} else if (cmd == "pooldump") {
+						vis.ClearScreen();
+						IOHelper.Print("String pools only apply to the C++ version.");  // CPP: StringPool::dumpAllPoolState();
+					} else {
+						IOHelper.Print("Available commands:");
+						IOHelper.Print("q[uit] -- Quit to shell");
+						IOHelper.Print("s[tep] -- single-step VM");
+						IOHelper.Print("pooldump -- dump all string pool state (C++ only)");
+					}
+					IOHelper.Input("\n(Press Return.)");
+					vis.ClearScreen();
 				}
 			} else {
 				vm.DebugMode = debugMode;

@@ -170,6 +170,123 @@ void* poolAllocatorForPool(size_t size, uint8_t poolNum) {
     return r.isNull() ? nullptr : MemPoolManager::getPtr(r);
 }
 
+// Helper function to create a safe, printable version of a string
+// Escapes control characters and truncates to maxLen characters
+static void printSafeString(const char* str, int lenB, int maxLen = 40) {
+    int outCount = 0;
+    for (int i = 0; i < lenB && outCount < maxLen; ++i) {
+        unsigned char c = (unsigned char)str[i];
+
+        // Handle common escape sequences
+        if (c == '\n') {
+            printf("\\n");
+            outCount += 2;
+        } else if (c == '\r') {
+            printf("\\r");
+            outCount += 2;
+        } else if (c == '\t') {
+            printf("\\t");
+            outCount += 2;
+        } else if (c == '\\') {
+            printf("\\\\");
+            outCount += 2;
+        } else if (c == '"') {
+            printf("\\\"");
+            outCount += 2;
+        } else if (c < 32 || c == 127) {
+            // Other control characters as hex
+            printf("\\x%02x", c);
+            outCount += 4;
+        } else {
+            // Normal printable character
+            printf("%c", c);
+            outCount += 1;
+        }
+    }
+
+    // Add ellipsis if truncated
+    if (lenB > maxLen) {
+        printf("...");
+    }
+}
+
+void dumpPoolState(uint8_t poolNum) {
+    Pool& p = pools[poolNum];
+
+    if (!p.initialized) {
+        printf("Pool %u: not initialized\n", poolNum);
+        return;
+    }
+
+    int totalEntries = 0;
+    int usedBins = 0;
+    int maxChainLength = 0;
+
+    // Count entries and analyze hash distribution
+    for (int i = 0; i < 256; ++i) {
+        if (p.hashTable[i].isNull()) continue;
+
+        usedBins++;
+        int chainLength = 0;
+        for (MemRef eRef = p.hashTable[i]; !eRef.isNull(); eRef = derefHE(eRef)->next) {
+            chainLength++;
+            totalEntries++;
+        }
+        if (chainLength > maxChainLength) maxChainLength = chainLength;
+    }
+
+    printf("Pool %u: initialized\n", poolNum);
+    printf("  Total entries: %d\n", totalEntries);
+    printf("  Used bins: %d / 256\n", usedBins);
+    printf("  Max chain length: %d\n", maxChainLength);
+    printf("  Average chain length: %.2f\n", usedBins > 0 ? (float)totalEntries / usedBins : 0.0f);
+
+    // Print all strings with pagination
+    printf("  All strings:\n");
+    int lineCount = 5; // Account for header lines already printed
+    int stringCount = 0;
+    for (int i = 0; i < 256; ++i) {
+        for (MemRef eRef = p.hashTable[i]; !eRef.isNull(); eRef = derefHE(eRef)->next) {
+            HashEntry* e = derefHE(eRef);
+            const StringStorage* ss = e->stringStorage();
+            if (ss) {
+                // Print the string with safe escaping
+                printf("    [%d] hash=0x%08x len=%d \"", stringCount, e->hash, ss->lenB);
+                printSafeString(ss->data, ss->lenB);
+                printf("\"\n");
+
+                stringCount++;
+                lineCount++;
+
+                // Pause every 30 lines
+                if (lineCount >= 30) {
+                    printf("--- %d/%d (Enter/Quit) --- ", stringCount, totalEntries);
+                    int c = getchar();
+                    if (c == 'q' || c == 'Q') {
+                        printf("\n");
+                        return;
+                    }
+                    lineCount = 0;
+                }
+            }
+        }
+    }
+}
+
+void dumpAllPoolState() {
+    printf("StringPool State Summary:\n");
+    bool foundAny = false;
+    for (int i = 0; i < 256; ++i) {
+        if (pools[i].initialized) {
+            dumpPoolState(i);
+            foundAny = true;
+        }
+    }
+    if (!foundAny) {
+        printf("  No pools initialized\n");
+    }
+}
+
 } // namespace StringPool
 
 // C-compatible wrapper for the pool allocator

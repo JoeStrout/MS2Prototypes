@@ -42,6 +42,10 @@ void* poolAllocator(size_t size);
 // Pool-specific allocator (can be used with std::bind or similar)
 void* poolAllocatorForPool(size_t size, uint8_t poolNum);
 
+// Inspection/debugging support
+void dumpPoolState(uint8_t poolNum);
+void dumpAllPoolState();
+
 } // namespace StringPool
 
 #ifdef __cplusplus

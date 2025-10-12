@@ -253,3 +253,11 @@ void MemPoolManager::destroyAllPools() {
         destroyPool(i);
     }
 }
+
+uint8_t MemPoolManager::findUnusedPool() {
+    // Start from 1 (reserve 0 for general use) and find first unused pool
+    for (int i = 1; i < 256; i++) {
+        if (pools[i] == nullptr) return (uint8_t)i;
+    }
+    return 0; // All pools in use
+}

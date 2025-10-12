@@ -7,6 +7,7 @@ using static MiniScript.ValueHelpers;
 // CPP: #include "IOHelper.g.h"
 // CPP: #include "VM.g.h"
 // CPP: #include "StringUtils.g.h"
+// CPP: #include "MemPoolShim.g.h"
 // CPP: #include "CS_Math.h"
 
 /*** BEGIN CPP_ONLY ***
@@ -39,6 +40,10 @@ namespace MiniScript {
 
 		private Int32 _screenWidth;
 		private Int32 _screenHeight;
+
+		// Pool management for temporary display strings
+		private Byte _displayPool;
+		private Byte _savedPool;
 		
 		// Be careful to get a *reference* to the VM rather than a deep copy, even
 		// in C++.  ToDo: find a more elegant solution to this recurring issue.
@@ -47,11 +52,17 @@ namespace MiniScript {
 		public VMVis(VM vm) {
 			_vm = vm;
 			UpdateScreenSize();
+			_savedPool = MemPoolShim.GetDefaultStringPool();
+			_displayPool = MemPoolShim.GetUnusedPool();
 		}
 		//*** END CS_ONLY ***
 		/*** BEGIN H_ONLY ***
 		private: VM& _vm;
-		public: inline VMVis(VM& vm) : _vm(vm) { UpdateScreenSize(); }
+		public: inline VMVis(VM& vm) : _vm(vm) {
+			UpdateScreenSize();
+			_savedPool = MemPoolShim::GetDefaultStringPool();
+			_displayPool = MemPoolShim::GetUnusedPool();
+		}
 		*** END H_ONLY ***/
 
 		public void UpdateScreenSize() {
@@ -251,10 +262,19 @@ namespace MiniScript {
 		}
 
 		public void UpdateDisplay() {
+			// Switch to temporary display pool for all string operations
+			if (_displayPool != 0) MemPoolShim.SetDefaultStringPool(_displayPool);
+
 			DrawCodeDisplay();
 			DrawRegisters();
 			DrawCallStack();
 			GoTo(1, _screenHeight - 2);
+
+			// Clear the display pool and restore original pool
+			if (_displayPool != 0) {
+				MemPoolShim.ClearStringPool(_displayPool);
+				MemPoolShim.SetDefaultStringPool(_savedPool);
+			}
 		}
 	}
 }

@@ -102,8 +102,11 @@ public:
     static void* getPtr(MemRef ref);
     static size_t getSize(MemRef ref);
 //	static MemRef getMemRef(void* ptr);	// (for ptr allocated by MemPool)
-    
+
     // Utility functions
     static void clearPool(uint8_t poolNum);
     static void destroyAllPools();
+
+    // Find an unused pool number (returns 0 if none available)
+    static uint8_t findUnusedPool();
 };
