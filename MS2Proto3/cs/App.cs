@@ -7,6 +7,7 @@ using static MiniScript.ValueHelpers;
 // CPP: #include "UnitTests.g.h"
 // CPP: #include "VM.g.h"
 // CPP: #include "gc.h"
+// CPP: #include "value_string.h"
 // CPP: #include "dispatch_macros.h"
 // CPP: #include "VMVis.g.h"
 // CPP: #include "StringPool.h"
@@ -134,11 +135,23 @@ public class App {
 					} else if (cmd == "pooldump") {
 						vis.ClearScreen();
 						IOHelper.Print("String pools only apply to the C++ version.");  // CPP: StringPool::dumpAllPoolState();
+					} else if (cmd == "gcdump") {
+						vis.ClearScreen();
+						IOHelper.Print("GC dump only applies to the C++ version.");  // CPP: gc_dump_objects();
+					} else if (cmd == "gcmark") {
+						vis.ClearScreen();
+						IOHelper.Print("GC mark only applies to the C++ version.");  // CPP: gc_mark_and_report();
+					} else if (cmd == "interndump") {
+						vis.ClearScreen();
+						IOHelper.Print("Intern table dump only applies to the C++ version.");  // CPP: dump_intern_table();
 					} else {
 						IOHelper.Print("Available commands:");
 						IOHelper.Print("q[uit] -- Quit to shell");
 						IOHelper.Print("s[tep] -- single-step VM");
 						IOHelper.Print("pooldump -- dump all string pool state (C++ only)");
+						IOHelper.Print("gcdump -- dump all GC objects with hex view (C++ only)");
+						IOHelper.Print("gcmark -- run GC mark and show reachable objects (C++ only)");
+						IOHelper.Print("interndump -- dump interned strings table (C++ only)");
 					}
 					IOHelper.Input("\n(Press Return.)");
 					vis.ClearScreen();

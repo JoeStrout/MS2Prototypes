@@ -48,6 +48,13 @@ uint32_t string_hash(const char* data, int len);
 // Get or compute hash value for a string
 uint32_t get_string_hash(Value str_val);
 
+// Debug dump function for interned strings
+void dump_intern_table(void);
+
+// Helper function to print a string with escape sequences (for debugging)
+// Prints up to max_len characters, truncates with "..." if longer
+void print_string_escaped(const char* str, int len, int max_len);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

@@ -2,6 +2,7 @@
 #include "StringPool.h"
 #include "CS_String.h"
 #include "hashing.h"
+#include "value_string.h"  // for print_string_escaped
 #include <cstring>  // strlen, memcpy
 #include <cstdio>
 
@@ -170,46 +171,6 @@ void* poolAllocatorForPool(size_t size, uint8_t poolNum) {
     return r.isNull() ? nullptr : MemPoolManager::getPtr(r);
 }
 
-// Helper function to create a safe, printable version of a string
-// Escapes control characters and truncates to maxLen characters
-static void printSafeString(const char* str, int lenB, int maxLen = 40) {
-    int outCount = 0;
-    for (int i = 0; i < lenB && outCount < maxLen; ++i) {
-        unsigned char c = (unsigned char)str[i];
-
-        // Handle common escape sequences
-        if (c == '\n') {
-            printf("\\n");
-            outCount += 2;
-        } else if (c == '\r') {
-            printf("\\r");
-            outCount += 2;
-        } else if (c == '\t') {
-            printf("\\t");
-            outCount += 2;
-        } else if (c == '\\') {
-            printf("\\\\");
-            outCount += 2;
-        } else if (c == '"') {
-            printf("\\\"");
-            outCount += 2;
-        } else if (c < 32 || c == 127) {
-            // Other control characters as hex
-            printf("\\x%02x", c);
-            outCount += 4;
-        } else {
-            // Normal printable character
-            printf("%c", c);
-            outCount += 1;
-        }
-    }
-
-    // Add ellipsis if truncated
-    if (lenB > maxLen) {
-        printf("...");
-    }
-}
-
 void dumpPoolState(uint8_t poolNum) {
     Pool& p = pools[poolNum];
 
@@ -252,7 +213,7 @@ void dumpPoolState(uint8_t poolNum) {
             if (ss) {
                 // Print the string with safe escaping
                 printf("    [%d] hash=0x%08x len=%d \"", stringCount, e->hash, ss->lenB);
-                printSafeString(ss->data, ss->lenB);
+                print_string_escaped(ss->data, ss->lenB, 40);
                 printf("\"\n");
 
                 stringCount++;

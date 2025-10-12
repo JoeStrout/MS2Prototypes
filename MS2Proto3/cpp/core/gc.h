@@ -62,6 +62,10 @@ typedef struct {
 
 GCStats gc_get_stats(void);
 
+// Debug dump functions
+void gc_dump_objects(void);              // Dump all GC objects with hex/ASCII view
+void gc_mark_and_report(void);           // Run mark phase and dump with reachability info
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

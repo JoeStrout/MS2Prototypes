@@ -12,6 +12,7 @@
 #include "value_list.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 // String interning system
 #define INTERN_THRESHOLD 128  // Intern strings under 128 bytes
@@ -623,4 +624,99 @@ int string_compare(Value a, Value b) {
     }
     
     return ss_compare(storage_a, storage_b);
+}
+
+// Helper function to print a string with escape sequences (for debugging)
+void print_string_escaped(const char* str, int len, int max_len) {
+    for (int i = 0; i < len && i < max_len; i++) {
+        unsigned char c = (unsigned char)str[i];
+        if (c >= 32 && c < 127 && c != '"' && c != '\\') {
+            printf("%c", c);
+        } else if (c == '\n') {
+            printf("\\n");
+        } else if (c == '\r') {
+            printf("\\r");
+        } else if (c == '\t') {
+            printf("\\t");
+        } else if (c == '"') {
+            printf("\\\"");
+        } else if (c == '\\') {
+            printf("\\\\");
+        } else {
+            printf("\\x%02x", c);
+        }
+    }
+    if (len > max_len) {
+        printf("...");
+    }
+}
+
+// Dump all interned strings for debugging
+void dump_intern_table(void) {
+    if (!intern_table_initialized) {
+        printf("\n=== Intern Table ===\n");
+        printf("Not initialized.\n");
+        return;
+    }
+
+    printf("\n=== Intern Table ===\n");
+    printf("Table size: %d buckets\n", INTERN_TABLE_SIZE);
+
+    int total_entries = 0;
+    int used_buckets = 0;
+    int max_chain_length = 0;
+
+    // Count entries and analyze distribution
+    for (int i = 0; i < INTERN_TABLE_SIZE; i++) {
+        if (intern_table[i] != NULL) {
+            used_buckets++;
+            int chain_length = 0;
+            InternEntry* entry = intern_table[i];
+            while (entry != NULL) {
+                chain_length++;
+                total_entries++;
+                entry = entry->next;
+            }
+            if (chain_length > max_chain_length) {
+                max_chain_length = chain_length;
+            }
+        }
+    }
+
+    printf("Total interned strings: %d\n", total_entries);
+    printf("Used buckets: %d / %d\n", used_buckets, INTERN_TABLE_SIZE);
+    printf("Max chain length: %d\n", max_chain_length);
+    printf("Avg chain length: %.2f\n",
+           used_buckets > 0 ? (float)total_entries / used_buckets : 0.0f);
+    printf("\nInterned strings:\n");
+
+    // Dump all interned strings
+    int string_num = 0;
+    for (int bucket = 0; bucket < INTERN_TABLE_SIZE; bucket++) {
+        InternEntry* entry = intern_table[bucket];
+        while (entry != NULL) {
+            string_num++;
+
+            Value str_val = entry->string_value;
+            if (is_heap_string(str_val)) {
+                StringStorage* str = as_string(str_val);
+                if (str) {
+                    printf("  [%d] bucket=%d hash=0x%08x len=%d \"",
+                           string_num, bucket, str->hash, str->lenB);
+                    print_string_escaped(str->data, str->lenB, 60);
+                    printf("\"\n");
+                }
+            } else {
+                printf("  [%d] bucket=%d (not a heap string?)\n", string_num, bucket);
+            }
+
+            entry = entry->next;
+        }
+    }
+
+    if (total_entries == 0) {
+        printf("  (no interned strings)\n");
+    }
+
+    printf("\n=== End Intern Table ===\n");
 }
