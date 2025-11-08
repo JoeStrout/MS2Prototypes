@@ -162,22 +162,21 @@ Several subsystems use temporary pools to reduce memory pressure:
 ## Debugging Memory
 
 ### For GC Objects
-Use `gc_dump_objects()` (to be implemented):
+Use `gc_dump_objects()`:
 - Shows all objects in `gc.all_objects` list
 - Hex/ASCII dump of object data
 - Mark status (if mark phase run first)
 
 ### For Interned Strings
-Use `dump_intern_table()` (to be implemented):
+Use `dump_intern_table()`:
 - Walk `intern_table[1024]` array
 - Follow collision chains
-- Show each interned string value
+- Shows each interned string value
 
 ### For StringPool
-Use `StringPool::dumpAllPoolState()` (implemented):
+Use `StringPool::dumpAllPoolState()`:
 - Shows all strings in each initialized pool
 - Pool statistics (entries, bins, chain lengths)
-- Already working (with pagination and escape sequences!)
 
 ### For MemPool
 Use `MemPoolManager` statistics:
