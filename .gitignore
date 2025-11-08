@@ -69,3 +69,6 @@ TestProject*/
 
 # Log Files
 *.log
+
+# Internal Stuff
+InternalNotes

@@ -68,8 +68,8 @@ namespace MiniScript {
 		public void UpdateScreenSize() {
 			//*** BEGIN CS_ONLY ***
 			try {
-				_screenWidth = Console.WindowWidth;		// CPP: // see below
-				_screenHeight = Console.WindowHeight;	// CPP: 
+				_screenWidth = Console.WindowWidth;
+				_screenHeight = Console.WindowHeight;
 			} catch {
 				_screenWidth = 80;
 				_screenHeight = 24;
