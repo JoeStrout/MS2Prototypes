@@ -52,7 +52,7 @@ Here are some of the things we'll need to solve, implement, or clean up as we wr
 - Ensure that all our type operations behave the same as in MiniScript 1.0: proper fuzzy-logic operators, multiplication of strings/lists by fractional values, etc.
 - Audit and/or measure use of the two heap managers (MemPool and GC), and ensure that these are being used correctly & consistently.
 - Fix our string interning.  For example, if the constant "abcdef" appears in a function twice, it should appear in the constants table only once, because it gets interned and wrapped up as the exact same Value.  But that's not currently happening.
-- Compare performance of all three VMs (C#, and C++ with/without computed goto) to equivalent MiniScript programs, and ensure we're still in the target zone (100X - 500X faster than MiniScript 1.0).
+- Compare performance of all three VMs (C#, and C++ with/without computed goto) to equivalent MiniScript programs, and ensure we're still in the target zone (100X faster than MiniScript 1.0 or more).
 - Figure out if we really want/need Value to be able to contain Int32's, or if we can do everything with doubles as in MS1.
 - Figure out tail call optimization.
 

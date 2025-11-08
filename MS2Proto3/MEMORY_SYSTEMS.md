@@ -39,7 +39,7 @@ MS2Proto3 uses **four distinct memory systems** for different purposes:
 
 **Location:** `cpp/core/value_string.c` (lines 16-193)
 
-**Purpose:** Deduplicate small, frequently-used runtime strings to save memory.
+**Purpose:** Deduplicate small, frequently-used runtime strings to save memory and reduce use of the GC system.  (Note that *very* small strings are stored directly in the Value, just like numbers, and so don't use heap memory at all.)
 
 **Implementation:**
 - Static hash table: `InternEntry* intern_table[INTERN_TABLE_SIZE]` (1024 buckets)
@@ -54,41 +54,14 @@ MS2Proto3 uses **four distinct memory systems** for different purposes:
 - Automatically used by `make_string()` for small strings
 - Examples: keywords, common identifiers, short literals
 
-**Lifetime:** **Immortal** - never freed during program execution. These are deliberately leaked to avoid the cost of reference counting or managing lifetimes.
+**Lifetime:** **Immortal** - never freed during program execution. These persist for the lifetime of the app to avoid the cost of reference counting or managing lifetimes.  (They're not "leaked" because we can always reach them via the hash table.)
 
 **Key characteristics:**
-- NOT managed by GC (comment at line 188: "this is not GC'd - it's part of the intern table")
+- NOT managed by GC
 - The `StringStorage` structures themselves ARE still reachable and won't be collected
 - Provides O(1) string deduplication for small strings
 
-**Optimization note:** Line 218 comment suggests future possibility of using MemPool instead of malloc for eventual cleanup.
-
-## 3. String Pool System
-
-**Location:** `cpp/core/StringPool.h`, `cpp/core/StringPool.cpp`
-
-**Purpose:** String interning for **host** code (the C# `String` class, assembler, compiler, etc.).
-
-**Implementation:**
-- 256 separate pools (indexed 0-255)
-- Each pool has hash table with 256 buckets
-- Entries stored as `MemRef` (pool number + index into MemPool)
-- Uses `MemPool` for underlying allocation
-
-**Used by:**
-- C# `String` class (transpiled to C++)
-- Assembler (function names, labels, etc.)
-- Any host code using the `String` class
-- VMVis display strings (uses temporary pool, cleared each frame)
-
-**Lifetime:**
-- Strings persist until their pool is explicitly cleared with `StringPool::clearPool(poolNum)`
-- Pool 0 is the default and typically long-lived
-- Temporary pools can be allocated/cleared for transient strings
-
-**Separation from runtime:** This system is completely separate from the Value/GC system. Host strings are not MiniScript values.
-
-## 4. MemPool System
+## 3. MemPool System
 
 **Location:** `cpp/core/MemPool.h`, `cpp/core/MemPool.cpp`
 
@@ -106,6 +79,34 @@ MS2Proto3 uses **four distinct memory systems** for different purposes:
 - Temporary data structures that can be bulk-freed
 
 **Lifetime:** Blocks persist until entire pool is cleared with `MemPoolManager::clearPool(poolNum)`
+
+## 4. String Pool System
+
+**Location:** `cpp/core/StringPool.h`, `cpp/core/StringPool.cpp`
+
+**Purpose:** String interning for **host** code (the assembler, compiler, etc., which make use of the C#-style `String` class).
+
+**Implementation:**
+- Based on MemPool (above)
+- Each pool has hash table with 256 buckets
+- Entries stored as `MemRef` (pool number + index into MemPool)
+- Uses `MemPool` for underlying allocation
+
+The idea behind the multiple pools is: a particular operation that may need to allocate a bunch of strings can use its own pool for that, and then drain just that pool when it's done, leaving other strings used by other parts of the program untouched.  But care must be taken if a process needs _some_ strings to survive the drain; those strings will need to be allocated in (or copied to) another pool.
+
+**Used by:**
+- `String` class (used for C# strings transpiled to C++)
+- Assembler (function names, labels, etc.)
+- Any host code using the `String` class
+- VMVis display strings (uses temporary pool, cleared each frame)
+
+**Lifetime:**
+- Strings persist until their pool is explicitly cleared with `StringPool::clearPool(poolNum)`
+- Pool 0 is the default and typically long-lived
+- Temporary pools can be allocated/cleared for transient strings
+
+**Separation from runtime:** This system is completely separate from the Value/GC system. Host strings are not MiniScript values.  Conversion to/from MiniScript strings always means copying the data.
+
 
 ## String Types Summary
 
@@ -144,17 +145,17 @@ MS2Proto3 uses **four distinct memory systems** for different purposes:
 ### Temporary Pool Strategy
 Several subsystems use temporary pools to reduce memory pressure:
 
-1. **Assembler** (implemented):
+1. **Assembler**:
    - Allocates temp pool at start of `Assemble()`
    - Function names re-interned into pool 0 before clearing
    - Temp pool cleared after assembly complete
 
-2. **VMVis** (implemented):
+2. **VMVis**:
    - Allocates temp pool in constructor
    - Switches to it during `UpdateDisplay()`
    - Clears after each frame rendered
 
-3. **App Main** (implemented):
+3. **App Main**:
    - Uses temp pool for file reading and command-line processing
    - Switches back to pool 0 before running VM
 
@@ -176,7 +177,7 @@ Use `dump_intern_table()` (to be implemented):
 Use `StringPool::dumpAllPoolState()` (implemented):
 - Shows all strings in each initialized pool
 - Pool statistics (entries, bins, chain lengths)
-- Already working with pagination and escape sequences
+- Already working (with pagination and escape sequences!)
 
 ### For MemPool
 Use `MemPoolManager` statistics:
@@ -198,13 +199,9 @@ Use `MemPoolManager` statistics:
    - Compiler data: Scoped (pools)
 
 3. **Language Integration:** Clean separation between host and runtime
-   - C# String class uses StringPool
+   - C#-style String class uses StringPool
    - MiniScript strings use GC/intern table
    - No mixing or confusion
 
-### Historical Note
-The dual-language (C#/C++) architecture necessitates host-level string management (StringPool) that is separate from the runtime's Value-based string system.
+4. **Coding Convenience:** GC strings require extra boilerplate in every method that touches them, in order to maintain the shadow stack.  See [GC_USAGE.md](GC_USAGE.md) for details.  Such code is fiddly to write and easy to screw up, and is especially impractical for code transpiled from C# -- such as all the compiler and assembler code.  So, those use the String class and its pool system, which requires no extra boilerplate.
 
----
-
-*Last updated: [Date] - Added comprehensive documentation of all memory systems*
