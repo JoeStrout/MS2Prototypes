@@ -67,13 +67,19 @@ typedef struct ValueMap {
 
 #define TINY_STRING_MAX_LEN 5                     // Max 5 chars in 40 bits (bits 8-47)
 
+// Common constant values (initialized by value_init_constants in value.c)
+#define val_null ((Value)NULL_VALUE)
+#define val_zero ((Value)INTEGER_TAG)  
+#define val_one ((Value)(INTEGER_TAG | 1))
+#define val_empty_string ((Value)TINY_STRING_TAG)
+
 static inline bool value_identical(Value a, Value b) {
 	return a == b;
 }
 
 // Core type checking functions
 static inline bool is_null(Value v) {
-    return v == NULL_VALUE;
+    return v == val_null;
 }
 
 static inline bool is_int(Value v) {
@@ -110,7 +116,7 @@ static inline bool is_map(Value v) {
 static inline bool is_double(Value v) {
 	uint64_t top16 = v & NANISH_MASK;
 	// Check if it's outside our reserved NaN range
-	return top16 < NULL_VALUE;  // Since NULL_VALUE is your lowest boxed type
+	return top16 < val_null;  // Since val_null is your lowest boxed type
 }
 
 static inline bool is_number(Value v) {
@@ -121,7 +127,7 @@ bool is_truthy(Value v);
 
 // Core value creation functions
 static inline Value make_null(void) {
-    return NULL_VALUE;
+    return val_null;
 }
 
 static inline Value make_int(int32_t i) {
@@ -378,7 +384,6 @@ Value value_shl(Value v, int shift);
 
 // Hash function for Values
 uint32_t value_hash(Value v);
-
 
 #ifdef __cplusplus
 } // extern "C"

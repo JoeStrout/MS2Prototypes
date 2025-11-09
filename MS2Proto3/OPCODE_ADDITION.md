@@ -92,7 +92,7 @@ We'll add the following to `VM.Execute()`:
 case Opcode.INC_rA: { // CPP: VM_CASE(INC_rA) {
     // R[A]++
     Byte a = BytecodeUtil.Au(instruction);
-    stack[baseIndex + a] = value_add(stack[baseIndex + a], make_int(1));
+    stack[baseIndex + a] = value_add(stack[baseIndex + a], val_one);
 
     // We assume R[A] is an integer.
     // TODO: Add support for other data types, like strings.

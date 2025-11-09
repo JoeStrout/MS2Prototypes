@@ -34,7 +34,7 @@ namespace MiniScript {
 			ReturnFuncIndex = returnFuncIndex;
 			CopyResultToReg = copyToReg;
 			LocalVarMap = make_null();
-			OuterVarMap = NULL_VALUE;
+			OuterVarMap = val_null;
 		}
 
 		public CallInfo(Int32 returnPC, Int32 returnBase, Int32 returnFuncIndex, Int32 copyToReg, Value outerVars) {

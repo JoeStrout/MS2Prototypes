@@ -52,6 +52,7 @@ static char tiny_string_buffer[TINY_STRING_MAX_LEN + 1];
 Value make_tiny_string(const char* str, int len) {
     // Create the value with proper type mask
     Value v = TINY_STRING_TAG;
+    if (len == 0) return v;		// bail out if it's an empty string
     
     // Get pointer to the 6-byte data area and store length-prefixed string
     char* data = GET_VALUE_DATA_PTR(&v);
@@ -201,9 +202,9 @@ static void intern_string(Value string_value) {
     intern_table[bucket] = new_entry;
 }
 
-// Interning-aware string creation
-// Interned strings use malloc() directly (not gc_allocate) since they're immortal
-Value make_string_interned(const char* str) {
+// Make a Value string from a const char *.  This will create a tiny string,
+// an interned string, or a GC heap-allocated string, depending on the length.
+Value make_string(const char* str) {
     if (str == NULL) return make_null();
     int lenB = strlen(str);
     
@@ -242,11 +243,6 @@ Value make_string_interned(const char* str) {
         strcpy(s->data, str);
         return STRING_TAG | ((uintptr_t)s & 0xFFFFFFFFFFFFULL);
     }
-}
-
-// make_string delegates to the interning implementation
-Value make_string(const char* str) {
-    return make_string_interned(str);
 }
 
 // String equality with optimization for interned/identical strings
@@ -542,7 +538,7 @@ Value string_substring(Value str, int startIndex, int len) {
     
     int strLenB = string_lengthB(str);
     if (strLenB == 0) {
-        result = make_string("");
+        result = val_empty_string;
         GC_POP_SCOPE();
         return result;
     }
@@ -558,7 +554,7 @@ Value string_substring(Value str, int startIndex, int len) {
     // Convert character indexes to byte indexes
     int startByteIndex = UTF8CharIndexToByteIndex((const unsigned char*)data, startIndex, strLenB);
     if (startByteIndex < 0) {
-        result = make_string("");
+        result = val_empty_string;
         GC_POP_SCOPE();
         return result;
     }
@@ -569,7 +565,7 @@ Value string_substring(Value str, int startIndex, int len) {
     
     int subLenB = endByteIndex - startByteIndex;
     if (subLenB <= 0) {
-        result = make_string("");
+        result = val_empty_string;
         GC_POP_SCOPE();
         return result;
     }

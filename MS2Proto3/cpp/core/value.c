@@ -32,7 +32,7 @@ Value value_mult_nonnumeric(Value a, Value b) {
     // Handle string repetition: string * int or int * string
     if (is_string(a) && is_int(b)) {
         int count = as_int(b);
-        if (count <= 0) return make_string("");
+        if (count <= 0) return val_empty_string;
         if (count == 1) return a;
         
         // Build repeated string
@@ -47,10 +47,10 @@ Value value_mult_nonnumeric(Value a, Value b) {
         double factor = as_double(b);
         int factorClass = fpclassify(factor);
         if (factorClass == FP_NAN || factorClass == FP_INFINITE) return make_null();
-        if (factorClass <= 0) return make_string("");
+        if (factorClass <= 0) return val_empty_string;
 
         repeats = (int)factor;
-        Value result = make_string("");
+        Value result = val_empty_string;
         for (int i = 0; i < repeats; i++) {
             result = string_concat(result, a);
         }
@@ -258,17 +258,17 @@ Value to_string(Value v) {
     else if (is_map(v)) {
         return map_to_string(v);
     }
-    return make_string("");
+    return val_empty_string;
 }
 
 Value to_number(Value v) {
 	if (is_number(v)) return v;
-	if (!is_string(v)) return make_int(0);
+	if (!is_string(v)) return val_zero;
 
 	// Get the string data
 	int len;
 	const char* str = get_string_data_zerocopy(&v, &len);
-	if (!str || len == 0) return make_int(0);
+	if (!str || len == 0) return val_zero;
 
 	// Parse as double using strtod (handles all cases efficiently)
 	char* endptr;
@@ -277,7 +277,7 @@ Value to_number(Value v) {
 	// Check if parsing was successful
 	if (endptr == str) {
 		// No conversion performed
-		return make_int(0);
+		return val_zero;
 	}
 
 	// Skip trailing whitespace after the number
@@ -288,7 +288,7 @@ Value to_number(Value v) {
 	// Check if we consumed the entire string
 	if (endptr != str + len) {
 		// Invalid characters after the number
-		return make_int(0);
+		return val_zero;
 	}
 
 	// Check if the result can be represented as int32 and has no fractional part

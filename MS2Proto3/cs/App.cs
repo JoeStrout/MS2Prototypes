@@ -21,7 +21,7 @@ public class App {
 	
 	public static void Main(string[] args) {
 		// CPP: gc_init();
-	
+
 		// Use a temp pool for reading the file, processing command-line arguments, and other setup
 		Byte tempPool = MemPoolShim.GetUnusedPool();
 		MemPoolShim.SetDefaultStringPool(tempPool);

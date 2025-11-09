@@ -29,7 +29,7 @@ namespace MiniScript {
 		// ==== TAGS & MASKS (EDIT TO MATCH YOUR C EXACTLY) =====================
 		// High 16 bits used to tag NaN-ish payloads.
 		private const ulong NANISH_MASK     = 0xFFFF_0000_0000_0000UL;
-		private const ulong NULL_VALUE      = 0xFFF1_0000_0000_0000UL; // null singleton (our lowest reserved NaN pattern)
+		private const ulong val_null      = 0xFFF1_0000_0000_0000UL; // null singleton (our lowest reserved NaN pattern)
 		private const ulong INTEGER_TAG     = 0xFFFA_0000_0000_0000UL; // Int32 tag
 		private const ulong FUNCREF_TAG     = 0xFFFB_0000_0000_0000UL; // function reference tag
 		private const ulong MAP_TAG         = 0xFFFC_0000_0000_0000UL; // map tag
@@ -39,7 +39,7 @@ namespace MiniScript {
 
 		// ==== CONSTRUCTORS ====================================================
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Value Null() => new(NULL_VALUE);
+		public static Value Null() => new(val_null);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value FromInt(int i) => new(INTEGER_TAG | (uint)i);
@@ -98,15 +98,15 @@ namespace MiniScript {
 			=> new(tagMask | (uint)handle);
 
 		// ==== TYPE PREDICATES =================================================
-		public bool IsNull   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _u == NULL_VALUE; }
+		public bool IsNull   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _u == val_null; }
 		public bool IsInt	{ [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == INTEGER_TAG; }
-		public bool IsTiny   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & TINY_STRING_TAG) == TINY_STRING_TAG && (_u & NANISH_MASK) != STRING_TAG && (_u & NANISH_MASK) != LIST_TAG && (_u & NANISH_MASK) != MAP_TAG && (_u & NANISH_MASK) != INTEGER_TAG && (_u & NANISH_MASK) != FUNCREF_TAG && _u != NULL_VALUE; }
+		public bool IsTiny   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & TINY_STRING_TAG) == TINY_STRING_TAG && (_u & NANISH_MASK) != STRING_TAG && (_u & NANISH_MASK) != LIST_TAG && (_u & NANISH_MASK) != MAP_TAG && (_u & NANISH_MASK) != INTEGER_TAG && (_u & NANISH_MASK) != FUNCREF_TAG && _u != val_null; }
 		public bool IsHeapString { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == STRING_TAG; }
 		public bool IsString { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & STRING_TAG) == STRING_TAG; }
 		public bool IsFuncRef { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == FUNCREF_TAG; }
 		public bool IsList   { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == LIST_TAG; }
 		public bool IsMap	{ [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) == MAP_TAG; }
-		public bool IsDouble { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) < NULL_VALUE; }
+		public bool IsDouble { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (_u & NANISH_MASK) < val_null; }
 
 		// ==== ACCESSORS =======================================================
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -243,11 +243,11 @@ namespace MiniScript {
                 int extraChars = 0;
                 double factor = as_double(b);
                 if (double.IsNaN(factor) || double.IsInfinity(factor)) return Null();
-                if (factor <= 0) return make_string("");
+                if (factor <= 0) return val_empty_string;
                 repeats = (int)factor;
                 // TODO: Do we need to check Max length of a string like in 1.0?
 
-                Value result = make_string("");
+                Value result = val_empty_string;
                 for (int i = 0; i < repeats; i++) {
                     result = StringConcat(result, a);
                 }
@@ -385,12 +385,16 @@ namespace MiniScript {
 	// so we don't have two ways to do things in the C# code (only one of which
 	// actually works in any transpiled code).
 	public static class ValueHelpers {
-	
-		public static Value NULL_VALUE = Value.Null();
-	
+
+		// Common constant values (matching value.h)
+		public static Value val_null = val_null;
+		public static Value val_zero = Value.FromInt(0);
+		public static Value val_one = Value.FromInt(1);
+		public static Value val_empty_string = Value.FromString("");
+
 		// Core value creation functions (matching value.h)
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Value make_null() => Value.Null();
+		public static Value make_null() => val_null;
 		
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Value make_int(int i) => Value.FromInt(i);
@@ -636,7 +640,7 @@ namespace MiniScript {
 				    && result <= Int32.MaxValue) return make_int((int)result);
 				return make_double(result);
 			} catch {
-				return make_int(0);
+				return val_zero;
 			}
 		}
 		
@@ -677,7 +681,7 @@ namespace MiniScript {
 		public void Add(Value item) => _items.Add(item);
 		
 		public Value Get(int index) {
-			if (index < 0 || index >= _items.Count) return Value.Null();
+			if (index < 0 || index >= _items.Count) return val_null;
 			return _items[index];
 		}
 		
@@ -710,7 +714,7 @@ namespace MiniScript {
 			if (_items.TryGetValue(key, out Value value)) {
 				return value;
 			}
-			return Value.Null();
+			return val_null;
 		}
 
 		public virtual bool Set(Value key, Value value) {
@@ -737,7 +741,7 @@ namespace MiniScript {
 	// String operations
 	public static class StringOperations {
 		public static Value StringSplit(Value str, Value delimiter) {
-			if (!str.IsString || !delimiter.IsString) return Value.Null();
+			if (!str.IsString || !delimiter.IsString) return val_null;
 			
 			string s = GetStringValue(str);
 			string delim = GetStringValue(delimiter);
@@ -762,7 +766,7 @@ namespace MiniScript {
 		}
 		
 		public static Value StringReplace(Value str, Value from, Value to) {
-			if (!str.IsString || !from.IsString || !to.IsString) return Value.Null();
+			if (!str.IsString || !from.IsString || !to.IsString) return val_null;
 			
 			string s = GetStringValue(str);
 			string fromStr = GetStringValue(from);
@@ -789,7 +793,7 @@ namespace MiniScript {
 		}
 		
 		public static Value StringConcat(Value str1, Value str2) {
-			if (!str1.IsString || !str2.IsString) return Value.Null();
+			if (!str1.IsString || !str2.IsString) return val_null;
 			
 			string s1 = GetStringValue(str1);
 			string s2 = GetStringValue(str2);
