@@ -7,6 +7,7 @@ using static MiniScript.ValueHelpers;
 // CPP: #include "UnitTests.g.h"
 // CPP: #include "VM.g.h"
 // CPP: #include "gc.h"
+// CPP: #include "gc_debug_output.h"
 // CPP: #include "value_string.h"
 // CPP: #include "dispatch_macros.h"
 // CPP: #include "VMVis.g.h"

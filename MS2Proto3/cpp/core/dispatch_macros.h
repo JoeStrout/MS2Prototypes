@@ -4,6 +4,9 @@
 //	1. Computed-goto (using a list of labels, one per opcode).
 //	2. An ordinary `switch` statement (just like the C# version).
 
+// This file is part of Layer 0 (foundation utilities)
+#define CORE_LAYER_0
+
 // Feature detection (override with -DVM_USE_COMPUTED_GOTO=0/1)
 #ifndef VM_USE_COMPUTED_GOTO
 /*
@@ -109,3 +112,7 @@
 	#define VM_DISPATCH_END()  default: IOHelper::Print("unknown opcode"); return make_null(); }
 	#define VM_DISPATCH_BOTTOM()
 #endif
+
+// Layer 0 foundation utility - safe to include from any layer
+// No layer violation checks needed (Layer 0 has no dependencies)
+

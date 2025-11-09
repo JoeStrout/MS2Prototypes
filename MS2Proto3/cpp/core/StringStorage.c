@@ -5,6 +5,11 @@
 #include "unicodeUtil.h"
 #include "hashing.h"
 
+#include "layer_defs.h"
+#if LAYER_1_VIOLATIONS
+#error "StringStorage.h (Layer 1) cannot depend on higher layers"
+#endif
+
 // Creation and destruction functions
 StringStorage* ss_create(const char* cstr, StringStorageAllocator allocator) {
     if (!cstr || !allocator) return NULL;

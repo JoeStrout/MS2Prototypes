@@ -8,6 +8,9 @@
 #include "value.h"
 #include <stdbool.h>
 
+// This module is part of Layer 2A (Runtime Value System + GC)
+#define CORE_LAYER_2A
+
 #ifdef __cplusplus
 extern "C" {
 #endif

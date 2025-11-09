@@ -11,6 +11,9 @@
 #include "value.h"
 #include <stddef.h>
 
+// This module is part of Layer 2A (Runtime Value System + GC)
+#define CORE_LAYER_2A
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -57,14 +60,19 @@ typedef struct {
     size_t bytes_allocated;
     size_t gc_threshold;
     int collections_count;
+    int root_count;
     bool is_enabled;
 } GCStats;
 
 GCStats gc_get_stats(void);
 
-// Debug dump functions
-void gc_dump_objects(void);              // Dump all GC objects with hex/ASCII view
-void gc_mark_and_report(void);           // Run mark phase and dump with reachability info
+// Accessor functions for debug output (used by gc_debug_output.c)
+// These allow traversing internal GC structures without exposing implementation details
+void* gc_get_all_objects(void);
+void* gc_get_next_object(void* obj);
+size_t gc_get_object_size(void* obj);
+bool gc_is_object_marked(void* obj);
+void gc_mark_phase(void);  // Exposed for gc_mark_and_report
 
 #ifdef __cplusplus
 } // extern "C"

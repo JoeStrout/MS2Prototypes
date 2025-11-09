@@ -1,6 +1,14 @@
 #include "MemPool.h"
-#include "core_includes.h"
 #include <cstring>
+#include <cstdio>
+
+#include "layer_defs.h"
+#if LAYER_2B_HIGHER
+#error "MemPool.cpp (Layer 2B) cannot depend on higher layers (3B, 4)"
+#endif
+#if LAYER_2B_ASIDE
+#error "MemPool.cpp (Layer 2B - host) cannot depend on A-side layers (2A, 3A)"
+#endif
 
 #if MEM_DEBUG
 #include <cstdio>

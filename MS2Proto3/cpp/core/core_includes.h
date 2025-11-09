@@ -10,6 +10,9 @@
 
 #include <cstdint>
 
+// This module is part of Layer 3B (Host C# Compatibility Layer)
+#define CORE_LAYER_3B
+
 // Data types which, in C#, are all defined in System.
 // C# code should use these instead of the shortcuts (int, byte, long, etc.)
 using Byte    = uint8_t;   // use this instead of byte
@@ -45,5 +48,13 @@ const Int32 Int32MaxValue = 2147483647;
 const UInt32 UInt32MinValue = 0;
 const UInt32 UInt32MaxValue = 4294967295U;
 
+// Header-only module - check for layer violations here
+#include "layer_defs.h"
+#if LAYER_3B_HIGHER
+#error "core_includes.h (Layer 3B) cannot depend on higher layers (4)"
+#endif
+#if LAYER_3B_ASIDE
+#error "core_includes.h (Layer 3B - host) cannot depend on A-side layers (2A, 3A)"
+#endif
 
 #endif // CORE_INCLUDES_H

@@ -7,6 +7,9 @@
 #include "StringStorage.h"
 #include <cstdint>
 
+// This module is part of Layer 2B (Host Memory Management)
+#define CORE_LAYER_2B
+
 namespace StringPool {
 
 struct HashEntry {

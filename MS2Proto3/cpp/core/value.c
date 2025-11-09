@@ -7,61 +7,24 @@
 #include "value_string.h"
 #include "value_list.h"
 #include "value_map.h"
+#include "gc.h"
 #include "StringStorage.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+
+#include "layer_defs.h"
+#if LAYER_2A_HIGHER
+#error "value.c (Layer 2A) cannot depend on higher layers (3A, 4)"
+#endif
+#if LAYER_2A_BSIDE
+#error "value.c (Layer 2A - runtime) cannot depend on B-side layers (2B, 3B)"
+#endif
 #include <string.h>
 
 // Debug utilities for Value inspection
-void debug_print_value(Value v) {
-    if (is_null(v)) {
-        printf("null");
-    } else if (is_int(v)) {
-        printf("int(%d)", as_int(v));
-    } else if (is_double(v)) {
-        printf("double(%g)", as_double(v));
-    } else if (is_tiny_string(v)) {
-        const char* data = GET_VALUE_DATA_PTR_CONST(&v);
-        int len = (int)(unsigned char)data[0];
-        printf("tiny_string(len=%d,\"", len);
-        for (int i = 0; i < len && i < TINY_STRING_MAX_LEN; i++) {
-            char c = data[1 + i];
-            if (c >= 32 && c <= 126) {
-                printf("%c", c);
-            } else {
-                printf("\\x%02x", (unsigned char)c);
-            }
-        }
-        printf("\")");
-    } else if (is_heap_string(v)) {
-        uintptr_t ptr = (uintptr_t)(v & 0xFFFFFFFFFFFFULL);
-        printf("heap_string(ptr=0x%llx)", (unsigned long long)ptr);
-    } else if (is_list(v)) {
-        uintptr_t ptr = (uintptr_t)(v & 0xFFFFFFFFFFFFULL);
-        printf("list(ptr=0x%llx)", (unsigned long long)ptr);
-    } else if (is_map(v)) {
-        uintptr_t ptr = (uintptr_t)(v & 0xFFFFFFFFFFFFULL);
-        printf("map(ptr=0x%llx)", (unsigned long long)ptr);
-    } else {
-        printf("unknown(0x%016llx)", v);
-    }
-}
-
-// Value type name for debugging
-const char* value_type_name(Value v) {
-    if (is_null(v)) return "nil";
-    if (is_int(v)) return "int";
-    if (is_double(v)) return "double";
-    if (is_tiny_string(v)) return "tiny_string";
-    if (is_heap_string(v)) return "heap_string";
-    if (is_list(v)) return "list";
-    if (is_map(v)) return "map";
-    return "unknown";
-}
-
 // Arithmetic operations for VM support
 // Note: value_add() and value_sub() are now inlined in value.h
 

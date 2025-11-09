@@ -18,6 +18,9 @@
 #include <string.h>
 #include "hashing.h"
 
+// This module is part of Layer 2A (Runtime Value System + GC)
+#define CORE_LAYER_2A
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -139,20 +142,13 @@ typedef struct {
     Value outerVars;      // VarMap containing captured outer variables, or null if none
 } ValueFuncRef;
 
-// Forward declare GC allocation function
+// Forward declare GC allocation function (implemented in gc.h/.c)
 extern void* gc_allocate(size_t size);
 
+// FuncRef accessor functions
 static inline ValueFuncRef* as_funcref(Value v) {
     if (!is_funcref(v)) return NULL;
     return (ValueFuncRef*)(uintptr_t)(v & 0xFFFFFFFFFFFFULL);
-}
-
-static inline Value make_funcref(int32_t funcIndex, Value outerVars) {
-    // Create ValueFuncRef using GC allocation
-    ValueFuncRef* funcRefObj = (ValueFuncRef*)gc_allocate(sizeof(ValueFuncRef));
-    funcRefObj->funcIndex = funcIndex;
-    funcRefObj->outerVars = outerVars;
-    return FUNCREF_TAG | ((uintptr_t)funcRefObj & 0xFFFFFFFFFFFFULL);
 }
 
 static inline int32_t funcref_index(Value v) {
@@ -163,6 +159,14 @@ static inline int32_t funcref_index(Value v) {
 static inline Value funcref_outer_vars(Value v) {
     ValueFuncRef* funcRefObj = as_funcref(v);
     return funcRefObj ? funcRefObj->outerVars : make_null();
+}
+
+// FuncRef creation function
+static inline Value make_funcref(int32_t funcIndex, Value outerVars) {
+    ValueFuncRef* funcRefObj = (ValueFuncRef*)gc_allocate(sizeof(ValueFuncRef));
+    funcRefObj->funcIndex = funcIndex;
+    funcRefObj->outerVars = outerVars;
+    return FUNCREF_TAG | ((uintptr_t)funcRefObj & 0xFFFFFFFFFFFFULL);
 }
 
 // Map creation functions (forward declarations for value_map.h)
@@ -375,11 +379,9 @@ Value value_shl(Value v, int shift);
 // Hash function for Values
 uint32_t value_hash(Value v);
 
-// Debug utility functions (implemented in value.c)
-void debug_print_value(Value v);
-const char* value_type_name(Value v);
 
 #ifdef __cplusplus
 } // extern "C"
 #endif
+
 #endif // NANBOX_H

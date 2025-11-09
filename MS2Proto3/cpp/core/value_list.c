@@ -6,6 +6,14 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "layer_defs.h"
+#if LAYER_2A_HIGHER
+#error "value_list.c (Layer 2A) cannot depend on higher layers (3A, 4)"
+#endif
+#if LAYER_2A_BSIDE
+#error "value_list.c (Layer 2A - runtime) cannot depend on B-side layers (2B, 3B)"
+#endif
+
 // List creation and management
 Value make_list(int initial_capacity) {
     if (initial_capacity <= 0) initial_capacity = 8; // Default capacity

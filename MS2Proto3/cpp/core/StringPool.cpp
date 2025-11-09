@@ -1,12 +1,41 @@
 // StringPool.cpp
 #include "StringPool.h"
-#include "CS_String.h"
 #include "hashing.h"
-#include "value_string.h"  // for print_string_escaped
 #include <cstring>  // strlen, memcpy
 #include <cstdio>
 
-uint8_t String::defaultPool = 0;
+#include "layer_defs.h"
+#if LAYER_2B_HIGHER
+#error "StringPool.cpp (Layer 2B) cannot depend on higher layers (3B, 4)"
+#endif
+#if LAYER_2B_ASIDE
+#error "StringPool.cpp (Layer 2B - host) cannot depend on A-side layers (2A, 3A)"
+#endif
+
+// Local helper for debug output (B-side version, can't use gc_debug_output from A-side)
+static void print_string_escaped(const char* str, int len, int max_len) {
+    for (int i = 0; i < len && i < max_len; i++) {
+        unsigned char c = (unsigned char)str[i];
+        if (c >= 32 && c < 127 && c != '"' && c != '\\') {
+            printf("%c", c);
+        } else if (c == '\n') {
+            printf("\\n");
+        } else if (c == '\r') {
+            printf("\\r");
+        } else if (c == '\t') {
+            printf("\\t");
+        } else if (c == '"') {
+            printf("\\\"");
+        } else if (c == '\\') {
+            printf("\\\\");
+        } else {
+            printf("\\x%02x", c);
+        }
+    }
+    if (len > max_len) {
+        printf("...");
+    }
+}
 
 namespace StringPool {
 

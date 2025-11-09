@@ -12,6 +12,9 @@
 #include <cstdint>
 #include <cstdlib>
 
+// This module is part of Layer 2B (Host Memory Management)
+#define CORE_LAYER_2B
+
 // MemPool reference - trivially copyable handle
 struct __attribute__((packed)) MemRef {
     uint8_t poolNum;    // Pool number (0-255)

@@ -1,4 +1,4 @@
-// String utilities: conversion between ints and strings, etc.
+// String utilities: conversion between ints and Strings, etc.
 
 using System;
 using System.Collections.Generic;
@@ -70,9 +70,8 @@ namespace MiniScript {
 
 		// Convert a Value to its representation (quoted string for strings, plain for others)
 		// This is used when displaying values in source code form.
-		public static String makeRepr(Value v) {
-			// CPP: return makeRepr(0, v).c_str();
-			//*** BEGIN CS_ONLY ***
+		//*** BEGIN CS_ONLY ***
+		public static String makeRepr(int pool, Value v) {
 			if (ValueHelpers.is_string(v)) {
 				String str = ValueHelpers.as_cstring(v);
 				// Replace quotes: " becomes ""
@@ -81,8 +80,8 @@ namespace MiniScript {
 				return "\"" + escaped + "\"";
 			}
 			return v.ToString();
-			//*** END CS_ONLY ***
 		}
+		//*** END CS_ONLY ***
 
 		//*** BEGIN CS_ONLY ***
 		public static string Left(this string s, int n) {

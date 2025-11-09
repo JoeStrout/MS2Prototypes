@@ -9,6 +9,9 @@
 #include "StringStorage.h"
 #include <stdbool.h>
 
+// This module is part of Layer 2A (Runtime Value System + GC)
+#define CORE_LAYER_2A
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,12 +51,13 @@ uint32_t string_hash(const char* data, int len);
 // Get or compute hash value for a string
 uint32_t get_string_hash(Value str_val);
 
-// Debug dump function for interned strings
-void dump_intern_table(void);
-
-// Helper function to print a string with escape sequences (for debugging)
-// Prints up to max_len characters, truncates with "..." if longer
-void print_string_escaped(const char* str, int len, int max_len);
+// Accessor functions for debug output (used by gc_debug_output.c)
+void* value_string_get_intern_table(void);
+void* value_string_get_intern_entry_at(int bucket);
+void* value_string_get_next_intern_entry(void* entry);
+Value value_string_get_entry_value(void* entry);
+int value_string_get_intern_table_size(void);
+bool value_string_is_intern_table_initialized(void);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -9,6 +9,18 @@
 #include <cstring>
 #include <initializer_list>
 
+// This module is part of Layer 3B (Host C# Compatibility Layer)
+#define CORE_LAYER_3B
+
+// Header-only module - check for layer violations here
+#include "layer_defs.h"
+#if LAYER_3B_HIGHER
+#error "CS_List.h (Layer 3B) cannot depend on higher layers (4)"
+#endif
+#if LAYER_3B_ASIDE
+#error "CS_List.h (Layer 3B - host) cannot depend on A-side layers (2A, 3A)"
+#endif
+
 // Forward declaration
 template<typename T> class List;
 
@@ -416,6 +428,7 @@ public:
     // Pool management
     uint8_t getPoolNum() const { return storage.poolNum; }
     MemRef getMemRef() const { return storage; }
-    
+
     bool isValid() const { return !storage.isNull() && getStorage() != nullptr; }
 };
+

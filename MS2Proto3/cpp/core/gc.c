@@ -9,6 +9,14 @@
 #include <string.h>
 #include <assert.h>
 
+#include "layer_defs.h"
+#if LAYER_2A_HIGHER
+#error "gc.c (Layer 2A) cannot depend on higher layers (3A, 4)"
+#endif
+#if LAYER_2A_BSIDE
+#error "gc.c (Layer 2A - runtime) cannot depend on B-side layers (2B, 3B)"
+#endif
+
 // #define GC_DEBUG 1
 // #define GC_AGGRESSIVE 1  // Collect on every allocation (for testing)
 
@@ -229,7 +237,7 @@ void gc_mark_map(ValueMap* map) {
     }
 }
 
-static void gc_mark_phase(void) {
+void gc_mark_phase(void) {
     // Mark all objects reachable from roots (shadow stack)
     for (int i = 0; i < gc.root_set.count; i++) {
         Value* root_ptr = gc.root_set.roots[i];
@@ -299,167 +307,29 @@ GCStats gc_get_stats(void) {
         .bytes_allocated = gc.bytes_allocated,
         .gc_threshold = gc.gc_threshold,
         .collections_count = gc.collections_count,
+        .root_count = gc.root_set.count,
         .is_enabled = (gc.disable_count == 0)
     };
     return stats;
 }
 
-// Helper to print a line of hex/ASCII dump
-static void print_hex_ascii_line(const unsigned char* data, size_t offset, size_t len, size_t total_size) {
-    // Print offset
-    printf("  %04zx: ", offset);
-
-    // Print hex bytes (16 per line)
-    for (size_t i = 0; i < 16; i++) {
-        if (i < len) {
-            printf("%02x ", data[offset + i]);
-        } else {
-            printf("   ");
-        }
-        if (i == 7) printf(" ");  // Extra space in middle
-    }
-
-    printf(" |");
-
-    // Print ASCII representation
-    for (size_t i = 0; i < 16 && i < len; i++) {
-        unsigned char c = data[offset + i];
-        if (c >= 32 && c < 127) {
-            printf("%c", c);
-        } else {
-            printf(".");
-        }
-    }
-
-    printf("|\n");
+// Accessor functions for debug output (used by gc_debug_output.c)
+// These allow traversing internal GC structures without exposing implementation details
+void* gc_get_all_objects(void) {
+    return gc.all_objects;
 }
 
-// Dump all GC objects with hex/ASCII view
-void gc_dump_objects(void) {
-    printf("\n=== GC Objects Dump ===\n");
-    printf("Total allocated: %zu bytes\n", gc.bytes_allocated);
-    printf("GC threshold: %zu bytes\n", gc.gc_threshold);
-    printf("Collections: %d\n\n", gc.collections_count);
-
-    int object_count = 0;
-    GCObject* obj = gc.all_objects;
-
-    while (obj) {
-        object_count++;
-
-        // Get pointer to actual data (after GCObject header)
-        unsigned char* data = (unsigned char*)obj + sizeof(GCObject);
-        size_t data_size = obj->size - sizeof(GCObject);
-
-        printf("Object #%d @ %p:\n", object_count, (void*)obj);
-        printf("  Size: %zu bytes (+ %zu header = %zu total)\n",
-               data_size, sizeof(GCObject), obj->size);
-        printf("  Marked: %s\n", obj->marked ? "YES" : "no");
-
-        // Try to heuristically identify if this looks like a StringStorage
-        bool looks_like_string = false;
-        if (data_size >= sizeof(StringStorage)) {
-            StringStorage* maybe_str = (StringStorage*)data;
-            // Check if lengths are reasonable and hash is non-zero
-            if (maybe_str->lenB >= 0 && maybe_str->lenB < 10000 &&
-                maybe_str->lenC >= -1 && maybe_str->lenC <= maybe_str->lenB) {
-                looks_like_string = true;
-                printf("  Type hint: Possibly StringStorage (lenB=%d, lenC=%d, hash=0x%08x)\n",
-                       maybe_str->lenB, maybe_str->lenC, maybe_str->hash);
-                if (maybe_str->lenB > 0 && maybe_str->lenB < 200) {
-                    printf("  String data: \"");
-                    print_string_escaped(maybe_str->data, maybe_str->lenB, 60);
-                    printf("\"\n");
-                }
-            }
-        }
-
-        // Hex/ASCII dump (first 64 bytes or less)
-        size_t dump_size = data_size < 64 ? data_size : 64;
-        printf("  Data (first %zu bytes):\n", dump_size);
-
-        for (size_t offset = 0; offset < dump_size; offset += 16) {
-            size_t line_len = (offset + 16 <= dump_size) ? 16 : (dump_size - offset);
-            print_hex_ascii_line(data, offset, line_len, data_size);
-        }
-
-        if (data_size > 64) {
-            printf("  ... (%zu more bytes)\n", data_size - 64);
-        }
-
-        printf("\n");
-        obj = obj->next;
-    }
-
-    if (object_count == 0) {
-        printf("No GC objects allocated.\n");
-    } else {
-        printf("Total objects: %d\n", object_count);
-    }
+void* gc_get_next_object(void* obj) {
+    if (!obj) return NULL;
+    return ((GCObject*)obj)->next;
 }
 
-// Run mark phase and dump objects with reachability info
-void gc_mark_and_report(void) {
-    if (gc.disable_count > 0) {
-        printf("GC is currently disabled (disable_count=%d)\n", gc.disable_count);
-        return;
-    }
+size_t gc_get_object_size(void* obj) {
+    if (!obj) return 0;
+    return ((GCObject*)obj)->size;
+}
 
-    printf("\n=== GC Mark and Report ===\n");
-    printf("Running mark phase from %d roots...\n", gc.root_set.count);
-
-    // Run mark phase (but NOT sweep)
-    gc_mark_phase();
-
-    printf("\n=== Reachability Report ===\n");
-
-    int marked_count = 0;
-    int unmarked_count = 0;
-    size_t marked_bytes = 0;
-    size_t unmarked_bytes = 0;
-
-    GCObject* obj = gc.all_objects;
-    while (obj) {
-        if (obj->marked) {
-            marked_count++;
-            marked_bytes += obj->size;
-        } else {
-            unmarked_count++;
-            unmarked_bytes += obj->size;
-        }
-        obj = obj->next;
-    }
-
-    printf("Reachable (marked): %d objects, %zu bytes\n", marked_count, marked_bytes);
-    printf("Unreachable (unmarked): %d objects, %zu bytes\n", unmarked_count, unmarked_bytes);
-    printf("\nReachable objects:\n");
-
-    // Dump marked objects
-    int obj_num = 0;
-    obj = gc.all_objects;
-    while (obj) {
-        if (obj->marked) {
-            obj_num++;
-            unsigned char* data = (unsigned char*)obj + sizeof(GCObject);
-            size_t data_size = obj->size - sizeof(GCObject);
-
-            printf("\n#%d @ %p: %zu bytes\n", obj_num, (void*)obj, data_size);
-
-            // Try to identify type
-            if (data_size >= sizeof(StringStorage)) {
-                StringStorage* maybe_str = (StringStorage*)data;
-                if (maybe_str->lenB >= 0 && maybe_str->lenB < 10000 &&
-                    maybe_str->lenC >= -1 && maybe_str->lenC <= maybe_str->lenB) {
-                    printf("  [StringStorage: lenB=%d, hash=0x%08x] \"",
-                           maybe_str->lenB, maybe_str->hash);
-                    print_string_escaped(maybe_str->data, maybe_str->lenB, 60);
-                    printf("\"\n");
-                }
-            }
-        }
-        obj = obj->next;
-    }
-
-    printf("\n=== End Report ===\n");
-    printf("Note: Marks remain set. Run gc_collect() to sweep and clear marks.\n");
+bool gc_is_object_marked(void* obj) {
+    if (!obj) return false;
+    return ((GCObject*)obj)->marked;
 }

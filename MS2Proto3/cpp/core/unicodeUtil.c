@@ -6,6 +6,11 @@
 #include "unicodeUtil.h"
 #include <stdlib.h>
 
+#include "layer_defs.h"
+#if LAYER_0_VIOLATIONS
+#error "unicodeUtil.c (Layer 0) cannot depend on any higher layer"
+#endif
+
 // table of upper-case code points (each corresponds to the entry at the same
 // position in sLowerTable, and where an entry appears more than once, the
 // earlier (lower-valued) one is preferred):

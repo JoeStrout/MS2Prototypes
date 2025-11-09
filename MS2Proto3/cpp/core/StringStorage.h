@@ -16,6 +16,9 @@ extern "C" {
 
 #include "unicodeUtil.h"
 
+// This file is part of Layer 1 (string infrastructure)
+#define CORE_LAYER_1
+
 typedef struct StringStorage {
     int lenB;           // Length in bytes
     int lenC;           // Length in characters (UTF-8)

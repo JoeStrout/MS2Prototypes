@@ -6,6 +6,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+// This file is part of Layer 0 (foundation utilities)
+#define CORE_LAYER_0
+
 #ifdef __cplusplus
 extern "C" {
 #endif

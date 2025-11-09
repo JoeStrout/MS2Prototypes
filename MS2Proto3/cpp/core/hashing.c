@@ -1,5 +1,10 @@
 #include "hashing.h"
 
+#include "layer_defs.h"
+#if LAYER_0_VIOLATIONS
+#error "hashing.h (Layer 0) cannot depend on any higher layer"
+#endif
+
 
 // FNV-1a hash function for strings
 // Returns 0 to indicate "not computed" is reserved, so we use 1 as minimum hash
