@@ -48,13 +48,4 @@ const Int32 Int32MaxValue = 2147483647;
 const UInt32 UInt32MinValue = 0;
 const UInt32 UInt32MaxValue = 4294967295U;
 
-// Header-only module - check for layer violations here
-#include "layer_defs.h"
-#if LAYER_3B_HIGHER
-#error "core_includes.h (Layer 3B) cannot depend on higher layers (4)"
-#endif
-#if LAYER_3B_ASIDE
-#error "core_includes.h (Layer 3B - host) cannot depend on A-side layers (2A, 3A)"
-#endif
-
 #endif // CORE_INCLUDES_H

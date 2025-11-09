@@ -223,7 +223,8 @@ Value list_to_string(Value list_val) {
     if (list->count == 0) return make_string("[]");
 
     // Build string: [item1, item2, ...]
-    // Use a simple approach: build each part and concatenate
+    // For now: a simple approach: build each part and concatenate.
+    // ToDo: a more efficient approach using Join
     Value result = make_string("[");
 
     for (int i = 0; i < list->count; i++) {

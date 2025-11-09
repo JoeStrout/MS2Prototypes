@@ -6,6 +6,7 @@ using System.Collections.Generic;
 // CPP: #include "FuncDef.g.h"
 // CPP: #include "StringUtils.g.h"
 // CPP: #include "MemPoolShim.g.h"
+// CPP: #include "CS_value_util.h"
 // CPP: #include <climits>
 
 using static MiniScript.ValueHelpers;
@@ -195,7 +196,7 @@ namespace MiniScript {
 
 				// Add parameter to current function (store name as Value string)
 				// ToDo: make simple, consistent conversion functions between String and Value, and use everywhere.
-				Current.ParamNames.Add(make_string(paramName)); // CPP: Current.ParamNames.Add(make_string(paramName.c_str()));
+				Current.ParamNames.Add(make_string(paramName));
 				Current.ParamDefaults.Add(defaultValue);
 
 				return 0; // Directives don't produce instructions
@@ -1087,7 +1088,7 @@ namespace MiniScript {
 			if (IsStringLiteral(token)) {
 				// Remove quotes and create string value
 				String content = token.Substring(1, token.Length - 2);
-				return make_string(content); // CPP: return make_string(content.c_str());
+				return make_string(content);
 			}
 			
 			// Check if it contains a decimal point (floating point number).
