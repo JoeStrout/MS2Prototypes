@@ -16,6 +16,9 @@ using static MiniScript.ValueHelpers;
 
 namespace MiniScript {
 
+	using CallInfoRef = CallInfo;
+	using FuncDefRef = FuncDef;
+	
 	// Call stack frame (return info)
 	public class CallInfo {
 		public Int32 ReturnPC;        // where to continue in caller (PC index)
@@ -299,7 +302,7 @@ namespace MiniScript {
 			Int32 baseIndex = BaseIndex;
 			Int32 currentFuncIndex = _currentFuncIndex;
 
-			FuncDef curFunc = CurrentFunction; // CPP: FuncDef& curFunc = CurrentFunction;
+			FuncDefRef curFunc = CurrentFunction; // should be: FuncDef& curFunc = CurrentFunction;
 			Int32 codeCount = curFunc.Code.Count;
 			var curCode = curFunc.Code; // CPP: UInt32* curCode = &curFunc.Code[0];
 			var curConstants = curFunc.Constants; // CPP: Value* curConstants = &curFunc.Constants[0];
@@ -356,36 +359,36 @@ namespace MiniScript {
 				
 				switch (opcode) { // CPP: VM_DISPATCH_BEGIN();
 				
-					case Opcode.NOOP: { // CPP: VM_CASE(NOOP) {
+					case Opcode.NOOP: {
 						// No operation
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LOAD_rA_rB: { // CPP: VM_CASE(LOAD_rA_rB) {
+					case Opcode.LOAD_rA_rB: {
 						// R[A] = R[B] (equivalent to MOVE)
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						localStack[a] = localStack[b];
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LOAD_rA_iBC: { // CPP: VM_CASE(LOAD_rA_iBC) {
+					case Opcode.LOAD_rA_iBC: {
 						// R[A] = BC (signed 16-bit immediate as integer)
 						Byte a = BytecodeUtil.Au(instruction);
 						short bc = BytecodeUtil.BCs(instruction);
 						localStack[a] = make_int(bc);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LOAD_rA_kBC: { // CPP: VM_CASE(LOAD_rA_kBC) {
+					case Opcode.LOAD_rA_kBC: {
 						// R[A] = constants[BC]
 						Byte a = BytecodeUtil.Au(instruction);
 						UInt16 constIdx = BytecodeUtil.BCu(instruction);
 						localStack[a] = curConstants[constIdx];
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LOADV_rA_rB_kC: { // CPP: VM_CASE(LOADV_rA_rB_kC) {
+					case Opcode.LOADV_rA_rB_kC: {
 						// R[A] = R[B], but verify that register B has name matching constants[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
@@ -400,10 +403,10 @@ namespace MiniScript {
 							// Variable not found in current scope, look in outer context
 							localStack[a] = LookupVariable(expectedName);
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LOADC_rA_rB_kC: { // CPP: VM_CASE(LOADC_rA_rB_kC) {
+					case Opcode.LOADC_rA_rB_kC: {
 						// R[A] = R[B], but verify that register B has name matching constants[C]
 						// and call the function if the value is a function reference
 						Byte a = BytecodeUtil.Au(instruction);
@@ -459,109 +462,109 @@ namespace MiniScript {
 
 							EnsureFrame(baseIndex, callee.MaxRegs);
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.FUNCREF_iA_iBC: { // CPP: VM_CASE(FUNCREF_iA_iBC) {
+					case Opcode.FUNCREF_iA_iBC: {
 						// R[A] := make_funcref(BC) with closure context
 						Byte a = BytecodeUtil.Au(instruction);
 						Int16 funcIndex = BytecodeUtil.BCs(instruction);
 
 						// Create function reference with our locals as the closure context
-						CallInfo frame = callStack[callStackTop]; // CPP: CallInfo& frame = callStack[callStackTop];
+						CallInfoRef frame = callStack[callStackTop];
 						Value locals = frame.GetLocalVarMap(stack, names, baseIndex, curFunc.MaxRegs);
 						localStack[a] = make_funcref(funcIndex, locals);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.ASSIGN_rA_rB_kC: { // CPP: VM_CASE(ASSIGN_rA_rB_kC) {
+					case Opcode.ASSIGN_rA_rB_kC: {
 						// R[A] = R[B] and names[baseIndex + A] = constants[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 						localStack[a] = localStack[b];
 						names[baseIndex + a] = curConstants[c];	// OFI: keep localNames?
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.NAME_rA_kBC: { // CPP: VM_CASE(NAME_rA_kBC) {
+					case Opcode.NAME_rA_kBC: {
 						// names[baseIndex + A] = constants[BC] (without changing R[A])
 						Byte a = BytecodeUtil.Au(instruction);
 						UInt16 constIdx = BytecodeUtil.BCu(instruction);
 						names[baseIndex + a] = curConstants[constIdx];	// OFI: keep localNames?
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.ADD_rA_rB_rC: { // CPP: VM_CASE(ADD_rA_rB_rC) {
+					case Opcode.ADD_rA_rB_rC: {
 						// R[A] = R[B] + R[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 						localStack[a] = value_add(localStack[b], localStack[c]);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.SUB_rA_rB_rC: { // CPP: VM_CASE(SUB_rA_rB_rC) {
+					case Opcode.SUB_rA_rB_rC: {
 						// R[A] = R[B] - R[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 						localStack[a] = value_sub(localStack[b], localStack[c]);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.MULT_rA_rB_rC: { // CPP: VM_CASE(MULT_rA_rB_rC) {
+					case Opcode.MULT_rA_rB_rC: {
 						// R[A] = R[B] * R[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 						localStack[a] = value_mult(localStack[b], localStack[c]);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.DIV_rA_rB_rC: { // CPP: VM_CASE(DIV_rA_rB_rC) {
+					case Opcode.DIV_rA_rB_rC: {
 						// R[A] = R[B] * R[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 						localStack[a] = value_div(localStack[b], localStack[c]);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-                    case Opcode.MOD_rA_rB_rC: { // CPP: VM_CASE(MOD_rA_rB_rC) {
+                    case Opcode.MOD_rA_rB_rC: {
 						// R[A] = R[B] % R[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 						localStack[a] = value_mod(localStack[b], localStack[c]);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LIST_rA_iBC: { // CPP: VM_CASE(LIST_rA_iBC) {
+					case Opcode.LIST_rA_iBC: {
 						// R[A] = make_list(BC)
 						Byte a = BytecodeUtil.Au(instruction);
 						Int16 capacity = BytecodeUtil.BCs(instruction);
 						localStack[a] = make_list(capacity);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.MAP_rA_iBC: { // CPP: VM_CASE(MAP_rA_iBC) {
+					case Opcode.MAP_rA_iBC: {
 						// R[A] = make_map(BC)
 						Byte a = BytecodeUtil.Au(instruction);
 						Int16 capacity = BytecodeUtil.BCs(instruction);
 						localStack[a] = make_map(capacity);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.PUSH_rA_rB: { // CPP: VM_CASE(PUSH_rA_rB) {
+					case Opcode.PUSH_rA_rB: {
 						// list_push(R[A], R[B])
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						list_push(localStack[a], localStack[b]);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.INDEX_rA_rB_rC: { // CPP: VM_CASE(INDEX_rA_rB_rC) {
+					case Opcode.INDEX_rA_rB_rC: {
 						// R[A] = R[B][R[C]] (supports both lists and maps)
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
@@ -582,10 +585,10 @@ namespace MiniScript {
 							RaiseRuntimeError(StringUtils.Format("Can't index into {0}", container));
 							localStack[a] = make_null();
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.IDXSET_rA_rB_rC: { // CPP: VM_CASE(IDXSET_rA_rB_rC) {
+					case Opcode.IDXSET_rA_rB_rC: {
 						// R[A][R[B]] = R[C] (supports both lists and maps)
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
@@ -601,165 +604,165 @@ namespace MiniScript {
 						} else {
 							RaiseRuntimeError(StringUtils.Format("Can't set indexed value in {0}", container));
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LOCALS_rA: { // CPP: VM_CASE(LOCALS_rA) {
+					case Opcode.LOCALS_rA: {
 						// Create VarMap for local variables and store in R[A]
 						Byte a = BytecodeUtil.Au(instruction);
 
-						CallInfo frame = callStack[callStackTop]; // CPP: CallInfo& frame = callStack[callStackTop];
+						CallInfoRef frame = callStack[callStackTop];
 						localStack[a] = frame.GetLocalVarMap(stack, names, baseIndex, curFunc.MaxRegs);
 						names[baseIndex+a] = make_null();
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.OUTER_rA: { // CPP: VM_CASE(OUTER_rA) {
+					case Opcode.OUTER_rA: {
 						// Create VarMap for outer variables and store in R[A]
 						// TODO: Implement outer variable map access
 						Byte a = BytecodeUtil.Au(instruction);
-						CallInfo frame = callStack[callStackTop-1]; // CPP: CallInfo& frame = callStack[callStackTop-1];
+						CallInfoRef frame = callStack[callStackTop-1];
 						localStack[a] = frame.OuterVarMap;
 						names[baseIndex+a] = make_null();
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.GLOBALS_rA: { // CPP: VM_CASE(GLOBALS_rA) {
+					case Opcode.GLOBALS_rA: {
 						// Create VarMap for global variables and store in R[A]
 						// TODO: Implement global variable map access
 						Byte a = BytecodeUtil.Au(instruction);
 						Int32 globalRegCount = functions[callStack[0].ReturnFuncIndex].MaxRegs;
 						localStack[a] = callStack[0].GetLocalVarMap(stack, names, 0, globalRegCount);
 						names[baseIndex+a] = make_null();
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.JUMP_iABC: { // CPP: VM_CASE(JUMP_iABC) {
+					case Opcode.JUMP_iABC: {
 						// Jump by signed 24-bit ABC offset from current PC
 						Int32 offset = BytecodeUtil.ABCs(instruction);
 						pc += offset;
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LT_rA_rB_rC: { // CPP: VM_CASE(LT_rA_rB_rC) {
+					case Opcode.LT_rA_rB_rC: {
 						// if R[A] = R[B] < R[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 
 						localStack[a] = make_int(value_lt(localStack[b], localStack[c]));
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LT_rA_rB_iC: { // CPP: VM_CASE(LT_rA_rB_iC) {
+					case Opcode.LT_rA_rB_iC: {
 						// if R[A] = R[B] < C (immediate)
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte c = BytecodeUtil.Cs(instruction);
 						
 						localStack[a] = make_int(value_lt(localStack[b], make_int(c)));
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LT_rA_iB_rC: { // CPP: VM_CASE(LT_rA_iB_rC) {
+					case Opcode.LT_rA_iB_rC: {
 						// if R[A] = B (immediate) < R[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						SByte b = BytecodeUtil.Bs(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 						
 						localStack[a] = make_int(value_lt(make_int(b), localStack[c]));
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LE_rA_rB_rC: { // CPP: VM_CASE(LE_rA_rB_rC) {
+					case Opcode.LE_rA_rB_rC: {
 						// if R[A] = R[B] <= R[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 
 						localStack[a] = make_int(value_le(localStack[b], localStack[c]));
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LE_rA_rB_iC: { // CPP: VM_CASE(LE_rA_rB_iC) {
+					case Opcode.LE_rA_rB_iC: {
 						// if R[A] = R[B] <= C (immediate)
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte c = BytecodeUtil.Cs(instruction);
 						
 						localStack[a] = make_int(value_le(localStack[b], make_int(c)));
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.LE_rA_iB_rC: { // CPP: VM_CASE(LE_rA_iB_rC) {
+					case Opcode.LE_rA_iB_rC: {
 						// if R[A] = B (immediate) <= R[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						SByte b = BytecodeUtil.Bs(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 						
 						localStack[a] = make_int(value_le(make_int(b), localStack[c]));
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.EQ_rA_rB_rC: { // CPP: VM_CASE(EQ_rA_rB_rC) {
+					case Opcode.EQ_rA_rB_rC: {
 						// if R[A] = R[B] == R[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 
 						localStack[a] = make_int(value_equal(localStack[b], localStack[c]));
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.EQ_rA_rB_iC: { // CPP: VM_CASE(EQ_rA_rB_iC) {
+					case Opcode.EQ_rA_rB_iC: {
 						// if R[A] = R[B] == C (immediate)
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte c = BytecodeUtil.Cs(instruction);
 						
 						localStack[a] = make_int(value_equal(localStack[b], make_int(c)));
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.NE_rA_rB_rC: { // CPP: VM_CASE(NE_rA_rB_rC) {
+					case Opcode.NE_rA_rB_rC: {
 						// if R[A] = R[B] != R[C]
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						Byte c = BytecodeUtil.Cu(instruction);
 
 						localStack[a] = make_int(!value_equal(localStack[b], localStack[c]));
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.NE_rA_rB_iC: { // CPP: VM_CASE(NE_rA_rB_iC) {
+					case Opcode.NE_rA_rB_iC: {
 						// if R[A] = R[B] != C (immediate)
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						SByte c = BytecodeUtil.Cs(instruction);
 						
 						localStack[a] = make_int(!value_equal(localStack[b], make_int(c)));
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.BRTRUE_rA_iBC: { // CPP: VM_CASE(BRTRUE_rA_iBC) {
+					case Opcode.BRTRUE_rA_iBC: {
 						Byte a = BytecodeUtil.Au(instruction);
 						Int32 offset = BytecodeUtil.BCs(instruction);
 						if (is_truthy(localStack[a])){
 							pc += offset;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.BRFALSE_rA_iBC: { // CPP: VM_CASE(BRFALSE_rA_iBC) {
+					case Opcode.BRFALSE_rA_iBC: {
 						Byte a = BytecodeUtil.Au(instruction);
 						Int32 offset = BytecodeUtil.BCs(instruction);
 						if (!is_truthy(localStack[a])){
 							pc += offset;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.BRLT_rA_rB_iC: { // CPP: VM_CASE(BRLT_rA_rB_iC) {
+					case Opcode.BRLT_rA_rB_iC: {
 						// if R[A] < R[B] then jump offset C.
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
@@ -767,10 +770,10 @@ namespace MiniScript {
 						if (value_lt(localStack[a], localStack[b])){
 							pc += offset;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.BRLT_rA_iB_iC: { // CPP: VM_CASE(BRLT_rA_iB_iC) {
+					case Opcode.BRLT_rA_iB_iC: {
 						// if R[A] < B (immediate) then jump offset C.
 						Byte a = BytecodeUtil.Au(instruction);
 						SByte b = BytecodeUtil.Bs(instruction);
@@ -778,10 +781,10 @@ namespace MiniScript {
 						if (value_lt(localStack[a], make_int(b))){
 							pc += offset;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.BRLT_iA_rB_iC: { // CPP: VM_CASE(BRLT_iA_rB_iC) {
+					case Opcode.BRLT_iA_rB_iC: {
 						// if A (immediate) < R[B] then jump offset C.
 						SByte a = BytecodeUtil.As(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
@@ -789,10 +792,10 @@ namespace MiniScript {
 						if (value_lt(make_int(a), localStack[b])){
 							pc += offset;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.BRLE_rA_rB_iC: { // CPP: VM_CASE(BRLE_rA_rB_iC) {
+					case Opcode.BRLE_rA_rB_iC: {
 						// if R[A] <= R[B] then jump offset C.
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
@@ -800,10 +803,10 @@ namespace MiniScript {
 						if (value_le(localStack[a], localStack[b])){
 							pc += offset;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.BRLE_rA_iB_iC: { // CPP: VM_CASE(BRLE_rA_iB_iC) {
+					case Opcode.BRLE_rA_iB_iC: {
 						// if R[A] <= B (immediate) then jump offset C.
 						Byte a = BytecodeUtil.Au(instruction);
 						SByte b = BytecodeUtil.Bs(instruction);
@@ -811,10 +814,10 @@ namespace MiniScript {
 						if (value_le(localStack[a], make_int(b))){
 							pc += offset;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.BRLE_iA_rB_iC: { // CPP: VM_CASE(BRLE_iA_rB_iC) {
+					case Opcode.BRLE_iA_rB_iC: {
 						// if A (immediate) <= R[B] then jump offset C.
 						SByte a = BytecodeUtil.As(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
@@ -822,10 +825,10 @@ namespace MiniScript {
 						if (value_le(make_int(a), localStack[b])){
 							pc += offset;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.BREQ_rA_rB_iC: { // CPP: VM_CASE(BREQ_rA_rB_iC) {
+					case Opcode.BREQ_rA_rB_iC: {
 						// if R[A] == R[B] then jump offset C.
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
@@ -833,10 +836,10 @@ namespace MiniScript {
 						if (value_equal(localStack[a], localStack[b])){
 							pc += offset;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.BREQ_rA_iB_iC: { // CPP: VM_CASE(BREQ_rA_iB_iC) {
+					case Opcode.BREQ_rA_iB_iC: {
 						// if R[A] == B (immediate) then jump offset C.
 						Byte a = BytecodeUtil.Au(instruction);
 						SByte b = BytecodeUtil.Bs(instruction);
@@ -844,10 +847,10 @@ namespace MiniScript {
 						if (value_equal(localStack[a], make_int(b))){
 							pc += offset;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.BRNE_rA_rB_iC: { // CPP: VM_CASE(BRNE_rA_rB_iC) {
+					case Opcode.BRNE_rA_rB_iC: {
 						// if R[A] != R[B] then jump offset C.
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
@@ -855,10 +858,10 @@ namespace MiniScript {
 						if (!value_equal(localStack[a], localStack[b])){
 							pc += offset;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.BRNE_rA_iB_iC: { // CPP: VM_CASE(BRNE_rA_iB_iC) {
+					case Opcode.BRNE_rA_iB_iC: {
 						// if R[A] != B (immediate) then jump offset C.
 						Byte a = BytecodeUtil.Au(instruction);
 						SByte b = BytecodeUtil.Bs(instruction);
@@ -866,110 +869,110 @@ namespace MiniScript {
 						if (!value_equal(localStack[a], make_int(b))){
 							pc += offset;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.IFLT_rA_rB: { // CPP: VM_CASE(IFLT_rA_rB) {
+					case Opcode.IFLT_rA_rB: {
 						// if R[A] < R[B] is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						if (!value_lt(localStack[a], localStack[b])) {
 							pc++; // Skip next instruction
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.IFLT_rA_iBC: { // CPP: VM_CASE(IFLT_rA_iBC) {
+					case Opcode.IFLT_rA_iBC: {
 						// if R[A] < BC (immediate) is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						short bc = BytecodeUtil.BCs(instruction);
 						if (!value_lt(localStack[a], make_int(bc))) {
 							pc++; // Skip next instruction
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-                    case Opcode.IFLT_iAB_rC: { // CPP: VM_CASE(IFLT_iAB_rC) {
+                    case Opcode.IFLT_iAB_rC: {
 						// if AB (immediate) < R[C] is false, skip next instruction
 						short ab = BytecodeUtil.ABs(instruction);
                         Byte c = BytecodeUtil.Cu(instruction);
 						if (!value_lt(make_int(ab), localStack[c])) {
 							pc++; // Skip next instruction
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-                    case Opcode.IFLE_rA_rB: { // CPP: VM_CASE(IFLE_rA_rB) {
+                    case Opcode.IFLE_rA_rB: {
 						// if R[A] <= R[B] is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						if (!value_le(localStack[a], localStack[b])) {
 							pc++; // Skip next instruction
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.IFLE_rA_iBC: { // CPP: VM_CASE(IFLE_rA_iBC) {
+					case Opcode.IFLE_rA_iBC: {
 						// if R[A] <= BC (immediate) is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						short bc = BytecodeUtil.BCs(instruction);
 						if (!value_le(localStack[a], make_int(bc))) {
 							pc++; // Skip next instruction
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-                    case Opcode.IFLE_iAB_rC: { // CPP: VM_CASE(IFLE_iAB_rC) {
+                    case Opcode.IFLE_iAB_rC: {
 						// if AB (immediate) <= R[C] is false, skip next instruction
 						short ab = BytecodeUtil.ABs(instruction);
                         Byte c = BytecodeUtil.Cu(instruction);
 						if (!value_le(make_int(ab), localStack[c])) {
 							pc++; // Skip next instruction
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-                    case Opcode.IFEQ_rA_rB: { // CPP: VM_CASE(IFEQ_rA_rB) {
+                    case Opcode.IFEQ_rA_rB: {
 						// if R[A] == R[B] is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						if (!value_equal(localStack[a], localStack[b])) {
 							pc++; // Skip next instruction
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-                    case Opcode.IFEQ_rA_iBC: { // CPP: VM_CASE(IFEQ_rA_iBC) {
+                    case Opcode.IFEQ_rA_iBC: {
 						// if R[A] == BC (immediate) is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						short bc = BytecodeUtil.BCs(instruction);
 						if (!value_equal(localStack[a], make_int(bc))) {
 							pc++; // Skip next instruction
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-                    case Opcode.IFNE_rA_rB: { // CPP: VM_CASE(IFNE_rA_rB) {
+                    case Opcode.IFNE_rA_rB: {
 						// if R[A] != R[B] is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						Byte b = BytecodeUtil.Bu(instruction);
 						if (value_equal(localStack[a], localStack[b])) {
 							pc++; // Skip next instruction
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-                    case Opcode.IFNE_rA_iBC: { // CPP: VM_CASE(IFNE_rA_iBC) {
+                    case Opcode.IFNE_rA_iBC: {
 						// if R[A] != BC (immediate) is false, skip next instruction
 						Byte a = BytecodeUtil.Au(instruction);
 						short bc = BytecodeUtil.BCs(instruction);
 						if (value_equal(localStack[a], make_int(bc))) {
 							pc++; // Skip next instruction
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.ARGBLK_iABC: { // CPP: VM_CASE(ARGBLK_iABC) {
+					case Opcode.ARGBLK_iABC: {
 						// Begin argument block with specified count
 						// ABC: number of ARG instructions that follow
 						Int32 argCount = BytecodeUtil.ABCs(instruction);
@@ -1039,10 +1042,10 @@ namespace MiniScript {
 						curConstants = curFunc.Constants; // CPP: curConstants = &curFunc.Constants[0];
 						currentFuncIndex = funcIndex2;
 						EnsureFrame(baseIndex, callee.MaxRegs);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.ARG_rA: { // CPP: VM_CASE(ARG_rA) {
+					case Opcode.ARG_rA: {
 						// The VM should never encounter this opcode on its own; it will
 						// be processed as part of the ARGBLK opcode.  So if we get
 						// here, it's an error.
@@ -1050,7 +1053,7 @@ namespace MiniScript {
 						return make_null();
 					}
 
-					case Opcode.ARG_iABC: { // CPP: VM_CASE(ARG_iABC) {
+					case Opcode.ARG_iABC: {
 						// The VM should never encounter this opcode on its own; it will
 						// be processed as part of the ARGBLK opcode.  So if we get
 						// here, it's an error.
@@ -1058,7 +1061,7 @@ namespace MiniScript {
 						return make_null();
 					}
 
-					case Opcode.CALLF_iA_iBC: { // CPP: VM_CASE(CALLF_iA_iBC) {
+					case Opcode.CALLF_iA_iBC: {
 						// A: arg window start (callee executes with base = base + A)
 						// BC: function index
 						Byte a = BytecodeUtil.Au(instruction);
@@ -1089,10 +1092,10 @@ namespace MiniScript {
 						currentFuncIndex = funcIndex; // Switch to callee function index
 
 						EnsureFrame(baseIndex, callee.MaxRegs);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 					
-					case Opcode.CALLFN_iA_kBC: { // CPP: VM_CASE(CALLFN_iA_kBC) {
+					case Opcode.CALLFN_iA_kBC: {
 						// Call named (intrinsic?) function kBC,
 						// with parameters/return at register A.
 						Byte a = BytecodeUtil.Au(instruction);
@@ -1101,10 +1104,10 @@ namespace MiniScript {
 						// For now, we'll only support intrinsics.
 						// ToDo: change this once we have variable look-up.
 						DoIntrinsic(funcName, baseIndex + a);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.CALL_rA_rB_rC: { // CPP: VM_CASE(CALL_rA_rB_rC) {
+					case Opcode.CALL_rA_rB_rC: {
 						// Invoke the FuncRef in R[C], with a stack frame starting at our register B,
 						// and upon return, copy the result from r[B] to r[A].
 						//
@@ -1119,7 +1122,7 @@ namespace MiniScript {
 						if (!is_funcref(funcRefValue)) {
 							IOHelper.Print("CALL: Value in register is not a function reference");
 							localStack[a] = funcRefValue;
-							break; // CPP: VM_NEXT();
+							break;
 						}
 
 						Int32 funcIndex = funcref_index(funcRefValue);
@@ -1150,10 +1153,10 @@ namespace MiniScript {
 						curConstants = curFunc.Constants; // CPP: curConstants = &curFunc.Constants[0];
 						currentFuncIndex = funcIndex; // Switch to callee function index
 						EnsureFrame(baseIndex, callee.MaxRegs);
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
-					case Opcode.RETURN: { // CPP: VM_CASE(RETURN) {
+					case Opcode.RETURN: {
 						// Return value convention: value is in base[0]
 						Value result = stack[baseIndex];
 						if (callStackTop == 0) {
@@ -1167,7 +1170,7 @@ namespace MiniScript {
 						}
 						
 						// If current call frame had a locals VarMap, gather it up
-						CallInfo frame = callStack[callStackTop]; // CPP: CallInfo& frame = callStack[callStackTop];
+						CallInfoRef frame = callStack[callStackTop];
 						if (!is_null(frame.LocalVarMap)) {
 							varmap_gather(frame.LocalVarMap);
 							frame.LocalVarMap = make_null();  // then clear from call frame
@@ -1187,7 +1190,7 @@ namespace MiniScript {
 						if (callInfo.CopyResultToReg >= 0) {
 							stack[baseIndex + callInfo.CopyResultToReg] = result;
 						}
-						break; // CPP: VM_NEXT();
+						break;
 					}
 
 					// CPP: VM_DISPATCH_END();

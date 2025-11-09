@@ -32,7 +32,7 @@ Converter.addCurly = false
 Converter.csOnly = false  // when true, skip conversion entirely
 Converter.hOnly = false   // when true, output only to hLines
 Converter.cppOnly = false // when true, output only to cppLines
-
+Converter.inVmCase = 0    // when > 1, codeBlockDepth of the current VM_CASE block
 
 Converter.Make = function
 	noob = new self
@@ -179,6 +179,7 @@ Converter.processLine = function(line)
 
 		if self.context == Context.METHOD and self.codeBlockDepth > 0 then
 			self.codeBlockDepth -= 1
+			if self.codeBlockDepth < self.inVmCase then self.inVmCase = 0
 		else if self.context == Context.METHOD then
 			self.context = Context.CLASS
 		else if self.context == Context.CLASS then
@@ -189,7 +190,7 @@ Converter.processLine = function(line)
 			self.hLines.push fullLine
 			self.cppLines.push fullLine
 			self.context = Context.START
-		end if
+		end if		
 		debugPrint "Context down: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 	end if
 
@@ -373,7 +374,21 @@ Converter.processMethodLine = function
 		return self.checkType
 	end if
 	
-	// Anything else: copy to header and/or CPP file according to context
+	if self.className == "VM" then
+		// Special case: VM dispatch case
+		if self.match("case Opcode::≤opcode≥:") or self.match("case Opcode.≤opcode≥:") then
+			self.cppLines.push self.indentation + "VM_CASE(≤opcode≥)".fill(self.m) + " {" * self.addCurly;
+			self.inVmCase = self.codeBlockDepth
+			return
+		end if
+		
+		if self.line == "break;" and self.inVmCase then
+			self.cppLines.push self.indentation + "VM_NEXT();"
+			return
+		end if
+	end if
+	
+	// Anything else: copy to CPP file
 	curly = " {" * self.addCurly
 	fullLine = self.indentation + self.line + curly + self.comment
 	self.cppLines.push fullLine
@@ -383,7 +398,13 @@ end function
 // Converter.tweakSyntax: do simple syntax transformations that can be done
 // within pretty much any line of code.
 Converter.tweakSyntax = function(line, context)
-	// local array declaration
+	// initialized char array declaration
+	if self.match("char[] ≤name≥ = new char[≤len≥];") then
+		self.m.lenPlus1 = str(self.m.len.val + 1)
+		return "char ≤name≥[≤lenPlus1≥]; ≤name≥[≤len≥] = 0;".fill(self.m)
+	end if
+	
+	// other local array declaration
 	m = line.match("≤type:w≥[] ≤name≥ = new ≤type2:w≥[≤count≥];")
 	if m then return "≤type≥ ≤name≥[≤count≥];".fill(m)	  
 
@@ -424,6 +445,15 @@ Converter.tweakSyntax = function(line, context)
 	// Output parameters on method calls
 	line = line.replace("(out ", "(&")
 	line = line.replace(", out ", ", &")
+	
+	// Reference types, using an alias like FuncDefRef to mean FuncDef&
+	if line.contains("Ref ") then
+		words = line.split
+		for i in words.indexes
+			if words[i].endsWith("Ref") then words[i] = words[i][:-3] + "&"
+		end for
+		line = words.join
+	end if
 	
 	// Reference parameters or arguments
 	if context == Context.CLASS then

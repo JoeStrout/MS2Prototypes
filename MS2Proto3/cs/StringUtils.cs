@@ -15,7 +15,7 @@ namespace MiniScript {
 		public const String hexDigits = "0123456789ABCDEF";
 		
 		public static String ToHex(UInt32 value) {
-			char[] hexChars = new char[8]; // CPP: char hexChars[9]; hexChars[8] = 0;
+			char[] hexChars = new char[8];
 			for (Int32 i = 7; i >= 0; i--) {
 				hexChars[i] = hexDigits[(int)(value & 0xF)];
 				value >>= 4;
@@ -24,7 +24,7 @@ namespace MiniScript {
 		}
 		
 		public static String ToHex(Byte value) {
-			char[] hexChars = new char[2]; // CPP: char hexChars[3]; hexChars[2] = 0;
+			char[] hexChars = new char[2];
 			for (Int32 i = 1; i >= 0; i--) {
 				hexChars[i] = hexDigits[(int)(value & 0xF)];
 				value >>= 4;
