@@ -1,7 +1,5 @@
 ## To Do:
 
-- We need simple, consistent conversion functions between String and Value.  See Assembler.cs:198 or Assembler.cs:1090 for example.
-
 - C# strings are indexed by character (bytes are not accessible).  C++ indexes by byte.  In many cases, bytes are good enough and more efficient, so I don't want to just always index by character.  But maybe we can unify this by a set of extension methods for C#, and corresponding methods for our C++ string, so that the syntax is the same.  As an example, IsStringLiteral (Assembler.cs:1054) could be such a method.
 
 - The fact that a FuncDef can be null in C#, but not in C++, is a frequent source of specialized code.  Also, we often use FuncDef& in C++ to avoid copying the whole struct.  Maybe FuncDef in C++ should actually be a pointer (or a tiny struct that contains and calls through to a pointer)?  This would require some extra code to deallocate them when done, or maybe store the actual definitions in a MemPool.  Needs careful thought.
@@ -23,6 +21,8 @@ This is so regular, we should probably have the transpiler do it for us.  Maybe 
 Similar things occur with FuncRef elsewhere.  We could automate these by putting `using CallInfoRef = CallInfo;` at the top of the file, and then having the transpiler recognize these "Ref" type names and change it to `&`.
 
 - StringUtils.makeRepr is (in C++) calling through to another makeRepr method with pool 0... this seems very sus.  [Resolution: made the version without a pool parameter C#-only; note that this function doesn't seem to be actually used anywhere, but I do expect that we'll need it at some point, so I left it in.]
+
+- We need simple, consistent conversion functions between String and Value.  See Assembler.cs:198 or Assembler.cs:1090 for example.
 
 
 ## Decided Not To Do:
