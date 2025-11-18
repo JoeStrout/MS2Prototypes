@@ -25,6 +25,7 @@ using ParserPtr = Parser; // CPP: using ParserPtr = Parser*;
 
 public abstract class Parselet {
 	public Precedence precedence;
+	// CPP: public: virtual ~Parselet() {}
 }
 
 // PrefixParselet: abstract base for parselets that handle tokens
@@ -41,7 +42,7 @@ public class NumberParselet : PrefixParselet {
 		operation = op;
 	}
 
-	public override Double Parse(ParserPtr parser, List<Token> tokens) {
+	public override Double Parse(ParserPtr, List<Token> tokens) {
 		Token token = tokens[0];
 		tokens.RemoveAt(0);
 		return operation(token.text);
@@ -97,7 +98,7 @@ public class PostfixParselet : InfixParselet {
 		precedence = prec;
 	}
 
-	public override Double Parse(ParserPtr parser, Double lhs, List<Token> tokens) {
+	public override Double Parse(ParserPtr, Double lhs, List<Token>) {
 		// This is a right-side unary operator, not actually a binary operator.
 		// So we don't touch the given tokens, but instead just operate on lhs.
 		return operation(lhs);

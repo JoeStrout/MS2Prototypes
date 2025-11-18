@@ -41,18 +41,18 @@ public class Program {
 			IOHelper.Print("All tests passed.");
 		} else {
 			String plural = errorCount != 1 ? "s" : "";
-			IOHelper.Print(errorCount + " error" + plural + " found."); // CPP: IOHelper::Print("error(s) found");
+			IOHelper.Print(ToString(errorCount) + " error" + plural + " found.");
 		}
 		
 		// CPP: delete parser;
 	}
 
-	public static void Main(String[] args, Int32 argc) {
+	public static void Main(String[] /*args*/, Int32 /*argc*/) {
 		RunUnitTests();
 
 		IOHelper.Print("Enter expression to evaluate, or 'quit' to quit.");
 		EvalOpSet ops = new EvalOpSet();
-		Parser parser = new Parser(ops);
+		Parser parser(ops);
 
 		while (true) {
 			String input = IOHelper.Input("eval> ");

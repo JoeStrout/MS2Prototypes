@@ -1,3 +1,13 @@
+// Parser: the main parsing class.  You configure this with an OpSet, which it uses
+// to construct a bunch of little Parselets to handle various language features.
+// The operations in that OpSet then get invoked by the Parselets when the appropriate
+// bits of code are parsed.
+//
+// Memory: a Parser is a pretty big object, containing two arrays of parselets.  Those
+// parselets are allocated with `new`, and owned by the Parser, which deletes them in
+// its destructor.  The Parser itself should be kept on the stack and allowed to go out
+// of scope, or explicitly `new`d and `delete`d by the user.
+
 using System;
 using System.Collections.Generic;
 // CPP: #include "Parselet.g.h"
@@ -48,6 +58,16 @@ public class Parser {
 		
 		BuildTokenEffects(ops);
 	}
+
+	/*** BEGIN H_ONLY ***
+	~Parser() {
+		Int32 qty = (Int32)TokenType::_QTY_TOKENS;
+		for (Int32 i=0; i<qty; i++) {
+			delete _prefixParsers[i];
+			delete _infixParsers[i];
+		}
+	}	
+	*** END H_ONLY ***/
 
 	// Build the token effects table from an OpSet
 	private void BuildTokenEffects(OpSet ops) {

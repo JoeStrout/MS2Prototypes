@@ -1,3 +1,14 @@
+// EvalOpSet: a parser operation set that immediately evaluates expressions
+// as they are parsed, returning a numeric (double) result.
+//
+// Memory: this is an OpSet subclass, with one extra (small) reference
+// (a Dictionary, whose storage is in MemPool managed memory).  The additional
+// reference is inconsequential, but as an OpSet, this is still too big to
+// copy, and so should be owned, deleted, and passed by reference or pointer.
+//
+// In typical usage, a method might allocate one of these on the stack, use it
+// to configure a Parser, and then allow it to go out of scope -- this is fine.
+
 using System;
 using System.Collections.Generic;
 // CPP: #include "OpSet.g.h"
@@ -30,7 +41,7 @@ public class EvalOpSet : OpSet {
 			return result;
 		};
 
-		getVar = (String id) => {
+		getVar = (String id) => {  // needs [this] in its C++ lambda form
 			Double result = 0.0;
 			if (!_vars.TryGetValue(id, out result)) {
 				Console.WriteLine("Undefined identifier: " + id); // CPP: std::cout << "Undefined identifier: " << id.c_str() << std::endl;
@@ -38,7 +49,7 @@ public class EvalOpSet : OpSet {
 			return result;
 		};
 
-		setVar = (String id, Double val) => {
+		setVar = (String id, Double val) => {  // also needs [this]
 			_vars[id] = val;
 			return val;
 		};

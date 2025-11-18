@@ -83,6 +83,7 @@ Converter.processLine = function(line)
 	else
 		comment = ""
 	end if
+	self.comment = comment // (in case helper methods need it)
 	
 	// Also split off leading whitespace (indentation)
 	indentation = ""
@@ -434,10 +435,12 @@ Converter.processMethodLine = function
 	end if
 	
 	// (capturing) lambda expression (NOTE: the C# code should include explicit param types)
+	if self.comment.contains("[this]") then lambda = "[this]" else lambda = "[]"
 	if self.match("≤name≥ = (≤params≥) => ≤expr≥;", "",
-	  "≤name≥ = [this](≤params≥) { return ≤expr≥; };") then
+	  "≤name≥ = " + lambda + "(≤params≥) { return ≤expr≥; };") then
 		return
-	else if self.match("≤name≥ = (≤params≥) =>", "", "≤name≥ = [this](≤params≥) ") then
+	else if self.match("≤name≥ = (≤params≥) =>", "",
+	  "≤name≥ = " + lambda + "(≤params≥) ") then
 		return
 	end if
 	
