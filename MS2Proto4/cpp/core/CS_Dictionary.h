@@ -233,10 +233,13 @@ public:
 		if (index >= 0 && s) {
 			return s->getEntries()[index].value;
 		}
-		// Key not found - add with default value
+		// Key not found - add with default value, then look it up
+		// again and return a reference to the value in the map
+		// so that it can be assigned to.
 		static TValue defaultValue = TValue();
 		Add(key, defaultValue);
 		index = findEntry(key);
+		s = getStorage();
 		if (index >= 0 && s) {
 			return s->getEntries()[index].value;
 		}
@@ -259,12 +262,12 @@ public:
 	}
 
 	// TryGetValue - C# style
-	bool TryGetValue(const TKey& key, TValue& value) const {
+	bool TryGetValue(const TKey& key, TValue* value) const {
 		int index = findEntry(key);
 		if (index >= 0) {
 			DictionaryStorage<TKey, TValue>* s = getStorage();
 			if (s) {
-				value = s->getEntries()[index].value;
+				*value = s->getEntries()[index].value;
 				return true;
 			}
 		}

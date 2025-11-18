@@ -1,7 +1,7 @@
 
 
 // Helper function to check if a character is a word character
-isWordChar = function(c)
+globals.isWordChar = function(c)
 	if c == null then return false
 	return (c >= "a" and c <= "z") or (c >= "A" and c <= "Z") or 
 	       (c >= "0" and c <= "9") or c == "_"
@@ -34,6 +34,7 @@ isWholeWord = function(str, startPos, endPos)
 	end for
 	return true
 end function
+
 
 // string.match: takes a pattern string that may
 // contain fields to fill in, identified by ≤key≥.  If

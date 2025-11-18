@@ -17,7 +17,7 @@ public class EvalOpSet : OpSet {
 	private StringDoubleDict _vars;
 
 	public EvalOpSet() {
-		_vars = new StringDoubleDict();
+		_vars = new StringDoubleDict(); // CPP:
 
 		// Initialize with standard mathematical constants and functions
 		_vars["pi"] = 3.1415926536; // Math.PI;
@@ -31,9 +31,11 @@ public class EvalOpSet : OpSet {
 		};
 
 		getVar = (String id) => {
-			if (_vars.ContainsKey(id)) return _vars[id];
-			Console.WriteLine("Undefined identifier: " + id); // CPP: std::cout << "Undefined identifier: " << id.c_str() << std::endl;
-			return 0.0;
+			Double result = 0.0;
+			if (!_vars.TryGetValue(id, out result)) {
+				Console.WriteLine("Undefined identifier: " + id); // CPP: std::cout << "Undefined identifier: " << id.c_str() << std::endl;
+			}
+			return result;
 		};
 
 		setVar = (String id, Double val) => {
@@ -45,7 +47,7 @@ public class EvalOpSet : OpSet {
 			// Built-in functions
 //			if (id == "sqrt") return Math.Sqrt(arg);
 //			if (id == "sin") return Math.Sin(arg);
-//			if (id == "cos") return Math.Cos(arg);
+			if (id == "cos") return Math.Cos(arg);
 //			if (id == "tan") return Math.Tan(arg);
 //			if (id == "asin") return Math.Asin(arg);
 //			if (id == "acos") return Math.Acos(arg);

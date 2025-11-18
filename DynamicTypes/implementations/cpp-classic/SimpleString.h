@@ -94,6 +94,7 @@ namespace MiniScript {
 		inline String& operator= (const char* c);
 		inline String operator+ (const String& other) const;
 		inline String operator+ (const char* c) const;
+		inline String operator+ (char c) const;
 		inline friend String operator+ (const char *c, const String& s);
 		
 		// inspectors
@@ -494,12 +495,23 @@ namespace MiniScript {
 	String String::operator+ (const char* c) const {
 		if (!c) return *this;
 		if (!ss) return String(c);
-		
+
 		size_t n1 = ss ? ss->dataSize - 1 : 0;
 		size_t n2 = strlen(c);
 		StringStorage* newbie = new StringStorage(n1 + n2 + 1);
 		memcpy(newbie->data, ss->data, n1);
 		memcpy(newbie->data+n1, c, n2+1);
+		return String(newbie, false);	// LEAK
+	}
+
+	String String::operator+ (char c) const {
+		if (!ss) return String(c);
+
+		size_t n1 = ss->dataSize - 1;
+		StringStorage* newbie = new StringStorage(n1 + 2);
+		memcpy(newbie->data, ss->data, n1);
+		newbie->data[n1] = c;
+		newbie->data[n1+1] = 0;
 		return String(newbie, false);	// LEAK
 	}
 

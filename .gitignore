@@ -25,6 +25,7 @@ build/
 # Generated (transpiled) files... not entirely sure whether we want
 # to push these to github or not, but probably not in this prototype.
 MS2Proto3/generated/
+MS2Proto4/generated/
 
 # C# / .NET / Mono Build Products
 *.exe
@@ -41,12 +42,13 @@ out/
 NanBoxTests/
 TestProject*/
 
-# Visual Studio / Visual Studio Code
+# Visual Studio / Visual Studio Code / XCode
 .vs/
 .vscode/
 *.user
 *.suo
 *.cache
+*.xcodeproj
 
 # Mono Compiler Outputs
 *.exe.mdb

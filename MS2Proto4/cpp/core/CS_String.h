@@ -13,6 +13,7 @@
 #include "StringPool.h"
 #include "CS_List.h"
 #include <cstdio> // for debugging
+#include <stdio.h>
 
 // This module is part of Layer 3B (Host C# Compatibility Layer)
 #define CORE_LAYER_3B
@@ -64,8 +65,11 @@ public:
     
     // Assignment from C string
     String& operator=(const char* cstr) {
-        if (!cstr || *cstr == '\0') return *this;
-        ref = StringPool::internString(defaultPool, cstr);
+		if (!cstr || *cstr == '\0') {
+			ref = MemRef();
+		} else {
+			ref = StringPool::internString(defaultPool, cstr);
+		}
         return *this;
     }
     
@@ -141,7 +145,18 @@ public:
     }
     
     bool operator!=(const String& other) const { return !(*this == other); }
-    
+
+    // Comparison with C strings
+    bool operator==(const char* cstr) const {
+        const StringStorage* s = getStorage();
+        if (!s && (!cstr || *cstr == '\0')) return true;  // Both empty
+        if (!s) return false;  // This is empty, cstr is not
+        if (!cstr || *cstr == '\0') return false;  // cstr is empty, this is not
+        return strcmp(s->data, cstr) == 0;
+    }
+
+    bool operator!=(const char* cstr) const { return !(*this == cstr); }
+
     bool operator<(const String& other) const {
         return Compare(other) < 0;
     }
@@ -533,12 +548,20 @@ public:
     }
 };
 
-// Free function: C string + String concatenation
+// C string + String concatenation
 inline String operator+(const char* lhs, const String& rhs) {
     if (!lhs) return rhs;
 	if (String::IsNullOrEmpty(rhs)) return String(lhs);
     String temp(lhs, rhs.getPoolNum());
     return temp + rhs;
+}
+
+// Free (i.e. global) ToString methods for atomic types
+inline String ToString(double d, const char *format=nullptr) {
+	if (!format) format = "%f";
+	char str[32];
+	snprintf(str, 32, format, d);
+	return String(str);
 }
 
 // Hash function for String (used by Dictionary<String, TValue>)

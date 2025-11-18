@@ -2,6 +2,7 @@
 
 import "listUtil"
 import "stringUtil"
+import "mapUtil"
 import "fancyMatch"  // overrides standard string.match and string.fill
 
 TAB = char(9)
@@ -33,8 +34,8 @@ Converter.csOnly = false  // when true, skip conversion entirely
 Converter.hOnly = false   // when true, output only to hLines
 Converter.cppOnly = false // when true, output only to cppLines
 Converter.inVmCase = 0    // when > 1, codeBlockDepth of the current VM_CASE block
-Converter.ptrFields = []
-Converter.ptrLocals = []
+Converter.classFields = {}  // identifier:type
+Converter.localVars = {}    // identifier:type
 
 Converter.Make = function
 	noob = new self
@@ -65,6 +66,11 @@ Converter.fail = function(errMsg)
 	print "ERROR: " + errMsg
 	print "on line " + self.lineNum + ": " + self.line + " {" * self.addCurly
 	self.failed = true
+end function
+
+Converter.getType = function(identifier)
+	if self.localVars.hasIndex(identifier) then return self.localVars[identifier]
+	return self.classFields.get(identifier, null)
 end function
 
 Converter.processLine = function(line)
@@ -184,12 +190,12 @@ Converter.processLine = function(line)
 			if self.codeBlockDepth < self.inVmCase then self.inVmCase = 0
 		else if self.context == Context.METHOD then
 			self.context = Context.CLASS
-			self.ptrLocals = []
+			self.localVars = {}
 		else if self.context == Context.CLASS then
 			// add ; after class declaration in .h file; omit from .cpp file
 			self.hLines.push self.indentation + "}; // end of class " + self.className
 			self.context = Context.NAMESPACE
-			self.ptrFields = []
+			self.classFields = {}
 		else
 			self.hLines.push fullLine
 			self.cppLines.push fullLine
@@ -287,37 +293,41 @@ Converter.processNonmethodLine = function
 	// class field, with and without default value
 	// (note: default values, i.e. i-class member initializers, are valid since C++11)
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥;",
-	  "≤scope≥: ≤type≥ ≤name≥;", "") then return self.checkType
+	  "≤scope≥: ≤type≥ ≤name≥;", "") then return self.noteClassField
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ = ≤value≥;",
-	  "≤scope≥: ≤type≥ ≤name≥ = ≤value≥;", "") then return self.checkType
+	  "≤scope≥: ≤type≥ ≤name≥ = ≤value≥;", "") then return self.noteClassField
 	// Same but for pointer types (automatically initializing to nullptr if not specified)
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥* ≤name:w≥;",
-	  "≤scope≥: ≤type≥* ≤name≥ = nullptr;", "") then return self.checkType
+	  "≤scope≥: ≤type≥* ≤name≥ = nullptr;", "") then return self.noteClassField
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥* ≤name:w≥ = ≤value≥;",
-	  "≤scope≥: ≤type≥* ≤name≥ = ≤value≥;", "") then return self.checkType
+	  "≤scope≥: ≤type≥* ≤name≥ = ≤value≥;", "") then return self.noteClassField
+
+	// class field (pointer/array)
+	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ *≤name:w≥;",
+	  "≤scope≥: ≤type≥ *≤name≥;", "") then return self.noteClassField
 
 	// static class field, with and without default value
 	if self.context == Context.CLASS and self.match("≤scope:w≥ static ≤type:w≥ ≤name:w≥;",
-	  "≤scope≥: static ≤type≥ ≤name≥;", "") then return self.checkType
+	  "≤scope≥: static ≤type≥ ≤name≥;", "") then return self.noteClassField
 	if self.context == Context.CLASS and self.match("≤scope:w≥ static ≤type:w≥ ≤name:w≥ = ≤value≥;",
-	  "≤scope≥: static ≤type≥ ≤name≥;", "≤type≥ ≤className≥::≤name≥ = ≤value≥;") then return self.checkType
+	  "≤scope≥: static ≤type≥ ≤name≥;", "≤type≥ ≤className≥::≤name≥ = ≤value≥;") then return self.noteClassField
 
 	// (static) const class field with default value
 	if self.context == Context.CLASS and 
 	  self.match("≤scope:w≥ const ≤type:w≥ ≤name:w≥ = ≤value≥;",
 	  "≤scope≥: static const ≤type≥ ≤name≥;",
-	  "const ≤type≥ ≤className≥::≤name≥ = ≤value≥;") then return self.checkType
+	  "const ≤type≥ ≤className≥::≤name≥ = ≤value≥;") then return self.noteClassField
 
 	// static readonly class field with default (usually non-constant) value
 	if self.context == Context.CLASS and 
 	  self.match("≤scope:w≥ static readonly ≤type:w≥ ≤name:w≥ = ≤value≥;",
 	  "≤scope≥: static const ≤type≥ ≤name≥;",
-	  "const ≤type≥ ≤className≥::≤name≥ = ≤value≥;") then return self.checkType
+	  "const ≤type≥ ≤className≥::≤name≥ = ≤value≥;") then return self.noteClassField
 
 	// class property with expression body
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ => ≤expr≥;",
 	  "≤scope≥: ≤type≥ ≤name≥() { return ≤expr≥; }", "") then
-		self.checkType
+		self.noteClassField
 		// ToDo: note ≤name≥ in this class as something that will need () where used.
 		return
 	end if
@@ -326,7 +336,7 @@ Converter.processNonmethodLine = function
 	// which loses the set protection, but it's fine
 	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥ { get; private set; }",
 	  "≤scope≥: ≤type≥ ≤name≥;", "") then
-		self.checkType
+		self.noteClassField
 		return
 	end if
 	
@@ -369,6 +379,7 @@ Converter.processNonmethodLine = function
 	  "≤scope≥: static ≤rtype≥ ≤name≥(≤params≥);",
 	  "≤rtype≥ ≤className≥::≤name≥(≤paramNamesOnly≥)") then
 		self.context = Context.METHOD
+		self.noteParams
 		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
 	end if
@@ -378,6 +389,7 @@ Converter.processNonmethodLine = function
 	  "≤rtype≥ ≤className≥::≤name≥(≤paramNamesOnly≥)") then
 	  	if self.m.scope == "static" then return self.fail("scope qualifier required on static method")
 		self.context = Context.METHOD
+		self.noteParams
 		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
 	end if
@@ -387,19 +399,28 @@ Converter.processNonmethodLine = function
 	  "≤scope≥: ≤rtype≥ ≤name≥(≤params≥);",
 	  "≤rtype≥ ≤className≥::≤name≥(≤paramNamesOnly≥)") then
 		self.context = Context.METHOD
+		self.noteParams
 		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
 	end if
 	
+	// abstract method declaration
+	if self.match("≤scope:w≥ abstract ≤rtype:w≥ ≤name:w≥(≤params≥);",
+	  "≤scope≥: virtual ≤rtype≥ ≤name≥(≤params≥) = 0;", "") then
+		return
+	end if
+		
 	// override method declaration
 	if self.match("≤scope:w≥ override ≤rtype:w≥ ≤name:w≥(≤params≥)",
 	  "≤scope≥: ≤rtype≥ ≤name≥(≤params≥);",
 	  "≤rtype≥ ≤className≥::≤name≥(≤paramNamesOnly≥)") then
 	  	if self.m.scope == "static" then return self.fail("scope qualifier required on static method")
 		self.context = Context.METHOD
+		self.noteParams
 		debugPrint "Context: " + self.context + " (code block depth " + self.codeBlockDepth + ")"
 		return
 	end if
+	
 end function
 
 // Process a line of code within a method.
@@ -434,6 +455,13 @@ Converter.processMethodLine = function
 		end if
 	end if
 	
+	// local variable declarations (with/without assignment)
+	if self.match("≤type:w≥ ≤name:w≥;", "", self.line) or
+	   self.match("≤type:w≥ ≤name:w≥ = ≤expr≥;", "", self.line) then
+		self.noteLocalVar
+		return
+	end if
+	
 	// Anything else: copy to CPP file
 	curly = " {" * self.addCurly
 	fullLine = self.indentation + self.line + curly + self.comment
@@ -444,6 +472,20 @@ end function
 // Converter.tweakSyntax: do simple syntax transformations that can be done
 // within pretty much any line of code.
 Converter.tweakSyntax = function(line, context)
+	// static class methods/properties, enum values (invoked on the class name itself)
+	for cls in self.classNames
+		afterPos = -1
+		while true
+			pos = line.indexOf(cls + ".", afterPos)
+			if pos == null then break
+			if pos == 0 or not isWordChar(line[pos-1]) then
+				line = line[:pos + cls.len] + "::" + line[pos + cls.len + 1:]
+				//print "REPLACED TO: " + line
+			end if
+			afterPos = pos + cls.len + 1
+		end while
+	end for
+	
 	// initialized char array declaration
 	if self.match("char[] ≤name≥ = new char[≤len≥];") then
 		self.m.lenPlus1 = str(self.m.len.val + 1)
@@ -452,7 +494,13 @@ Converter.tweakSyntax = function(line, context)
 	
 	// other local array declaration
 	m = line.match("≤type:w≥[] ≤name≥ = new ≤type2:w≥[≤count≥];")
-	if m then return "≤type≥ ≤name≥[≤count≥];".fill(m)	  
+	if m then
+		if not type.endsWith("Ptr") then return "≤type≥ ≤name≥[≤count≥];".fill(m)
+		return line
+	end if
+	// ...other array creation, must always involve a pointer
+	m = line.match("≤name≥ = new ≤type:w≥[≤count≥];")
+	if m then return line
 
 	// array syntax (especially as seen in parameters)
 	line = line.replace("[] ", " *")
@@ -460,17 +508,28 @@ Converter.tweakSyntax = function(line, context)
 	// special case of a Main program args: add the count
 	line = line.replace("string *args", "String args[], int argCount")
 	
-	// static class methods (invoked on the class name itself)
-	for cls in self.classNames
-		line = line.replace(cls+".", cls+"::")
-	end for
-	
 	// Split to list
 	m = line.match("≤pre≥.Split(≤args≥).ToList()≤post≥")
 	if m then line = "≤pre≥.SplitToList(≤args≥)≤post≥".fill(m)
 	
-	// Object creation (assuming a compatible memory-managed type).
-	line = line.replace(" new ", " ")
+	if line.contains(" new ") then
+		// Object creation & assignment: look up the LHS type to know whether to 
+		// keep "new" (because it's a Ptr) or remove it (any other type).
+		m = line.match("≤type≥ ≤name≥ = new ≤expr≥;")
+		if not m then m = line.match("≤name≥[≤idx≥] = new ≤expr≥;")
+		if m then
+			if not m.hasIndex("type") then m.type = self.getType(m.name)
+			if m.type == null or not m.type.endsWith("Ptr") then
+				line = line.replace(" new ", " ")
+			end if
+//			print "SAW NEW and found type: " + m.type
+		else
+//			print "SAW NEW, but no match"
+			// If not one of the above patterns, we'll assume not a pointer (for now)
+			line = line.replace(" new ", " ")
+		end if
+	end if
+	// Other object creation (assuming a compatible memory-managed type).
 	line = line.replace("(new ", "(")
 	if line.startsWith("new ") then line = line[4:]
 	
@@ -494,8 +553,13 @@ Converter.tweakSyntax = function(line, context)
 
 	// Pointer dereference (changing `.` to `->`)
 	line = line.replace("this.", "this->")
-	for type in self.ptrFields + self.ptrLocals
-		line = line.replace(type + ".", type + "->")
+	for kv in self.classFields
+		if not kv.value.endsWith("Ptr") then continue
+		line = line.replace(kv.key + ".", kv.key + "->")
+	end for	
+	for kv in self.localVars
+		if not kv.value.endsWith("Ptr") then continue
+		line = line.replace(kv.key + ".", kv.key + "->")
 	end for	
 	
 	// Reference types, using an alias like FuncDefRef to mean FuncDef&
@@ -559,25 +623,41 @@ disallowedTypes = {
 	"uint": "UInt32",
 	"long": "Int64",
 	"ulong": "UInt64" }
-
 // Converter.checkType: ensure that the given type is something we can deal
 // with, and throw and error if it is disallowed.  Return true if OK, 
 // false if failed.
 Converter.checkType = function(type)
 	if type == null then type = self.m["type"]
-
-	if type.endsWith("Ptr") and self.m.hasIndex("name") then
-		if self.context == Context.CLASS then
-			self.ptrFields.push self.m.name
-		else if self.context == Context.METHOD then
-			self.ptrLocals.push self.m.name
-		end if
-//		print "ptrFields: " + self.ptrFields
-//		print "ptrLocals: " + self.ptrLocals
-	end if
 	if not disallowedTypes.hasIndex(type) then return true
 	self.fail "Type " + type + " disallowed; use " + disallowedTypes[type] + " instead"
 	return false
+end function
+
+Converter.noteClassField = function(name, type)
+	if name == null then name = self.m.name
+	if type == null then type = self.m.type
+	self.classFields[name] = type
+	debugPrint "--> classFields: " + self.classFields
+	return self.checkType(type)
+end function
+
+Converter.noteLocalVar = function(name, type)
+	if name == null then name = self.m.name
+	if type == null then type = self.m.type
+	self.localVars[name] = type
+	debugPrint "--> localVars: " + self.localVars
+	return self.checkType(type)
+end function
+
+Converter.noteParams = function(params)
+	if params == null then params = self.m.params
+	for param in params.split(",")
+		param = param.trim
+		typeAndName = param.split
+		if typeAndName.len != 2 then continue
+		self.localVars[typeAndName[1]] = typeAndName[0]
+	end for
+	debugPrint "--> localVars: " + self.localVars
 end function
 
 WARNING = [

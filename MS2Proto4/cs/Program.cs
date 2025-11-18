@@ -1,61 +1,79 @@
 using System;
 using System.Collections.Generic;
+// CPP: #include "IOHelper.g.h"
+// CPP: #include "EvalOpSet.g.h"
+// CPP: #include "Parser.g.h"
+// CPP: #include "CS_Math.h"
 
 namespace MS2Proto4 {
 
 public class Program {
 
-	public static void RunUnitTests() {
-		Console.WriteLine("Unit testing: eval");
-
-		EvalOpSet ops = new EvalOpSet();
-		Parser parser = new Parser(ops);
-		Int32 errorCount = 0;
-
-		Action<String, Double> check = (expression, expected) => {
-			List<String> tokens = Lexer.Lex(expression);
-			Double actual = parser.Parse(tokens);
-			if (Math.Abs(actual - expected) > 0.0001) {
-				Console.WriteLine("Unit test failure on \"" + expression + "\": expected " + expected + ", got " + actual);
-				errorCount++;
-			}
-		};
-
-		check("2+2", 4);
-		check("pi", Math.PI);
-		check("2+3*4", 14);
-		check("(2+3)*4", 20);
-		check("5!", 120);
-		check("200 - 5!", 80);
-		check("2^2^3", 256);
-		check("(2^2)^3", 64);
-		check("round(cos(45*pi/180)*100)", 71);
-
-		if (errorCount == 0) {
-			Console.WriteLine("All tests passed.");
-		} else {
-			String plural = errorCount != 1 ? "s" : "";
-			Console.WriteLine(errorCount + " error" + plural + " found.");
+	private static Int32 errorCount = 0;
+	
+	private static void check(ParserPtr parser, String expression, Double expected) {
+		List<Token> tokens = Lexer.Lex(expression);
+		Double actual = parser.Parse(tokens);
+		if (Math.Abs(actual - expected) > 0.0001) {
+			IOHelper.Print(String("Unit test failure on \"") + expression + "\": expected " + ToString(expected) + ", got " + ToString(actual));
+			errorCount++;
 		}
 	}
 
-	public static void Main(String[] args) {
+	public static void RunUnitTests() {
+		IOHelper.Print("Unit testing: eval");
+
+		EvalOpSet ops = new EvalOpSet();
+		ParserPtr parser = new Parser(ops);
+		errorCount = 0;
+
+		check(parser, "2+2", 4);
+		check(parser, "pi", 3.1415926536);
+		check(parser, "2+3*4", 14);
+		check(parser, "(2+3)*4", 20);
+		check(parser, "5!", 120);
+		check(parser, "200 - 5!", 80);
+		check(parser, "2^2^3", 256);
+		check(parser, "(2^2)^3", 64);
+		check(parser, "round(cos(45*pi/180)*100)", 71);
+
+		if (errorCount == 0) {
+			IOHelper.Print("All tests passed.");
+		} else {
+			String plural = errorCount != 1 ? "s" : "";
+			IOHelper.Print(errorCount + " error" + plural + " found."); // CPP: IOHelper::Print("error(s) found");
+		}
+		
+		// CPP: delete parser;
+	}
+
+	public static void Main(String[] args, Int32 argc) {
 		RunUnitTests();
 
-		Console.WriteLine("Enter expression to evaluate, or 'quit' to quit.");
+		IOHelper.Print("Enter expression to evaluate, or 'quit' to quit.");
 		EvalOpSet ops = new EvalOpSet();
 		Parser parser = new Parser(ops);
 
 		while (true) {
-			Console.Write("eval> ");
-			String input = Console.ReadLine();
+			String input = IOHelper.Input("eval> ");
 			if (input == null || input == "quit" || input == "exit") break;
 
-			List<String> tokens = Lexer.Lex(input);
+			List<Token> tokens = Lexer.Lex(input);
 			Double result = parser.Parse(tokens);
-			Console.WriteLine(result);
+			IOHelper.Print(result.ToString()); // CPP: printf("%f\n", result);
 		}
 	}
 }
 
 }
+
+/*** BEGIN CPP_ONLY ***
+
+int main(int argc, const char* argv[]) {
+	String* args = new String[argc];
+	for (int i=0; i<argc; i++) args[i] = String(argv[i]);
+	MS2Proto4::Program::Main(args, argc);
+}
+
+*** END CPP_ONLY ***/
+

@@ -2,13 +2,15 @@ using System;
 using System.Collections.Generic;
 // CPP: #include "Parselet.g.h"
 // CPP: #include "Lexer.g.h"
+// CPP: #include "Token.g.h"
+// CPP: #include "IOHelper.g.h"
 
 namespace MS2Proto4 {
 
-using StringPrefixDict = Dictionary<String, PrefixParselet>;
-using StringInfixDict = Dictionary<String, InfixParselet>;
-// CPP: using StringPrefixDict = Dictionary<String, PrefixParselet>;
-// CPP: using StringInfixDict = Dictionary<String, InfixParselet>;
+// CPP: class Parser;
+using ParserPtr = Parser; // CPP: using ParserPtr = Parser*;
+using PrefixParseletPtr = PrefixParselet; // CPP: using PrefixParseletPtr = PrefixParselet*;
+using InfixParseletPtr = InfixParselet; // CPP: using InfixParseletPtr = InfixParselet*;
 
 // Precedence levels (higher precedence binds more strongly).
 public enum Precedence : Int32 {
@@ -30,89 +32,88 @@ public enum Precedence : Int32 {
 // Uses a Pratt parser algorithm with parselets to handle operator precedence.
 public class Parser {
 
-	private StringPrefixDict _prefixParsers;
-	private StringInfixDict _infixParsers;
+	private PrefixParseletPtr[] _prefixParsers;
+	private InfixParseletPtr[] _infixParsers;
 
 	public Parser(OpSet ops) {
-		_prefixParsers = new StringPrefixDict();
-		_infixParsers = new StringInfixDict();
+		// Initialize arrays (size = number of token types)
+		Int32 qty = (Int32)TokenType._QTY_TOKENS;
+		_prefixParsers = new PrefixParseletPtr[qty];
+		_infixParsers = new InfixParseletPtr[qty];
+		
+		for (Int32 i=0; i<qty; i++) {
+			_prefixParsers[i] = null;
+			_infixParsers[i] = null;
+		}
+		
 		BuildTokenEffects(ops);
 	}
 
 	// Build the token effects table from an OpSet
 	private void BuildTokenEffects(OpSet ops) {
-		// Special parselets that don't directly map to operations
-		PrefixParselet numberParselet = new PrefixParselet(ops.numVal);
-		IdentifierParselet identParselet = new IdentifierParselet(ops.getVar, ops.setVar, ops.call, this);
-		GroupParselet groupParselet = new GroupParselet(this);
-
 		// Tokens with prefix parselets
-		_prefixParsers["("] = groupParselet;
-		_prefixParsers["number"] = numberParselet;
-		_prefixParsers["ident"] = identParselet;
+		_prefixParsers[(Int32)TokenType.LPAREN] = new GroupParselet();
+		_prefixParsers[(Int32)TokenType.NUMBER] = new NumberParselet(ops.numVal);
+		_prefixParsers[(Int32)TokenType.IDENTIFIER] = new IdentifierParselet(ops.getVar, ops.setVar, ops.call);
 
 		// Minus can be both prefix (unary) and infix (binary)
-		_prefixParsers["-"] = new UnaryOpParselet(ops.unaryMinus, Precedence.PREFIX, this);
-		_infixParsers["-"] = new InfixParselet(ops.subtract, Precedence.SUM, this);
+		_prefixParsers[(Int32)TokenType.MINUS] = new UnaryOpParselet(ops.unaryMinus, Precedence.PREFIX);
+		_infixParsers[(Int32)TokenType.MINUS] = new BinaryOpParselet(ops.subtract, Precedence.SUM);
 
 		// Binary operators
-		_infixParsers["+"] = new InfixParselet(ops.add, Precedence.SUM, this);
-		_infixParsers["*"] = new InfixParselet(ops.multiply, Precedence.PRODUCT, this);
-		_infixParsers["/"] = new InfixParselet(ops.divide, Precedence.PRODUCT, this);
-		_infixParsers["%"] = new InfixParselet(ops.mod, Precedence.PRODUCT, this);
-		_infixParsers["^"] = new InfixParselet(ops.power, Precedence.EXPONENT, this, true);
+		_infixParsers[(Int32)TokenType.PLUS] = new BinaryOpParselet(ops.add, Precedence.SUM);
+		_infixParsers[(Int32)TokenType.STAR] = new BinaryOpParselet(ops.multiply, Precedence.PRODUCT);
+		_infixParsers[(Int32)TokenType.SLASH] = new BinaryOpParselet(ops.divide, Precedence.PRODUCT);
+		_infixParsers[(Int32)TokenType.PERCENT] = new BinaryOpParselet(ops.mod, Precedence.PRODUCT);
+		_infixParsers[(Int32)TokenType.CARET] = new BinaryOpParselet(ops.power, Precedence.EXPONENT, true);
 
 		// Postfix operators
-		_infixParsers["!"] = new PostfixParselet(ops.factorial, Precedence.FACTORIAL, this);
+		_infixParsers[(Int32)TokenType.BANG] = new PostfixParselet(ops.factorial, Precedence.FACTORIAL);
 	}
 
-	// Get the precedence of the infix parser for a token
-	private Precedence InfixPrecedence(String token) {
-		if (!_infixParsers.ContainsKey(token)) return (Precedence)(-1);
-		InfixParselet parselet = _infixParsers[token];
+	// Get the precedence of the infix parser for a token type
+	private Precedence InfixPrecedence(TokenType type) {
+		InfixParseletPtr parselet = _infixParsers[(Int32)type];
+		if (parselet == null) return (Precedence)(-1);
 		return parselet.precedence;
 	}
 
 	// Parse a list of tokens and return the result
-	public Double Parse(List<String> tokens, Precedence precedence) {
-		if (tokens == null || tokens.Count == 0) return 0.0;
+	public Double Parse(List<Token> tokens, Precedence precedence) {
+		if (tokens.Count == 0) return 0.0;
 
 		// First, check prefix parsers (for tokens that can start an expression)
-		String firstTok = tokens[0];
-		PrefixParselet prefixParselet = null;
-
-		if (Lexer.IsNumber(firstTok)) {
-			prefixParselet = _prefixParsers["number"];
-		} else if (Lexer.IsIdentifier(firstTok)) {
-			prefixParselet = _prefixParsers["ident"];
-		} else if (_prefixParsers.ContainsKey(firstTok)) {
-			prefixParselet = _prefixParsers[firstTok];
-		}
+		Token firstTok = tokens[0];
+		PrefixParseletPtr prefixParselet = _prefixParsers[(Int32)firstTok.type];
 
 		Double value = 0.0;
 		if (prefixParselet != null) {
-			value = prefixParselet.Parse(tokens);
+			value = prefixParselet.Parse(this, tokens);
 		} else {
-			Console.WriteLine("Invalid expression start: " + firstTok);
+			ReportError("Invalid expression start");
 			return 0.0;
 		}
 
 		// Then, continue applying infix parsers, until
 		// we hit something of lower (or same) precedence.
-		while (tokens.Count > 0 && InfixPrecedence(tokens[0]) > precedence) {
-			String operatorToken = tokens[0];
+		while (tokens.Count > 0 && InfixPrecedence(tokens[0].type) > precedence) {
+			TokenType operatorType = tokens[0].type;
 			tokens.RemoveAt(0);
-			if (!_infixParsers.ContainsKey(operatorToken)) break;
-			InfixParselet infixParselet = _infixParsers[operatorToken];
-			value = infixParselet.Parse(value, tokens);
+			InfixParseletPtr infixParselet = _infixParsers[(Int32)operatorType];
+			if (infixParselet == null) break;
+			value = infixParselet.Parse(this, value, tokens);
 		}
 
 		return value;
 	}
 
 	// Convenience overload that uses default precedence
-	public Double Parse(List<String> tokens) {
+	public Double Parse(List<Token> tokens) {
 		return Parse(tokens, Precedence.BELOW_ASSIGNMENT);
+	}
+	
+	public void ReportError(String errMsg) {
+		IOHelper.Print(errMsg);
 	}
 }
 

@@ -65,6 +65,10 @@ public:
 		return std::pow(x, y);
 	}
 	
+	static double Cos(double x) {
+		return std::cos(x);
+	}
+	
     // Additional common math functions can be added here as needed
 
 private:

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 // CPP: #include "OpSet.g.h"
+// CPP: #include "Token.g.h"
 /*** BEGIN CPP_ONLY ***
 #include "Parser.g.h"
 #include <iostream>
@@ -15,71 +16,72 @@ namespace MS2Proto4 {
 
 // CPP: // forward declarations
 // CPP: class Parser;
+// CPP: class Parselet;
+// CPP: class PrefixParselet;
+// CPP: class InfixParselet;
 // CPP: enum class Precedence : int32_t;
 
 using ParserPtr = Parser; // CPP: using ParserPtr = Parser*;
 
-public class Parselet {
+public abstract class Parselet {
 	public Precedence precedence;
 }
 
-// PrefixParselet: handles tokens that start an expression,
-// like numbers, identifiers, or unary operators.
-public class PrefixParselet : Parselet {
+// PrefixParselet: abstract base for parselets that handle tokens
+// starting an expression (numbers, identifiers, unary operators).
+public abstract class PrefixParselet : Parselet {
+	public abstract Double Parse(ParserPtr parser, List<Token> tokens);
+}
+
+// NumberParselet: handles number literals.
+public class NumberParselet : PrefixParselet {
 	public NumValFunc operation;
 
-	public PrefixParselet() {
-		operation = null;
-	}
-
-	public PrefixParselet(NumValFunc op) {
+	public NumberParselet(NumValFunc op) {
 		operation = op;
 	}
 
-	public virtual Double Parse(List<String> tokens) {
-		String token = tokens[0];
+	public override Double Parse(ParserPtr parser, List<Token> tokens) {
+		Token token = tokens[0];
 		tokens.RemoveAt(0);
-		return operation(token);
+		return operation(token.text);
 	}
 }
 
 // UnaryOpParselet: handles prefix unary operators like '-' in '-x'.
 public class UnaryOpParselet : PrefixParselet {
-	public new UnaryOpFunc operation;
-	public ParserPtr parser;
+	public UnaryOpFunc operation;
 
-	public UnaryOpParselet(UnaryOpFunc op, Precedence prec, ParserPtr parser) {
+	public UnaryOpParselet(UnaryOpFunc op, Precedence prec) {
 		operation = op;
 		precedence = prec;
-		this.parser = parser;
 	}
 
-	public override Double Parse(List<String> tokens) {
+	public override Double Parse(ParserPtr parser, List<Token> tokens) {
 		tokens.RemoveAt(0);  // skip operator token
 		Double operand = parser.Parse(tokens, precedence);
 		return operation(operand);
 	}
 }
 
-// InfixParselet: handles binary operators like '+', '-', '*', etc.
-public class InfixParselet : Parselet {
+// InfixParselet: abstract base for parselets that handle infix operators.
+public abstract class InfixParselet : Parselet {
+	// in CPP, this would be public: virtual Double Parse(ParserPtr parser, Double lhs, List<Token> tokens) = 0;
+	public abstract Double Parse(ParserPtr parser, Double lhs, List<Token> tokens);
+}
+
+// BinaryOpParselet: handles binary operators like '+', '-', '*', etc.
+public class BinaryOpParselet : InfixParselet {
 	public BinaryOpFunc operation;
 	public Boolean rightAssoc = false;
-	public ParserPtr parser;
 
-	public InfixParselet() {
-		operation = null;
-		parser = null;
-	}
-
-	public InfixParselet(BinaryOpFunc op, Precedence prec, ParserPtr parser, Boolean rightAssoc = false) {
+	public BinaryOpParselet(BinaryOpFunc op, Precedence prec, Boolean rightAssoc = false) {
 		operation = op;
 		precedence = prec;
-		this.parser = parser;
 		this.rightAssoc = rightAssoc;
 	}
 
-	public virtual Double Parse(Double lhs, List<String> tokens) {
+	public override Double Parse(ParserPtr parser, Double lhs, List<Token> tokens) {
 		Precedence rhsPrec = precedence - (rightAssoc ? 1 : 0);
 		Double rhs = parser.Parse(tokens, rhsPrec);
 		return operation(lhs, rhs);
@@ -88,15 +90,14 @@ public class InfixParselet : Parselet {
 
 // PostfixParselet: handles postfix unary operators like '!' for factorial.
 public class PostfixParselet : InfixParselet {
-	public new UnaryOpFunc operation;
+	public UnaryOpFunc operation;
 
-	public PostfixParselet(UnaryOpFunc op, Precedence prec, ParserPtr parser) {
+	public PostfixParselet(UnaryOpFunc op, Precedence prec) {
 		operation = op;
 		precedence = prec;
-		this.parser = parser;
 	}
 
-	public override Double Parse(Double lhs, List<String> tokens) {
+	public override Double Parse(ParserPtr parser, Double lhs, List<Token> tokens) {
 		// This is a right-side unary operator, not actually a binary operator.
 		// So we don't touch the given tokens, but instead just operate on lhs.
 		return operation(lhs);
@@ -108,37 +109,34 @@ public class PostfixParselet : InfixParselet {
 // - Variable assignments (when followed by '=')
 // - Function calls (when followed by '(')
 public class IdentifierParselet : PrefixParselet {
-	public new VarGetFunc operation;
+	public VarGetFunc operation;
 	public VarSetFunc assignmentOp;
 	public CallFunc callOp;
-	public ParserPtr parser;
 
-	public IdentifierParselet(VarGetFunc getOp, VarSetFunc setOp, CallFunc callOp, ParserPtr parser) {
+	public IdentifierParselet(VarGetFunc getOp, VarSetFunc setOp, CallFunc callOp) {
 		operation = getOp;
 		assignmentOp = setOp;
 		this.callOp = callOp;
-		this.parser = parser;
 	}
 
-	public override Double Parse(List<String> tokens) {
-		String identifier = tokens[0];
+	public override Double Parse(ParserPtr parser, List<Token> tokens) {
+		String identifier = tokens[0].text;
 		tokens.RemoveAt(0);
 
 		// Check what comes next
-		String nextToken = null;
-		if (tokens.Count > 0) nextToken = tokens[0];
+		TokenType nextType = tokens.Count > 0 ? tokens[0].type : TokenType.NUMBER;
 
-		if (nextToken == "=") {
+		if (nextType == TokenType.ASSIGN) {
 			tokens.RemoveAt(0);  // discard "="
 			Double rhs = parser.Parse(tokens, Precedence.BELOW_ASSIGNMENT);
 			return assignmentOp(identifier, rhs);
-		} else if (nextToken == "(") {
+		} else if (nextType == TokenType.LPAREN) {
 			tokens.RemoveAt(0);  // discard "("
 			Double arg = 0.0;
-			if (tokens.Count > 0 && tokens[0] != ")") {
+			if (tokens.Count > 0 && tokens[0].type != TokenType.RPAREN) {
 				arg = parser.Parse(tokens, Precedence.BELOW_ASSIGNMENT);
 			}
-			if (tokens.Count == 0 || tokens[0] != ")") {
+			if (tokens.Count == 0 || tokens[0].type != TokenType.RPAREN) {
 				Console.WriteLine("Unbalanced parentheses"); // CPP: std::cout << "Unbalanced parentheses\n";
 				return 0.0;
 			}
@@ -152,16 +150,14 @@ public class IdentifierParselet : PrefixParselet {
 
 // GroupParselet: handles parenthesized expressions like '(2 + 3)'.
 public class GroupParselet : PrefixParselet {
-	public ParserPtr parser;
 
-	public GroupParselet(ParserPtr parser) {
-		this.parser = parser;
+	public GroupParselet() {
 	}
 
-	public override Double Parse(List<String> tokens) {
+	public override Double Parse(ParserPtr parser, List<Token> tokens) {
 		tokens.RemoveAt(0);  // discard "("
 		Double result = parser.Parse(tokens, Precedence.BELOW_ASSIGNMENT);
-		if (tokens.Count == 0 || tokens[0] != ")") {
+		if (tokens.Count == 0 || tokens[0].type != TokenType.RPAREN) {
 			Console.WriteLine("Unbalanced parentheses"); // CPP: std::cout << "Unbalanced parentheses\n";
 			return 0.0;
 		}
