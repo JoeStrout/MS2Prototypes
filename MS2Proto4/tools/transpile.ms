@@ -304,8 +304,8 @@ Converter.processNonmethodLine = function
 	  "≤scope≥: ≤type≥* ≤name≥ = ≤value≥;", "") then return self.noteClassField
 
 	// class field (pointer/array)
-	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥ *≤name:w≥;",
-	  "≤scope≥: ≤type≥ *≤name≥;", "") then return self.noteClassField
+	if self.context == Context.CLASS and self.match("≤scope:w≥ ≤type:w≥[] ≤name:w≥;",
+	  "≤scope≥: std::vector<≤type≥> ≤name≥;", "") then return self.noteClassField(self.m.name, self.m.type, true)
 
 	// static class field, with and without default value
 	if self.context == Context.CLASS and self.match("≤scope:w≥ static ≤type:w≥ ≤name:w≥;",
@@ -458,14 +458,21 @@ Converter.processMethodLine = function
 		end if
 	end if
 	
+	// array assignments
+	if self.match("≤name:w≥ = new ≤type:w≥[≤qty≥];", "",
+	  "≤name≥ = std::vector<≤type≥>(≤qty≥);") then
+		return
+	end if
+	
 	// local variable declarations (with/without assignment)
 	if self.match("≤type:w≥ ≤name:w≥;", "", self.line) or
 	   self.match("≤type:w≥ ≤name:w≥ = ≤expr≥;", "", self.line) then
 		self.noteLocalVar
 		return
 	end if
-	
+		
 	// Anything else: copy to CPP file
+	debugPrint "NO MATCH, copying: " + self.line
 	curly = " {" * self.addCurly
 	fullLine = self.indentation + self.line + curly + self.comment
 	self.cppLines.push fullLine
@@ -496,17 +503,19 @@ Converter.tweakSyntax = function(line, context)
 	end if
 	
 	// other local array declaration
-	m = line.match("≤type:w≥[] ≤name≥ = new ≤type2:w≥[≤count≥];")
-	if m then
-		if not type.endsWith("Ptr") then return "≤type≥ ≤name≥[≤count≥];".fill(m)
-		return line
-	end if
-	// ...other array creation, must always involve a pointer
-	m = line.match("≤name≥ = new ≤type:w≥[≤count≥];")
-	if m then return line
+//	m = line.match("≤type:w≥[] ≤name≥ = new ≤type2:w≥[≤count≥];")
+//	if m then
+//		if not type.endsWith("Ptr") then return "≤type≥ ≤name≥[≤count≥];".fill(m)
+//		return line
+//	end if
+//	// ...other array creation, must always involve a pointer
+//	m = line.match("≤name≥ = new ≤type:w≥[≤count≥];")
+//	if m then return line
 
 	// array syntax (especially as seen in parameters)
-	line = line.replace("[] ", " *")
+// TODO: commenting this out, as we are probably adopting std::vector everywhere,
+// and that will certainly require rethinking this.
+//	line = line.replace("[] ", " *")
 	
 	// special case of a Main program args: add the count
 	line = line.replace("string *args", "String args[], int argCount")
@@ -518,19 +527,22 @@ Converter.tweakSyntax = function(line, context)
 	if line.contains(" new ") then
 		// Object creation & assignment: look up the LHS type to know whether to 
 		// keep "new" (because it's a Ptr) or remove it (any other type).
+		debugPrint "FOUND new IN: " + line
 		m = line.match("≤type≥ ≤name≥ = new ≤expr≥;")
 		if not m then m = line.match("≤name≥[≤idx≥] = new ≤expr≥;")
+		if not m then m = line.match("≤name≥ = new ≤expr≥[≤qty≥];")
 		if m then
 			if not m.hasIndex("type") then m.type = self.getType(m.name)
-			if m.type == null or not m.type.endsWith("Ptr") then
+			if m.type == null or (not m.type.endsWith("Ptr") and not m.type.endsWith("[]")) then
 				line = line.replace(" new ", " ")
 			end if
-//			print "SAW NEW and found type: " + m.type
+			print "SAW NEW and found type: " + m.type
 		else
-//			print "SAW NEW, but no match"
+			print "SAW NEW, but no match"
 			// If not one of the above patterns, we'll assume not a pointer (for now)
 			line = line.replace(" new ", " ")
 		end if
+		debugPrint "...and made it: " + line
 	end if
 	// Other object creation (assuming a compatible memory-managed type).
 	line = line.replace("(new ", "(")
@@ -636,18 +648,18 @@ Converter.checkType = function(type)
 	return false
 end function
 
-Converter.noteClassField = function(name, type)
+Converter.noteClassField = function(name, type, array=false)
 	if name == null then name = self.m.name
 	if type == null then type = self.m.type
-	self.classFields[name] = type
+	self.classFields[name] = type + "[]" * array
 	debugPrint "--> classFields: " + self.classFields
 	return self.checkType(type)
 end function
 
-Converter.noteLocalVar = function(name, type)
+Converter.noteLocalVar = function(name, type, array=false)
 	if name == null then name = self.m.name
 	if type == null then type = self.m.type
-	self.localVars[name] = type
+	self.localVars[name] = type + "[]" * array
 	debugPrint "--> localVars: " + self.localVars
 	return self.checkType(type)
 end function

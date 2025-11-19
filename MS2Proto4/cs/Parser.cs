@@ -51,15 +51,11 @@ public class Parser {
 		_prefixParsers = new PrefixParseletPtr[qty];
 		_infixParsers = new InfixParseletPtr[qty];
 		
-		for (Int32 i=0; i<qty; i++) {
-			_prefixParsers[i] = null;
-			_infixParsers[i] = null;
-		}
-		
 		BuildTokenEffects(ops);
 	}
 
 	/*** BEGIN H_ONLY ***
+	// ToDo: take this out once we're using unique_ptr instead of raw pointers.
 	~Parser() {
 		Int32 qty = (Int32)TokenType::_QTY_TOKENS;
 		for (Int32 i=0; i<qty; i++) {
