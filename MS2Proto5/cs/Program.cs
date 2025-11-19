@@ -13,7 +13,7 @@ namespace MS2Proto5 {
 public class Program {
 
 	public static void Main(string[] args) {
-		IOHelper.Print("MS2Proto5 AST Parser");
+		IOHelper.Print("MS2Proto5 AST Parser with Constant Folding");
 		IOHelper.Print("Enter expression to parse, or 'quit' to quit.");
 
 		Parser parser = new Parser();
@@ -24,7 +24,10 @@ public class Program {
 
 			List<Token> tokens = Lexer.Lex(input);
 			ASTNodeUPtr ast = parser.Parse(tokens);
-			IOHelper.Print(ast.ToString());
+			IOHelper.Print("Original: " + ast.ToString());
+
+			ASTNodeUPtr simplified = ast.Simplify();
+			IOHelper.Print("Simplified: " + simplified.ToString());
 		}
 	}
 }

@@ -31,6 +31,10 @@ namespace MS2Proto5 {
 public abstract class ASTNode {
 	// Each node type should override this to provide a string representation
 	public abstract new String ToString();
+
+	// Simplify this node (constant folding and other optimizations)
+	// Returns a simplified version of this node (may be a new node, or this node unchanged)
+	public abstract ASTNodeUPtr Simplify();
 }
 
 // Number literal node (e.g., 42, 3.14)
@@ -44,6 +48,10 @@ public class NumberNode : ASTNode {
 	public override String ToString() {
 		return value.ToString();
 	}
+
+	public override ASTNodeUPtr Simplify() {
+		return this;  // Already as simple as it gets
+	}
 }
 
 // Identifier node (e.g., variable name like "x" or "foo")
@@ -56,6 +64,10 @@ public class IdentifierNode : ASTNode {
 
 	public override String ToString() {
 		return name;
+	}
+
+	public override ASTNodeUPtr Simplify() {
+		return this;  // Can't simplify a variable reference
 	}
 }
 
@@ -72,6 +84,11 @@ public class AssignmentNode : ASTNode {
 	public override String ToString() {
 		return variable + " = " + value.ToString();
 	}
+
+	public override ASTNodeUPtr Simplify() {
+		ASTNodeUPtr simplifiedValue = value.Simplify();
+		return new AssignmentNode(variable, simplifiedValue);
+	}
 }
 
 // Unary operator node (e.g., -x, !flag)
@@ -86,6 +103,28 @@ public class UnaryOpNode : ASTNode {
 
 	public override String ToString() {
 		return op + "(" + operand.ToString() + ")";
+	}
+
+	public override ASTNodeUPtr Simplify() {
+		ASTNodeUPtr simplifiedOperand = operand.Simplify();
+
+		// If operand is a constant, compute the result
+		if (simplifiedOperand is NumberNode) {
+			NumberNode num = (NumberNode)simplifiedOperand;
+			if (op == Op.MINUS) {
+				return new NumberNode(-num.value);
+			} else if (op == Op.FACTORIAL) {
+				// Compute factorial
+				Double result = 1;
+				for (Int32 i = 2; i <= (Int32)num.value; i++) {
+					result *= i;
+				}
+				return new NumberNode(result);
+			}
+		}
+
+		// Otherwise return unary op with simplified operand
+		return new UnaryOpNode(op, simplifiedOperand);
 	}
 }
 
@@ -103,6 +142,32 @@ public class BinaryOpNode : ASTNode {
 
 	public override String ToString() {
 		return op + "(" + left.ToString() + ", " + right.ToString() + ")";
+	}
+
+	public override ASTNodeUPtr Simplify() {
+		ASTNodeUPtr simplifiedLeft = left.Simplify();
+		ASTNodeUPtr simplifiedRight = right.Simplify();
+
+		// If both operands are constants, compute the result
+		if (simplifiedLeft is NumberNode && simplifiedRight is NumberNode) {
+			NumberNode leftNum = (NumberNode)simplifiedLeft;
+			NumberNode rightNum = (NumberNode)simplifiedRight;
+
+			if (op == Op.PLUS) {
+				return new NumberNode(leftNum.value + rightNum.value);
+			} else if (op == Op.MINUS) {
+				return new NumberNode(leftNum.value - rightNum.value);
+			} else if (op == Op.TIMES) {
+				return new NumberNode(leftNum.value * rightNum.value);
+			} else if (op == Op.DIVIDE) {
+				return new NumberNode(leftNum.value / rightNum.value);
+			} else if (op == Op.POWER) {
+				return new NumberNode(Math.Pow(leftNum.value, rightNum.value));
+			}
+		}
+
+		// Otherwise return binary op with simplified operands
+		return new BinaryOpNode(op, simplifiedLeft, simplifiedRight);
 	}
 }
 
@@ -130,6 +195,14 @@ public class CallNode : ASTNode {
 		result += ")";
 		return result;
 	}
+
+	public override ASTNodeUPtr Simplify() {
+		List<ASTNodeUPtr> simplifiedArgs = new List<ASTNodeUPtr>();
+		for (Int32 i = 0; i < arguments.Count; i++) {
+			simplifiedArgs.Add(arguments[i].Simplify());
+		}
+		return new CallNode(function, simplifiedArgs);
+	}
 }
 
 // Grouping node (e.g., parenthesized expression like "(x + y)")
@@ -144,6 +217,11 @@ public class GroupNode : ASTNode {
 
 	public override String ToString() {
 		return "(" + expression.ToString() + ")";
+	}
+
+	public override ASTNodeUPtr Simplify() {
+		// Groups don't affect value, just return simplified child
+		return expression.Simplify();
 	}
 }
 
