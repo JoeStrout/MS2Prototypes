@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>MS2Proto5</RootNamespace>
+    <AssemblyName>MS2Proto5</AssemblyName>
+  </PropertyGroup>
+
+</Project>
