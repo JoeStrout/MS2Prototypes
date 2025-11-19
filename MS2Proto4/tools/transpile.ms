@@ -464,9 +464,85 @@ Converter.processMethodLine = function
 		return
 	end if
 	
+	// some uses of `new` that need to be smart-pointerfied
+	while self.line.contains(" new ")
+		// Object creation & assignment: look up the LHS type to know whether to 
+		// keep "new" (because it's a Ptr), change it to a smart pointer factory
+		// call (if UPtr or SPtr), or remove it entirely (any other type).
+		m = self.line.match("≤type:w≥ ≤name:w≥ = new ≤expr≥;")
+		if m then
+//			print "NEW case 1: " + m
+			if m.type.contains("List") or m.type.contains("String") or m.type.contains("Dict") then
+				// These are our C#-style types; we don't need `new` with them at all.
+				self.match("≤type:w≥ ≤name:w≥ = new ≤type2≥();", "",
+				   "≤type≥ ≤name≥;") or
+				   self.match("≤type:w≥ ≤name:w≥ = new ≤type2≥(≤args≥);", "",
+				   "≤type≥ ≤name≥(≤args≥);")				  
+				  return
+			else if m.type.endsWith("UPtr") then
+				self.match("≤type≥ ≤name≥ = new ≤type2≥(≤args≥);", "", 
+				  "≤type≥ ≤name≥ = std::make_unique<≤type2≥>(≤args≥);")
+				return
+			else if m.type.endsWith("SPtr") then
+				self.match("≤type≥ ≤name≥ = new ≤type2≥(≤args≥);", "", 
+				  "≤type≥ ≤name≥ = std::make_ushared<≤type2≥>(≤args≥);")
+				return
+			else if m.type.endsWith("Ptr") then
+				break
+			end if
+		end if
+		m = self.line.match("≤name:w≥ = new ≤type≥(≤args≥);")
+		if m then
+//			print "NEW case 2: " + m
+			type = self.getType(m.name)
+			if type.endsWith("UPtr") then
+				self.match("≤name≥ = new ≤type≥(≤args≥);", "", 
+				  "≤name≥ = std::make_unique<≤type≥>(≤args≥);")
+				return
+			else if type.endsWith("SPtr") then
+				self.match("≤name≥ = new ≤type≥(≤args≥);", "", 
+				  "≤name≥ = std::make_ushared<≤type≥>(≤args≥);")
+				return
+			else if type.endsWith("Ptr") then
+				break
+			end if
+		end if
+		m = self.line.match("≤name:w≥[≤idx≥] = new ≤type≥(≤args≥);")
+		if m then
+//			print "NEW case 3: " + m
+			type = self.getType(m.name)
+			if type.endsWith("UPtr[]") then
+				self.match("≤name≥[≤idx≥] = new ≤type≥(≤args≥);", "", 
+				  "≤name≥[≤idx≥] = std::make_unique<≤type≥>(≤args≥);")
+				return
+			else if type.endsWith("SPtr") then
+				self.match("≤name≥[≤idx≥] = new ≤type≥(≤args≥);", "", 
+				  "≤name≥ = std::make_ushared<≤type≥>(≤args≥);")
+				return
+			else if type.endsWith("Ptr") then
+				break
+			end if
+		end if
+//		print "NEW unknown case: " + self.line
+		// Other object creation (assumes a compatible memory-managed type).
+		self.line = self.line.replace(" new ", " ")
+		self.line = self.line.replace("(new ", "(")
+		if self.line.startsWith("new ") then self.line = self.line[4:]
+		break
+	end while
+	
+	
+
+	
 	// local variable declarations (with/without assignment)
 	if self.match("≤type:w≥ ≤name:w≥;", "", self.line) or
 	   self.match("≤type:w≥ ≤name:w≥ = ≤expr≥;", "", self.line) then
+		if self.m.type.endsWith("UPtr") then
+			// If the type is a UPtr, we need to use a reference; can't copy UPtrs!
+			self.cppLines.pop
+			self.match "≤type:w≥ ≤name:w≥ = ≤expr≥;", "", "≤type≥& ≤name≥ = ≤expr≥;"
+			print "Inserted &: " + self.cppLines[-1]
+		end if
 		self.noteLocalVar
 		return
 	end if
@@ -523,30 +599,6 @@ Converter.tweakSyntax = function(line, context)
 	// Split to list
 	m = line.match("≤pre≥.Split(≤args≥).ToList()≤post≥")
 	if m then line = "≤pre≥.SplitToList(≤args≥)≤post≥".fill(m)
-	
-	if line.contains(" new ") then
-		// Object creation & assignment: look up the LHS type to know whether to 
-		// keep "new" (because it's a Ptr) or remove it (any other type).
-		debugPrint "FOUND new IN: " + line
-		m = line.match("≤type≥ ≤name≥ = new ≤expr≥;")
-		if not m then m = line.match("≤name≥[≤idx≥] = new ≤expr≥;")
-		if not m then m = line.match("≤name≥ = new ≤expr≥[≤qty≥];")
-		if m then
-			if not m.hasIndex("type") then m.type = self.getType(m.name)
-			if m.type == null or (not m.type.endsWith("Ptr") and not m.type.endsWith("[]")) then
-				line = line.replace(" new ", " ")
-			end if
-			print "SAW NEW and found type: " + m.type
-		else
-			print "SAW NEW, but no match"
-			// If not one of the above patterns, we'll assume not a pointer (for now)
-			line = line.replace(" new ", " ")
-		end if
-		debugPrint "...and made it: " + line
-	end if
-	// Other object creation (assuming a compatible memory-managed type).
-	line = line.replace("(new ", "(")
-	if line.startsWith("new ") then line = line[4:]
 	
 	// null --> nullptr
 	line = line.replace(" null", " nullptr")

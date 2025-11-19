@@ -19,8 +19,8 @@ namespace MS2Proto4 {
 
 // CPP: class Parser;
 using ParserPtr = Parser; // CPP: using ParserPtr = Parser*;
-using PrefixParseletPtr = PrefixParselet; // CPP: using PrefixParseletPtr = PrefixParselet*;
-using InfixParseletPtr = InfixParselet; // CPP: using InfixParseletPtr = InfixParselet*;
+using PrefixParseletUPtr = PrefixParselet; // CPP: using PrefixParseletUPtr = std::unique_ptr<PrefixParselet>;
+using InfixParseletUPtr = InfixParselet; // CPP: using InfixParseletUPtr = std::unique_ptr<InfixParselet>;
 
 // Precedence levels (higher precedence binds more strongly).
 public enum Precedence : Int32 {
@@ -42,28 +42,17 @@ public enum Precedence : Int32 {
 // Uses a Pratt parser algorithm with parselets to handle operator precedence.
 public class Parser {
 
-	private PrefixParseletPtr[] _prefixParsers;
-	private InfixParseletPtr[] _infixParsers;
+	private PrefixParseletUPtr[] _prefixParsers;
+	private InfixParseletUPtr[] _infixParsers;
 
 	public Parser(OpSet ops) {
 		// Initialize arrays (size = number of token types)
 		Int32 qty = (Int32)TokenType._QTY_TOKENS;
-		_prefixParsers = new PrefixParseletPtr[qty];
-		_infixParsers = new InfixParseletPtr[qty];
+		_prefixParsers = new PrefixParseletUPtr[qty];
+		_infixParsers = new InfixParseletUPtr[qty];
 		
 		BuildTokenEffects(ops);
 	}
-
-	/*** BEGIN H_ONLY ***
-	// ToDo: take this out once we're using unique_ptr instead of raw pointers.
-	~Parser() {
-		Int32 qty = (Int32)TokenType::_QTY_TOKENS;
-		for (Int32 i=0; i<qty; i++) {
-			delete _prefixParsers[i];
-			delete _infixParsers[i];
-		}
-	}	
-	*** END H_ONLY ***/
 
 	// Build the token effects table from an OpSet
 	private void BuildTokenEffects(OpSet ops) {
@@ -89,7 +78,7 @@ public class Parser {
 
 	// Get the precedence of the infix parser for a token type
 	private Precedence InfixPrecedence(TokenType type) {
-		InfixParseletPtr parselet = _infixParsers[(Int32)type];
+		InfixParseletUPtr parselet = _infixParsers[(Int32)type];
 		if (parselet == null) return (Precedence)(-1);
 		return parselet.precedence;
 	}
@@ -100,7 +89,7 @@ public class Parser {
 
 		// First, check prefix parsers (for tokens that can start an expression)
 		Token firstTok = tokens[0];
-		PrefixParseletPtr prefixParselet = _prefixParsers[(Int32)firstTok.type];
+		PrefixParseletUPtr prefixParselet = _prefixParsers[(Int32)firstTok.type];
 
 		Double value = 0.0;
 		if (prefixParselet != null) {
@@ -115,7 +104,7 @@ public class Parser {
 		while (tokens.Count > 0 && InfixPrecedence(tokens[0].type) > precedence) {
 			TokenType operatorType = tokens[0].type;
 			tokens.RemoveAt(0);
-			InfixParseletPtr infixParselet = _infixParsers[(Int32)operatorType];
+			InfixParseletUPtr infixParselet = _infixParsers[(Int32)operatorType];
 			if (infixParselet == null) break;
 			value = infixParselet.Parse(this, value, tokens);
 		}

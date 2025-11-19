@@ -4,7 +4,7 @@
 CXX = g++
 CC = gcc
 
-CXXFLAGS = -std=gnu++11 -Wall -Wextra -O3 -DNDEBUG -Icore
+CXXFLAGS = -std=gnu++14 -Wall -Wextra -O3 -DNDEBUG -Icore
 CFLAGS = -std=c99 -Wall -Wextra -O3 -DNDEBUG -Icore
 SRCDIR = core
 GENDIR = ../generated
