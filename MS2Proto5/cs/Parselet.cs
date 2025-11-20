@@ -5,11 +5,12 @@ using System.Collections.Generic;
 /*** BEGIN CPP_ONLY ***
 #include "Parser.g.h"
 #include <iostream>
+#include <stdlib.h>
 *** END CPP_ONLY ***/
 
-// Type alias for C++: In C#, ASTNodeUPtr is just ASTNode.
-// The transpiler will generate: using ASTNodeUPtr = std::unique_ptr<ASTNode>;
-using ASTNodeUPtr = MS2Proto5.ASTNode;
+// Type alias for C++: In C#, ASTNodeSPtr is just ASTNode.
+// The transpiler will generate: using ASTNodeSPtr = std::unique_ptr<ASTNode>;
+using ASTNodeSPtr = MS2Proto5.ASTNode;
 
 namespace MS2Proto5 {
 
@@ -34,7 +35,7 @@ public abstract class Parselet {
 // PrefixParselet: abstract base for parselets that handle tokens
 // starting an expression (numbers, identifiers, unary operators).
 public abstract class PrefixParselet : Parselet {
-	public abstract ASTNodeUPtr Parse(ParserPtr parser, List<Token> tokens);
+	public abstract ASTNodeSPtr Parse(ParserPtr parser, List<Token> tokens);
 }
 
 // NumberParselet: handles number literals.
@@ -43,11 +44,11 @@ public class NumberParselet : PrefixParselet {
 	public NumberParselet() {
 	}
 
-	public override ASTNodeUPtr Parse(ParserPtr parser, List<Token> tokens) {
+	public override ASTNodeSPtr Parse(ParserPtr, List<Token> tokens) {
 		Token token = tokens[0];
 		tokens.RemoveAt(0);
-		Double value = Double.Parse(token.text);
-		return new NumberNode(value);
+		Double value = Double.Parse(token.text); // CPP: Double value = atof(token.text.c_str());
+		return new NumberNode(value); // CPP: return std::make_shared<NumberNode>(value);
 	}
 }
 
@@ -60,16 +61,16 @@ public class UnaryOpParselet : PrefixParselet {
 		precedence = prec;
 	}
 
-	public override ASTNodeUPtr Parse(ParserPtr parser, List<Token> tokens) {
+	public override ASTNodeSPtr Parse(ParserPtr parser, List<Token> tokens) {
 		tokens.RemoveAt(0);  // skip operator token
-		ASTNodeUPtr operand = parser.Parse(tokens, precedence);
-		return new UnaryOpNode(op, operand);
+		ASTNodeSPtr operand = parser.Parse(tokens, precedence);
+		return new UnaryOpNode(op, operand); // CPP: return std::make_shared<UnaryOpNode>(op, operand);
 	}
 }
 
 // InfixParselet: abstract base for parselets that handle infix operators.
 public abstract class InfixParselet : Parselet {
-	public abstract ASTNodeUPtr Parse(ParserPtr parser, ASTNodeUPtr lhs, List<Token> tokens);
+	public abstract ASTNodeSPtr Parse(ParserPtr parser, ASTNodeSPtr lhs, List<Token> tokens);
 }
 
 // BinaryOpParselet: handles binary operators like '+', '-', '*', etc.
@@ -83,10 +84,10 @@ public class BinaryOpParselet : InfixParselet {
 		this.rightAssoc = rightAssoc;
 	}
 
-	public override ASTNodeUPtr Parse(ParserPtr parser, ASTNodeUPtr lhs, List<Token> tokens) {
+	public override ASTNodeSPtr Parse(ParserPtr parser, ASTNodeSPtr lhs, List<Token> tokens) {
 		Precedence rhsPrec = precedence - (rightAssoc ? 1 : 0);
-		ASTNodeUPtr rhs = parser.Parse(tokens, rhsPrec);
-		return new BinaryOpNode(op, lhs, rhs);
+		ASTNodeSPtr rhs = parser.Parse(tokens, rhsPrec);
+		return new BinaryOpNode(op, lhs, rhs); // CPP: return std::make_shared<BinaryOpNode>(op, lhs, rhs);
 	}
 }
 
@@ -99,10 +100,10 @@ public class PostfixParselet : InfixParselet {
 		precedence = prec;
 	}
 
-	public override ASTNodeUPtr Parse(ParserPtr parser, ASTNodeUPtr lhs, List<Token> tokens) {
+	public override ASTNodeSPtr Parse(ParserPtr, ASTNodeSPtr lhs, List<Token>) {
 		// This is a right-side unary operator, not actually a binary operator.
 		// So we don't touch the given tokens, but instead just operate on lhs.
-		return new UnaryOpNode(op, lhs);
+		return new UnaryOpNode(op, lhs); // CPP: return std::make_shared<UnaryOpNode>(op, lhs);
 	}
 }
 
@@ -115,7 +116,7 @@ public class IdentifierParselet : PrefixParselet {
 	public IdentifierParselet() {
 	}
 
-	public override ASTNodeUPtr Parse(ParserPtr parser, List<Token> tokens) {
+	public override ASTNodeSPtr Parse(ParserPtr parser, List<Token> tokens) {
 		String identifier = tokens[0].text;
 		tokens.RemoveAt(0);
 
@@ -124,22 +125,22 @@ public class IdentifierParselet : PrefixParselet {
 
 		if (nextType == TokenType.ASSIGN) {
 			tokens.RemoveAt(0);  // discard "="
-			ASTNodeUPtr rhs = parser.Parse(tokens, Precedence.BELOW_ASSIGNMENT);
-			return new AssignmentNode(identifier, rhs);
+			ASTNodeSPtr rhs = parser.Parse(tokens, Precedence.BELOW_ASSIGNMENT);
+			return new AssignmentNode(identifier, rhs); // CPP: return std::make_shared<AssignmentNode>(identifier, rhs);
 		} else if (nextType == TokenType.LPAREN) {
 			tokens.RemoveAt(0);  // discard "("
-			List<ASTNodeUPtr> args = new List<ASTNodeUPtr>();
+			List<ASTNodeSPtr> args = new List<ASTNodeSPtr>();
 			if (tokens.Count > 0 && tokens[0].type != TokenType.RPAREN) {
 				args.Add(parser.Parse(tokens, Precedence.BELOW_ASSIGNMENT));
 			}
 			if (tokens.Count == 0 || tokens[0].type != TokenType.RPAREN) {
 				Console.WriteLine("Unbalanced parentheses"); // CPP: std::cout << "Unbalanced parentheses\n";
-				return new NumberNode(0.0);
+				return new NumberNode(0.0); // CPP: return std::make_shared<NumberNode>(0.0);
 			}
 			tokens.RemoveAt(0);  // discard ")"
-			return new CallNode(identifier, args);
+			return new CallNode(identifier, args); // CPP: return std::make_shared<CallNode>(identifier, args);
 		} else {
-			return new IdentifierNode(identifier);
+			return new IdentifierNode(identifier); // CPP: return std::make_shared<IdentifierNode>(identifier);
 		}
 	}
 }
@@ -150,15 +151,15 @@ public class GroupParselet : PrefixParselet {
 	public GroupParselet() {
 	}
 
-	public override ASTNodeUPtr Parse(ParserPtr parser, List<Token> tokens) {
+	public override ASTNodeSPtr Parse(ParserPtr parser, List<Token> tokens) {
 		tokens.RemoveAt(0);  // discard "("
-		ASTNodeUPtr result = parser.Parse(tokens, Precedence.BELOW_ASSIGNMENT);
+		ASTNodeSPtr result = parser.Parse(tokens, Precedence.BELOW_ASSIGNMENT);
 		if (tokens.Count == 0 || tokens[0].type != TokenType.RPAREN) {
 			Console.WriteLine("Unbalanced parentheses"); // CPP: std::cout << "Unbalanced parentheses\n";
-			return new NumberNode(0.0);
+			return new NumberNode(0.0); // CPP: return std::make_shared<NumberNode>(0.0);
 		}
 		tokens.RemoveAt(0);  // discard ")"
-		return new GroupNode(result);
+		return new GroupNode(result); // CPP: return std::make_shared<GroupNode>(result);
 	}
 }
 

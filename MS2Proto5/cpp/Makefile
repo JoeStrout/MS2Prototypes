@@ -1,4 +1,4 @@
-# MS2Proto4 C++ Makefile
+# MS2Proto5 C++ Makefile
 # Builds the transpiled C++ version
 
 CXX = g++
@@ -26,7 +26,7 @@ GEN_OBJECTS = $(GEN_SOURCES:$(GENDIR)/%.g.cpp=$(OBJDIR)/gen_%.o)
 OBJECTS = $(CORE_OBJECTS) $(GEN_OBJECTS)
 
 # Target executable
-TARGET = $(BUILDDIR)/MS2Proto4
+TARGET = $(BUILDDIR)/MS2Proto5
 
 .PHONY: all clean info
 

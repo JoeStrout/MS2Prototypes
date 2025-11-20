@@ -531,8 +531,20 @@ Converter.processMethodLine = function
 		break
 	end while
 	
-	
-
+	// dynamic casts
+	if self.match("var ≤name:w≥ = ≤expr≥ as ≤type2≥;", "",
+	   "≤type2≥* ≤name≥ = dynamic_cast<≤type2≥*>(≤expr≥.get());") then
+		self.m.type = self.m.type2
+		self.m.type += "Ptr"
+		self.noteLocalVar
+		return
+	end if
+	if self.match("≤type≥ ≤name:w≥ = ≤expr≥ as ≤type2≥;", "",
+	   "≤type≥* ≤name≥ = dynamic_cast<≤type2≥*>(≤expr≥.get());") then
+		self.m.type += "Ptr"
+		self.noteLocalVar
+		return
+	end if
 	
 	// local variable declarations (with/without assignment)
 	if self.match("≤type:w≥ ≤name:w≥;", "", self.line) or
@@ -541,7 +553,7 @@ Converter.processMethodLine = function
 			// If the type is a UPtr, we need to use a reference; can't copy UPtrs!
 			self.cppLines.pop
 			self.match "≤type:w≥ ≤name:w≥ = ≤expr≥;", "", "≤type≥& ≤name≥ = ≤expr≥;"
-			print "Inserted &: " + self.cppLines[-1]
+//			print "Inserted &: " + self.cppLines[-1]
 		end if
 		self.noteLocalVar
 		return

@@ -97,6 +97,12 @@ public:
         data->push_back(item);
     }
 
+    // Move version for types that can't be copied (like unique_ptr)
+    void Add(T&& item) {
+        ensureData();
+        data->push_back(std::move(item));
+    }
+
     void AddRange(const List<T>& collection) {
         if (collection.Empty()) return;
         ensureData();

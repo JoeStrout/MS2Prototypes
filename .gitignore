@@ -26,6 +26,7 @@ build/
 # to push these to github or not, but probably not in this prototype.
 MS2Proto3/generated/
 MS2Proto4/generated/
+MS2Proto5/generated/
 
 # C# / .NET / Mono Build Products
 *.exe

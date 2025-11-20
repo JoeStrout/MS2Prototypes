@@ -14,9 +14,7 @@ using System.Collections.Generic;
 // CPP: #include "Token.g.h"
 // CPP: #include "IOHelper.g.h"
 
-// Type alias for C++: In C#, ASTNodeUPtr is just ASTNode.
-// The transpiler will generate: using ASTNodeUPtr = std::unique_ptr<ASTNode>;
-using ASTNodeUPtr = MS2Proto5.ASTNode;
+using ASTNodeSPtr = MS2Proto5.ASTNode;
 
 namespace MS2Proto5 {
 
@@ -86,19 +84,21 @@ public class Parser {
 	}
 
 	// Parse a list of tokens and return the AST root node
-	public ASTNodeUPtr Parse(List<Token> tokens, Precedence precedence) {
-		if (tokens.Count == 0) return new NumberNode(0.0);
+	public ASTNodeSPtr Parse(List<Token> tokens, Precedence precedence) {
+		if (tokens.Count == 0) {
+			return new NumberNode(0.0); // CPP: return std::make_shared<NumberNode>(0.0);
+		}
 
 		// First, check prefix parsers (for tokens that can start an expression)
 		Token firstTok = tokens[0];
 		PrefixParseletUPtr prefixParselet = _prefixParsers[(Int32)firstTok.type];
 
-		ASTNodeUPtr node = null;
+		ASTNodeSPtr node = null;
 		if (prefixParselet != null) {
 			node = prefixParselet.Parse(this, tokens);
 		} else {
 			ReportError("Invalid expression start");
-			return new NumberNode(0.0);
+			return new NumberNode(0.0); // CPP: return std::make_shared<NumberNode>(0.0);
 		}
 
 		// Then, continue applying infix parsers, until
@@ -115,7 +115,7 @@ public class Parser {
 	}
 
 	// Convenience overload that uses default precedence
-	public ASTNodeUPtr Parse(List<Token> tokens) {
+	public ASTNodeSPtr Parse(List<Token> tokens) {
 		return Parse(tokens, Precedence.BELOW_ASSIGNMENT);
 	}
 
