@@ -34,4 +34,4 @@ inline Token::Token(TokenType type, String text ) {
 	this->text = text;
 }
 
-} // end of namespace MS2Proto5
+} // end of namespace MiniScript

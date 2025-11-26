@@ -30,8 +30,8 @@ public struct Token {
 	public String Str() {
 		switch (type) {
 			case TokenType.UNKNOWN: return "UNKNOWN";
-			case TokenType.NUMBER: return $"NUMBER({text}";
-			case TokenType.IDENTIFIER: return $"IDENTIFIER{text}";
+			case TokenType.NUMBER: return $"NUMBER({text})";
+			case TokenType.IDENTIFIER: return $"IDENTIFIER({text})";
 			case TokenType.PLUS: return "PLUS";
 			case TokenType.MINUS: return "MINUS";
 			case TokenType.STAR: return "STAR";

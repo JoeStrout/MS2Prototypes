@@ -17,4 +17,4 @@ class Op {
 	public: static const String TIMES;
 }; // end of class Op
 
-} // end of namespace MS2Proto5
+} // end of namespace MiniScript
