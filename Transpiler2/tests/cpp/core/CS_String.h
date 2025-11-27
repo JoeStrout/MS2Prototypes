@@ -48,10 +48,29 @@ private:
 	// Helper method to create a String from a StringStorage freshly made with malloc
 	static String fromMallocStorage(StringStorage* rawPtr) {
 		String s;
-		s.ref = std::shared_ptr<StringStorage>(rawPtr, free);
+		s.ref = std::shared_ptr<StringStorage>(rawPtr, [](StringStorage* p) { ::free(p); });
 		return s;
 	}
-	
+
+	// Safely wrap StringStorage* returned from ss_* functions.
+	// Many ss_* functions may return their input pointer (cast away const) for efficiency
+	// when the operation would be a no-op (e.g., toLower on an already lowercase string).
+	// This helper detects that case and reuses the existing String instead of creating
+	// a new shared_ptr to already-managed memory (which would cause double-free).
+	static String wrapStorage(StringStorage* result, const String& original) {
+		if (!result) return String();  // NULL result = empty string
+		if (result == original.getStorageRaw()) return original;  // Same storage, reuse
+		return fromMallocStorage(result);  // New storage, wrap it
+	}
+
+	// Overload for two possible original strings (for binary operations like concat)
+	static String wrapStorage(StringStorage* result, const String& original1, const String& original2) {
+		if (!result) return String();
+		if (result == original1.getStorageRaw()) return original1;
+		if (result == original2.getStorageRaw()) return original2;
+		return fromMallocStorage(result);
+	}
+
     // Private constructor from StringStorageSPtr
     String(StringStorageSPtr ssRef) : ref(ssRef) {}
     
@@ -95,12 +114,17 @@ public:
         return ss_lengthC(s);
     }
     
-    const char* c_str() const { 
+    const char* c_str() const {
 		if (!ref) return "";
 		const StringStorage *ss = getStorageRaw();
 		return ss ? ss->data : "";
     }
-	
+
+	// Implicit conversion to const char* for use with C APIs and stream operators
+	operator const char*() const {
+		return c_str();
+	}
+
 	const StringStorage* getStorageRaw() const {
 		return (const StringStorage*)(ref.get());
 	}
@@ -113,8 +137,7 @@ public:
 		if (!s2) return *this;
 
         StringStorage* result_ss = ss_concat(s1, s2, malloc);
-        String result = fromMallocStorage(result_ss);	// ToDo: intern?
-		return result;
+        return wrapStorage(result_ss, *this, other);
     }
 
     // String concatenation assignment
@@ -122,9 +145,13 @@ public:
         const StringStorage* s1 = getStorageRaw();
         const StringStorage* s2 = other.getStorageRaw();
 		if (!s2) return *this;
+		if (!s1) {
+			*this = other;
+			return *this;
+		}
 
         StringStorage* result_ss = ss_concat(s1, s2, malloc);
-        ref = std::shared_ptr<StringStorage>(result_ss, free);	// ToDo: intern if small enough!
+        *this = wrapStorage(result_ss, *this, other);
         return *this;
     }
 
@@ -247,17 +274,17 @@ public:
     String Substring(int startIndex) const {
         const StringStorage* s = getStorageRaw();
         if (!s) return String();
-        
+
         StringStorage* result = ss_substring(s, startIndex, malloc);
-        return fromMallocStorage(result);
+        return wrapStorage(result, *this);
     }
-    
+
     String Substring(int startIndex, int length) const {
         const StringStorage* s = getStorageRaw();
         if (!s) return String();
-        
+
         StringStorage* result_ss = ss_substringLen(s, startIndex, length, malloc);
-        return fromMallocStorage(result_ss);
+        return wrapStorage(result_ss, *this);
     }
     
     String Left(int chars) const {
@@ -274,84 +301,84 @@ public:
         const StringStorage* s = getStorageRaw();
         const StringStorage* v = value.getStorageRaw();
         if (!s || !v) return String();
-        
+
         StringStorage* result_ss = ss_insert(s, startIndex, v, malloc);
-		return fromMallocStorage(result_ss);
+		return wrapStorage(result_ss, *this);
     }
-    
+
     String Remove(int startIndex) const {
         const StringStorage* s = getStorageRaw();
         if (!s) return String();
-        
+
         StringStorage* result_ss = ss_remove(s, startIndex, malloc);
-		return fromMallocStorage(result_ss);
+		return wrapStorage(result_ss, *this);
     }
-    
+
     String Remove(int startIndex, int count) const {
         const StringStorage* s = getStorageRaw();
         if (!s) return String();
-        
+
         StringStorage* result_ss = ss_removeLen(s, startIndex, count, malloc);
-		return fromMallocStorage(result_ss);
+		return wrapStorage(result_ss, *this);
     }
-    
+
     String Replace(const String& oldValue, const String& newValue) const {
         const StringStorage* s = getStorageRaw();
         const StringStorage* oldVal = oldValue.getStorageRaw();
         const StringStorage* newVal = newValue.getStorageRaw();
-        
+
         StringStorage* result_ss = ss_replace(s, oldVal, newVal, malloc);
-		return fromMallocStorage(result_ss);
+		return wrapStorage(result_ss, *this);
     }
-    
+
     String Replace(char oldChar, char newChar) const {
         const StringStorage* s = getStorageRaw();
         if (!s) return String();
-        
+
         StringStorage* result_ss = ss_replaceByte(s, oldChar, newChar, malloc);
-		return fromMallocStorage(result_ss);
+		return wrapStorage(result_ss, *this);
     }
     
     // C# String API - Case conversion
     String ToLower() const {
         const StringStorage* s = getStorageRaw();
         if (!s) return String();
-        
+
         StringStorage* result_ss = ss_toLower(s, malloc);
-        return fromMallocStorage(result_ss);
+        return wrapStorage(result_ss, *this);
     }
-    
+
     String ToUpper() const {
         const StringStorage* s = getStorageRaw();
         if (!s) return String();
-        
+
         StringStorage* result_ss = ss_toUpper(s, malloc);
-        return fromMallocStorage(result_ss);
+        return wrapStorage(result_ss, *this);
     }
-    
+
     // C# String API - Trimming
     String Trim() const {
         const StringStorage* s = getStorageRaw();
         if (!s) return String();
-        
+
         StringStorage* result_ss = ss_trim(s, malloc);
-        return fromMallocStorage(result_ss);
+        return wrapStorage(result_ss, *this);
     }
-    
+
     String TrimStart() const {
         const StringStorage* s = getStorageRaw();
         if (!s) return String();
-        
+
         StringStorage* result_ss = ss_trimStart(s, malloc);
-        return fromMallocStorage(result_ss);
+        return wrapStorage(result_ss, *this);
     }
-    
+
     String TrimEnd() const {
         const StringStorage* s = getStorageRaw();
         if (!s) return String();
-        
+
         StringStorage* result_ss = ss_trimEnd(s, malloc);
-        return fromMallocStorage(result_ss);
+        return wrapStorage(result_ss, *this);
     }
     
     // C# String API - Splitting (caller must free returned array and its contents)
@@ -546,7 +573,7 @@ public:
         
         // Create String from result and clean up
         String joined(result);
-        free(result);					// free valid here because it came from malloc, above
+        ::free(result);					// free valid here because it came from malloc, above
         return joined;
     }
 };
@@ -566,6 +593,31 @@ inline String ToString(double d, const char *format=nullptr) {
 	snprintf(str, 32, format, d);
 	return String(str);
 }
+
+inline String ToString(int i) {
+	char str[32];
+	snprintf(str, 32, "%d", i);
+	return String(str);
+}
+
+// String interpolation function - forward declarations for variadic template
+namespace InterpImpl {
+	// Helper to convert any argument to String
+	inline String ArgToString(int val) { return ToString(val); }
+	inline String ArgToString(double val) { return ToString(val); }
+	inline String ArgToString(const char* val) { return String(val ? val : ""); }
+	inline String ArgToString(const String& val) { return val; }
+
+	// Helper to format a double with a format specifier (e.g., "0.00" -> 2 decimal places)
+	inline String FormatDouble(double val, const char* formatSpec);
+}
+
+// String interpolation - replaces {} placeholders with arguments
+// Supports format specifiers like {0.00} for doubles
+// Usage: Interp("Value: {}", 42) -> "Value: 42"
+//        Interp("Pi: {0.00}", 3.14159) -> "Pi: 3.14"
+template<typename... Args>
+String Interp(const char* format, Args... args);
 
 // Hash function for String (used by Dictionary<String, TValue>)
 inline int Hash(const String& str) {

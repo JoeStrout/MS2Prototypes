@@ -27,7 +27,7 @@ public class NumberNode : ASTNode {
 
 	[MethodImpl(AggressiveInlining)]
 	public override String Str() {
-		return StringExtras.ToString(value);
+		return $"{value}";
 	}
 
 	[MethodImpl(AggressiveInlining)]

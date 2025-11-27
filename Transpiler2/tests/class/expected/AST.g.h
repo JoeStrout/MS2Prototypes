@@ -9,14 +9,14 @@ namespace MiniScript {
 //----------------------------------------------------------------------
 // Forward declaration of wrapper classes
 //----------------------------------------------------------------------
-class ASTNode;
-class NumberNode;
-class IdentifierNode;
-class AssignmentNode;
-class UnaryOpNode;
-class BinaryOpNode;
-class CallNode;
-class GroupNode;
+struct ASTNode;
+struct NumberNode;
+struct IdentifierNode;
+struct AssignmentNode;
+struct UnaryOpNode;
+struct BinaryOpNode;
+struct CallNode;
+struct GroupNode;
 
 class ASTNodeStorage;
 
@@ -141,7 +141,7 @@ inline NumberNodeStorage::NumberNodeStorage(Double value) {
 }
 
 inline String NumberNodeStorage::Str() {
-	return StringExtras::ToString(value);
+	return Interp("{}", value);
 }
 
 inline ASTNode NumberNodeStorage::Simplify() {

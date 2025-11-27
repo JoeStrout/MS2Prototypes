@@ -1,7 +1,7 @@
 // AUTO-GENERATED FILE.  DO NOT MODIFY.
 // Transpiled from: ast.cs
 
-#include "ast.g.h"
+#include "AST.g.h"
 
 
 namespace MiniScript {
