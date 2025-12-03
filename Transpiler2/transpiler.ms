@@ -35,6 +35,62 @@ debugPrint = function(s)
 end function
 
 //--------------------------------------------------------------------------------
+Line = {}
+Line.full = ""					// full text of line
+Line.m = null					// match map (set by .match method)
+
+Line.indentation = function
+	line = self.full
+	i = 0
+	while i < line.len and (line[i] == " " or line[i] == TAB)
+		i += 1
+	end while
+	self.indentation = line[:i]  // memoize on the instance
+	return self.indentation
+end function
+
+Line.comment = function
+	line = self.full
+	i = 0
+	comment = ""
+	inQuote = false
+	while i < line.len-2
+		if line[i] == """" then inQuote = not inQuote
+		if line[i:i+2] == "//" and not inQuote then
+			comment = line[i:]
+			break
+		end if
+		i += 1
+	end while
+	self.comment = comment  // memoize on the instance
+	return comment
+end function
+
+Line.trimmed = function
+	comment = self.comment
+	if comment.len > 0 then
+		line = self.full[self.indentation.len : -comment.len]
+	else
+		line = self.full[self.indentation.len:]
+	end if
+	line = line.trimRight
+	self.trimmed = line  // again, memoize
+	return line
+end function
+
+Line.match = function(pattern, againstFull=false)
+	if againstFull then s = self.full else s = self.trimmed
+	self.m = s.match(pattern)
+	return self.m != null
+end function
+
+Line.Make = function(fullLine)
+	noob = new Line
+	noob.full = fullLine
+	return noob
+end function
+
+//--------------------------------------------------------------------------------
 ClassInfo = {}
 ClassInfo.name = ""
 ClassInfo.type = ""				// ClassType.CLASS, etc.
@@ -88,6 +144,7 @@ Transpiler.state = ""
 Transpiler.gatherMode = false	// if true, just gathering symbols
 Transpiler.sourcePath = ""		// file path to .cs file we're processing
 Transpiler.outputFolder = ""	// path to folder for output files
+Transpiler.namespace = ""		// namespace we're processing
 Transpiler.preLines = null		// list of lines (usually comments) before method/field
 Transpiler.line = ""			// current line we're processing
 Transpiler.fileClasses = null	// list of ClassInfo we're processing (in this file)
@@ -125,60 +182,75 @@ Transpiler.exitState = function(toNewState)
 end function
 
 Transpiler.updateState = function
-	line = self.line
-	comment = self.line.comment
-	print "comment: " + comment
 	
 	if self.state == State.START then
-		if comment.startsWith("// CPP: ") then; self.cppLines.push comment[8:]; return; end if
-		if comment.startsWith("// H: ") then; self.headerLines.push comment[6:]; return; end if
-		if line.trimmed == "" then; self.headerLines.push line.full; return; end if
-		if line.trimmed.startsWith("namespace ") then
-			self.headerLines.push line.full
-			self.enterState State.NAMESPACE
-		end if
-		return
-	end if
-	
-	if self.state == State.NAMESPACE then
-		if comment.startsWith("// CPP: ") then; self.cppLines.push comment[8:]; return; end if
-		if comment.startsWith("// H: ") then; self.headerLines.push comment[6:]; return; end if
-		if line.trimmed == "" then; self.preLines.push line.full; return; end if
-		m = line.trimmed.match("≤scope:w≥ static class ≤name:w≥ {")
-		if m then
-			self.enterState State.CLASS
-			self.curClass = ClassInfo.Make(m.name)
-			self.fileClasses.push self.curClass
-			self.curClass.declLines += self.preLines
-			self.preLines = []
-			self.curClass.declLines.push line.full
-			self.curClass.defLines.push ""
-		end if
-		if line.full.startsWith("}") then
-			self.endLines.push line.full
-			self.enterState State.DONE
-		end if
-		return
-	end if
-
-	if self.state == State.CLASS then
-		if line.full.startsWith("}") then
-			self.curClass.declLines.push line.full
-			self.enterState State.NAMESPACE
-		end if
-		m = line.trimmed.match("≤scope:w≥ const ≤type:w≥ ≤name:w≥ = ≤value≥;")
-		if m then
-			m.className = self.curClass.name
-			self.curClass.declLines.push "\t≤scope≥: static const ≤type≥ ≤name≥;".fill(m)
-			self.curClass.defLines.push "const ≤type≥ ≤className≥::≤name≥ = ≤value≥;".fill(m)
-		end if
-		return
-	end if
-
-	if self.state == State.DONE then
+		self.updateStateSTART
+	else if self.state == State.NAMESPACE then
+		self.updateStateNAMESPACE
+	else if self.state == State.CLASS then
+		self.updateStateCLASS
+	else if self.state == State.DONE then
 		self.endLines.push line.full	// ToDo: support H: and CPP: comments here?
 	end if
 	
+end function
+
+Transpiler.updateStateSTART = function
+	line = self.line
+	comment = self.line.comment
+
+	if comment.startsWith("// CPP: ") then
+		self.cppLines.push comment[8:]
+	else if comment.startsWith("// H: ") then
+		self.headerLines.push comment[6:]
+	else if line.trimmed == "" then
+		self.headerLines.push line.full
+	else if line.match("namespace ≤name≥ {") then
+		self.headerLines.push line.full
+		self.namespace = line.m.name
+		self.enterState State.NAMESPACE
+	else
+		print "Ignored in state START: " + line.full
+	end if
+end function
+
+Transpiler.updateStateNAMESPACE = function
+	line = self.line
+	comment = self.line.comment
+
+	if comment.startsWith("// CPP: ") then
+		self.cppLines.push comment[8:]
+	else if comment.startsWith("// H: ") then
+		self.headerLines.push comment[6:]
+	else if line.trimmed == "" then
+		self.preLines.push line.full
+	else if line.match("≤scope:w≥ static class ≤name:w≥ {") then
+		self.enterState State.CLASS
+		self.curClass = ClassInfo.Make(line.m.name)
+		self.fileClasses.push self.curClass
+		self.curClass.declLines += self.preLines
+		self.preLines = []
+		self.curClass.declLines.push line.full
+		self.curClass.defLines.push ""
+	else if line.full.startsWith("}") then
+		if not line.comment then line.comment = "// end of namespace " + self.namespace
+		self.endLines.push "} " + line.comment
+		self.enterState State.DONE
+	end if
+end function
+
+Transpiler.updateStateCLASS = function
+	line = self.line
+	comment = self.line.comment
+
+	if line.full.startsWith("}") then
+		self.curClass.declLines.push line.full
+		self.enterState State.NAMESPACE
+	else if line.match("≤scope:w≥ const ≤type:w≥ ≤name:w≥ = ≤value≥;") then
+		line.m.className = self.curClass.name
+		self.curClass.declLines.push "\t≤scope≥: static const ≤type≥ ≤name≥;".fill(line.m)
+		self.curClass.defLines.push "const ≤type≥ ≤className≥::≤name≥ = ≤value≥;".fill(line.m)
+	end if
 end function
 
 Transpiler.generateOutput = function
@@ -213,12 +285,16 @@ Transpiler.generateOutput = function
 	cppLines.push "// AUTO-GENERATED FILE.  DO NOT MODIFY."
 	cppLines.push "// Transpiled from: " + self.sourceName
 	cppLines.push ""
-	print "Got " + self.cppLines.len + " cppLines"
 	cppLines += self.cppLines
+	cppLines.push ""
+	cppLines.push "namespace " + self.namespace + " {"
+	cppLines.push ""
 	for class in self.fileClasses
 		cppLines += class.defLines
 		cppLines.push ""
 	end for
+	cppLines.push ""
+	cppLines.push "} // end of namespace " + self.namespace
 
 	baseName = self.sourceName - ".cs"
 	headerPath = file.child(self.outputFolder, baseName + ".g.h")
@@ -231,30 +307,10 @@ Transpiler.generateOutput = function
 end function
 
 Transpiler.processLine = function(line)
-	self.line = {}
-	self.line.full = line
-	
-	// Split off the comment, if any
-	// (ToDo: lex this properly in a string-literal-savvy way)
-	parts = line.split("//", 2)
-	if parts.len == 2 then
-		line = parts[0]
-		self.line.comment = "//" + parts[1]
-	else
-		self.line.comment = ""
-	end if
-	
-	// Also split off leading whitespace (indentation)
-	self.line.indentation = ""
-	while line and (line[0] == " " or line[0] == TAB)
-		self.line.indentation += line[0]
-		line = line[1:]
-	end while
-	
-	// And keep the trimmed line
-	self.line.trimmed = line.trim
+	self.line = Line.Make(line)
 	
 	state = self.state
+	line = self.line.trimmed
 	comment = self.line.comment
 	debugPrint "[≤state≥] ≤line≥ ≤comment≥".fill(locals)
 	self.updateState	
