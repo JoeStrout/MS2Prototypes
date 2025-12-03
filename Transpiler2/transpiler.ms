@@ -34,6 +34,37 @@ debugPrint = function(s)
 	if debugMode then print s
 end function
 
+fixStringInterpolation = function(s)
+	// Look for C#-style string interpolation, and replace it with a
+	// call to our Interp function.  Example:
+	//		$"{greeting}, {name}!"  -->  Interp("{}, {}!", greeting, name)
+	pos0 = -1
+	while true
+		pos0 = s.indexOf("$""", pos0)
+		if pos0 == null then return s
+		pos1 = s.indexOf("""", pos0+1)
+		while pos1 and s[pos1-1] == "\"
+			pos1 = s.indexOf("""", pos1)
+		end while
+		content = s[pos0+2:pos1]  // string content, not including quotes
+		print "content: " + content
+		args = [content]
+		i = -1
+		while true
+			i = content.indexOf("{", i)
+			if i == null then break
+			i2 = content.indexOf("}", i)
+			args.push content[i+1:i2]
+			content = content[:i+1] + content[i2:]
+		end while
+		args[0] = """" + content + """"
+		revisedContent = "Interp(" + args.join(", ") + ")"
+		print "revisedContent: " + revisedContent
+		s = s[:pos0] + revisedContent + s[pos1+1:]
+	end while
+	return s
+end function
+
 //--------------------------------------------------------------------------------
 Line = {}
 Line.full = ""					// full text of line
@@ -93,12 +124,14 @@ end function
 //--------------------------------------------------------------------------------
 ClassInfo = {}
 ClassInfo.name = ""
-ClassInfo.type = ""				// ClassType.CLASS, etc.
+ClassInfo.type = ClassType.CLASS
 ClassInfo.fields = null			// list of VariableInfo
 ClassInfo.methods = null		// list of MethodInfo
 ClassInfo.declLines = null		// class declaration lines (header file)
 ClassInfo.inlineLines = null	// inline definition lines (header file)
 ClassInfo.defLines = null		// out-of-line definition lines (cpp file)
+ClassInfo.methodLines = null	// reference to either .inlineLines or .defLines
+ClassInfo.nextMethodInline = false
 
 ClassInfo.Make = function(name="")
 	noob = new ClassInfo
@@ -146,16 +179,46 @@ Transpiler.sourcePath = ""		// file path to .cs file we're processing
 Transpiler.outputFolder = ""	// path to folder for output files
 Transpiler.namespace = ""		// namespace we're processing
 Transpiler.preLines = null		// list of lines (usually comments) before method/field
-Transpiler.line = ""			// current line we're processing
+Transpiler.line = null			// current line we're processing
 Transpiler.fileClasses = null	// list of ClassInfo we're processing (in this file)
 Transpiler.curClass = null		// ClassInfo that's currently being processed
+Transpiler.curMethod = null		// MethodInfo that's currently being processed
 Transpiler.headerLines = null	// extra lines for top of header file
 Transpiler.cppLines = null		// extra lines for top of .cpp file
 Transpiler.endLines = null		// end of namespace, and anything that comes after
 
 Transpiler.sourceName = function; return file.name(self.sourcePath); end function
 
-Transpiler.enterState = function(newState)
+// Transpiler.match: match the given pattern against our current line; if found,
+// copy self.line.m to self.m (for convenience), and also fill in className and
+// inline.
+Transpiler.match = function(pattern)
+	if self.line.match(pattern) then
+		self.m = self.line.m
+		if self.curClass then
+			self.m.className = self.curClass.name
+			if self.curClass.nextMethodInline then
+				self.m.inline = "inline "
+			else
+				self.m.inline = ""
+			end if
+		end if
+		return true
+	end if
+	self.line.m = null
+	self.m = null
+	return false
+end function
+
+// Transpiler.fill: fill the given pattern with values from self.m, and 
+// optionally append the comment, if the current line has one.
+Transpiler.fill = function(pattern, addComment=true)
+	result = pattern.fill(self.m)
+	if addComment and self.line.comment then result += " " + self.line.comment
+	return result
+end function
+
+Transpiler.enterState = function(newState, initAsNew=true)
 	if newState == self.state then return
 	if self.state then self.exitState newState
 	debugPrint "Entering state: " + newState
@@ -169,10 +232,39 @@ Transpiler.enterState = function(newState)
 		self.cppLines = []
 		self.endLines = []
 		self.curClass = null
-	end if
+		self.curMethod = null
 	
-	if newState == State.NAMESPACE then
+	else if newState == State.NAMESPACE then
 		self.curClass = null
+		
+	else if newState == State.CLASS then
+		if initAsNew then
+			if self.line and self.line.m and self.line.m.hasIndex("name") then
+				name = self.line.m.name
+			else
+				name = "?"
+			end if
+			self.curClass = ClassInfo.Make(name)
+			self.fileClasses.push self.curClass
+			self.curClass.declLines += self.preLines
+			self.preLines = []
+			self.curClass.defLines.push ""
+		end if
+		self.curClass.nextMethodInline = false
+
+	else if newState == State.METHOD then
+		if self.line and self.line.m and self.line.m.hasIndex("name") then
+			name = self.line.m.name
+		else
+			name = "?"
+		end if
+		self.curMethod = MethodInfo.Make(name)
+		if self.curClass.nextMethodInline then
+			self.curClass.methodLines = self.curClass.inlineLines
+		else
+			self.curClass.methodLines = self.curClass.defLines
+		end if
+
 	end if
 	
 end function
@@ -189,8 +281,10 @@ Transpiler.updateState = function
 		self.updateStateNAMESPACE
 	else if self.state == State.CLASS then
 		self.updateStateCLASS
+	else if self.state == State.METHOD then
+		self.updateStateMETHOD
 	else if self.state == State.DONE then
-		self.endLines.push line.full	// ToDo: support H: and CPP: comments here?
+		self.endLines.push self.line.full	// ToDo: support H: and CPP: comments here?
 	end if
 	
 end function
@@ -205,7 +299,7 @@ Transpiler.updateStateSTART = function
 		self.headerLines.push comment[6:]
 	else if line.trimmed == "" then
 		self.headerLines.push line.full
-	else if line.match("namespace ≤name≥ {") then
+	else if self.match("namespace ≤name≥ {") then
 		self.headerLines.push line.full
 		self.namespace = line.m.name
 		self.enterState State.NAMESPACE
@@ -224,14 +318,17 @@ Transpiler.updateStateNAMESPACE = function
 		self.headerLines.push comment[6:]
 	else if line.trimmed == "" then
 		self.preLines.push line.full
-	else if line.match("≤scope:w≥ static class ≤name:w≥ {") then
+	else if self.match("≤scope:w≥ static class ≤name:w≥ {") then
 		self.enterState State.CLASS
-		self.curClass = ClassInfo.Make(line.m.name)
-		self.fileClasses.push self.curClass
-		self.curClass.declLines += self.preLines
-		self.preLines = []
 		self.curClass.declLines.push line.full
-		self.curClass.defLines.push ""
+	else if self.match("≤scope:w≥ struct ≤name:w≥ {") then
+		self.enterState State.CLASS
+		self.curClass.type = ClassType.STRUCT
+		self.curClass.declLines.push line.full
+	else if self.match("≤scope:w≥ enum ≤name:w≥ : ≤type≥ {") then
+		self.enterState State.CLASS
+		self.curClass.type = ClassType.ENUM
+		self.curClass.declLines.push line.full		
 	else if line.full.startsWith("}") then
 		if not line.comment then line.comment = "// end of namespace " + self.namespace
 		self.endLines.push "} " + line.comment
@@ -246,11 +343,63 @@ Transpiler.updateStateCLASS = function
 	if line.full.startsWith("}") then
 		self.curClass.declLines.push line.full
 		self.enterState State.NAMESPACE
-	else if line.match("≤scope:w≥ const ≤type:w≥ ≤name:w≥ = ≤value≥;") then
-		line.m.className = self.curClass.name
-		self.curClass.declLines.push "\t≤scope≥: static const ≤type≥ ≤name≥;".fill(line.m)
-		self.curClass.defLines.push "const ≤type≥ ≤className≥::≤name≥ = ≤value≥;".fill(line.m)
+		return
 	end if
+	
+	if line.trimmed.startsWith("[") then
+		// decorator -- most are ignored, but check for inline flag
+		if line.trimmed.contains("(AggressiveInlining)") then
+			self.curClass.nextMethodInline = true
+		end if
+		return
+	end if
+	
+	if self.curClass.type == ClassType.ENUM then
+		// enum value, with/without numeric value and with/without comma
+		if self.match("≤name:w≥ = ≤value:w≥,") or self.match("≤name:w≥,") or
+		   self.match("≤name:w≥ = ≤value:w≥")  or self.match("≤name:w≥") then
+			self.curClass.declLines.push line.full
+		end if
+	else
+		// constant
+		if self.match("≤scope:w≥ const ≤type:w≥ ≤name:w≥ = ≤value≥;") then
+			self.curClass.declLines.push self.fill("\t≤scope≥: static const ≤type≥ ≤name≥;")
+			self.curClass.defLines.push self.fill("const ≤type≥ ≤className≥::≤name≥ = ≤value≥;")
+		// ordinary field
+		else if self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥;") then
+			self.curClass.declLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥;")
+		// constructor method (no return type)
+		else if self.match("≤scope:w≥ ≤name:w≥(≤params≥) {") then
+			self.enterState State.METHOD
+			self.curClass.declLines.push self.fill("\t≤scope≥: ≤name≥(≤params≥);")
+			self.curClass.methodLines.push self.fill("≤inline≥≤className≥::≤name≥(≤params≥) {")
+		// standard method
+		else if self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥(≤params≥) {") then
+			self.enterState State.METHOD
+			self.curClass.declLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥(≤params≥);")
+			self.curClass.methodLines.push self.fill("≤inline≥≤type≥ ≤className≥::≤name≥(≤params≥) {")
+		end if
+	end if
+end function
+
+Transpiler.updateStateMETHOD = function
+	line = self.line
+	comment = self.line.comment
+
+	// outdent method lines by 1 tab
+	if line.full.startsWith(TAB) then line.full = line.full[1:]
+	
+	if line.full.startsWith("}") then
+		self.curClass.methodLines.push line.full
+		self.enterState State.CLASS, false
+		return
+	end if
+	
+	// anything else, apply standard transformations, then write out
+	cline = line.full
+	cline = fixStringInterpolation(cline)
+	self.curClass.methodLines.push cline
+
 end function
 
 Transpiler.generateOutput = function
@@ -330,10 +479,41 @@ Transpiler.process = function(filePath, gatherMode=false)
 	debugPrint "Done processing: " + filePath
 end function
 
+runUnitTests = function
+	count = 0
+	check = function(actual, expected)
+		outer.count += 1
+		if actual == expected then return
+		print "UNIT TEST FAILED."
+		print "EXPECTED: " + expected
+		print "  ACTUAL: " + actual
+		exit
+	end function
+	
+	check fixStringInterpolation("No interp here"), "No interp here"
+	
+	check fixStringInterpolation(
+	  "x = $""{greeting}, {name}!"";"),
+	  "x = Interp(""{}, {}!"", greeting, name);"
+
+	print "All " + count + " unit tests completed successfully."
+end function
+
+
 if locals == globals then
 	debugMode = true
-	// Current test case:
+	
+	if debugMode then runUnitTests
+	
 	t = new Transpiler
-	dir = env.MS_SCRIPT_DIR + "/tests/staticStringConst"
-	t.process file.child(dir, "Op.cs")
+	if shellArgs[1][0] == "/" then
+		dir = shellArgs[1]
+	else
+		dir = file.child(env.MS_SCRIPT_DIR, shellArgs[1])
+	end if
+	print "Processing directory: " + dir
+	for filename in file.children(dir)
+		if not filename.endsWith(".cs") or filename == "main.cs" then continue
+		t.process file.child(dir, filename)
+	end for
 end if
