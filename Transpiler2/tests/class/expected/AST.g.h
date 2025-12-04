@@ -10,15 +10,11 @@ namespace MiniScript {
 // Forward declaration of wrapper classes
 //----------------------------------------------------------------------
 struct ASTNode;
-struct NumberNode;
-struct IdentifierNode;
-struct AssignmentNode;
-struct UnaryOpNode;
-struct BinaryOpNode;
-struct CallNode;
-struct GroupNode;
-
 class ASTNodeStorage;
+struct NumberNode;
+class NumberNodeStorage;
+struct BinaryOpNode;
+class BinaryOpNodeStorage;
 
 // 1. BASE CLASS DECLARATION COMES FIRST.  Abstract methods in C# are actually
 // concrete here; they call through to the storage, and they're abstract there.
@@ -96,12 +92,7 @@ class BinaryOpNodeStorage : public ASTNodeStorage {
 	public: ASTNode Simplify();
 };
 
-// 3. INLINE DEFINITIONS OF BASE CLASS WRAPPER METHODS, calling through to storage.
-
-inline String ASTNode::Str() { return storage->Str(); }
-inline ASTNode ASTNode::Simplify() { return storage->Simplify(); }
-
-// 4. DERIVED CLASS WRAPPER DECLARATIONS.  The wrapper methods can always be right
+// 3. DERIVED CLASS WRAPPER DECLARATIONS.  The wrapper methods can always be right
 // inline with the class body, since they just call through to the storage classes,
 // which are already declared above.
 
@@ -133,8 +124,12 @@ struct BinaryOpNode : public ASTNode {
 	public: void set_right(ASTNode _v) { get()->right = _v; }
 }; // end of class BinaryOpNode
 
-// 5. INLINE METHOD DEFINITIONS that were not already defined in the struct/class body.
+// 4. INLINE METHOD DEFINITIONS that were not already defined in the struct/class body.
 // (Only for methods marked with [MethodImpl(AggressiveInlining)] in the C# code.)
+
+inline String ASTNode::Str() { return storage->Str(); }
+
+inline ASTNode ASTNode::Simplify() { return storage->Simplify(); }
 
 inline NumberNodeStorage::NumberNodeStorage(Double value) {
 	this->value = value;
