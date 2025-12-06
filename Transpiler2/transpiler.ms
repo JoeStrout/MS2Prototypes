@@ -70,6 +70,26 @@ isIdentifierChar = function(c, isFirstChar)
 	  (not isFirstChar and ("0" <= c <= "9"))
 end function
 
+_keywords = null
+isKeyword = function(word)
+	if _keywords == null then
+		_keywords = {}
+		for kw in split(
+					"abstract as base bool break byte case catch char checked" +
+					"class const continue decimal default delegate do double else" +
+					"enum event explicit extern false finally fixed float for" +
+					"foreach goto if implicit in int interface internal is lock" +
+					"long namespace new null object operator out override params" +
+					"private protected public readonly ref return sbyte sealed" +
+					"short sizeof stackalloc static string struct switch this" +
+					"throw true try typeof uint ulong unchecked unsafe ushort" +
+					"using virtual void volatile while")
+			_keywords.push kw
+		end for
+	end if
+	return _keywords.hasIndex(word)
+end function
+
 roughTokenize = function(s)
 	// Roughly tokenize the given string, which is mostly about separating
 	// out the identifiers.  Anything that's not an identifier can be lumped
@@ -186,6 +206,29 @@ ClassInfo.clearOutput = function
 	self.defLines = []
 end function
 
+ClassInfo.lookup = function(identifier, allClasses)
+	// Look up the given identifier among our symbols, including inherited ones.
+	cls = self
+	while cls
+		for fld in cls.fields
+			if fld.name == identifier then return fld
+		end for
+		for meth in cls.methods
+			if meth.name == identifier then return meth
+		end for
+		// find superclass
+		if not cls.superclass then return null
+		for baseCls in allClasses
+			if baseCls.name == cls.superclass then
+				cls = baseCls
+				continue
+			end if
+		end for
+		return null
+	end while
+end function
+
+
 //--------------------------------------------------------------------------------
 VariableInfo = {}				// used for fields, parameters, and local vars
 VariableInfo.name = ""
@@ -229,6 +272,7 @@ Transpiler.line = null			// current line we're processing
 Transpiler.allClasses = null	// list of ClassInfo we're processing (in this file)
 Transpiler.curClass = null		// ClassInfo that's currently being processed
 Transpiler.curMethod = null		// MethodInfo that's currently being processed
+Transpiler.localVars = null		// current set of variables for method we're in
 Transpiler.headerLines = null	// extra lines for top of header file
 Transpiler.cppLines = null		// extra lines for top of .cpp file
 Transpiler.endLines = null		// end of namespace, and anything that comes after
@@ -296,26 +340,18 @@ Transpiler.lookup = function(identifier, context)
 
 	// 0. Look in given context (only), if there is one
 	if context isa ClassInfo then
-		for fld in context.fields
-			if fld.name == identifier then return fld
-		end for
-		for meth in context.methods
-			if meth.name == identifier then return meth
-		end for
-		// TODO: superclasses
-		return null
+		return context.lookup(identifier, self.allClasses)
 	end if		
 	
-	// 1. locals, including curMethod parameters (TODO)
+	// 1. locals, including curMethod parameters
+	for var in self.localVars
+		if var.name == identifier then return var
+	end for
+	
 	// 2. fields and methods of the current class
 	if self.curClass then
-		for fld in self.curClass.fields
-			if fld.name == identifier then return fld
-		end for
-		for meth in self.curClass.methods
-			if meth.name == identifier then return meth
-		end for
-		// TODO: superclasses (and we should refactor this to DRY it out)
+		info = self.curClass.lookup(identifier, self.allClasses)
+		if info then return info
 	end if
 	// 3. class names
 	for cls in self.allClasses
@@ -332,6 +368,8 @@ Transpiler.transformStatement = function(trimmedLine)
 	// type, so that we can add () after class field getters, and convert
 	// assignment to class fields to a set_X() call.
 	
+	if not trimmedLine then return trimmedLine
+	
 	// Start with a rough tokenization, separating each identifier and
 	// non-identifier string.
 	tokens = roughTokenize(trimmedLine)
@@ -342,14 +380,15 @@ Transpiler.transformStatement = function(trimmedLine)
 	didAssignment = false
 	curInfo = null
 	for i in tokens.indexes
-		if tokens[i] == "." then continue  // dot operator: continue the context chain
-		if tokens[i][0] == "(" and curInfo then  // method call!
-			curInfo = self.lookup(curInfo.type)
+		if tokens[i] == "." then   // dot operator: resolve var type and continue
+			if curInfo isa VariableInfo then curInfo = self.lookup(curInfo.type)
+			continue
+		else if tokens[i][0] == "(" and curInfo then  // method call!
+			curInfo = self.lookup(curInfo.type)	// TODO: type stack, store until ')'
 			//print "METHOD CALL returns: " + curInfo
 			continue
 		end if
 		nextInfo = self.lookup(tokens[i], curInfo)
-		//print tokens[i] + " info: " + nextInfo
 		if curInfo isa ClassInfo and curInfo.type == ClassType.CLASS and
 		  nextInfo isa VariableInfo then
 			// Found a field lookup!  Or maybe an assignment.  Check the next token
@@ -427,6 +466,7 @@ Transpiler.enterState = function(newState, initAsNew=true)
 		else
 			self.curClass.methodLines = self.curClass.defLines
 		end if
+		self.localVars = []
 
 	end if
 	
@@ -434,6 +474,11 @@ end function
 
 Transpiler.exitState = function(toNewState)
 	debugPrint "Exiting state: " + self.state
+
+	if self.state == State.METHOD then
+		self.localVars = []
+	end if
+
 end function
 
 Transpiler.updateState = function
@@ -582,21 +627,25 @@ Transpiler.updateStateCLASS = function
 			else
 				self.curClass.declLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥;")
 			end if
+			if self.gatherMode then self.curClass.fields.push VariableInfo.Make(self.m.name, self.m.type, self.m.scope)
 		// constructor method (no return type)
 		else if self.match("≤scope:w≥ ≤name:w≥(≤params≥) {") then
 			self.enterState State.METHOD
 			self.curClass.declLines.push self.fill("\t≤scope≥: ≤name≥(≤params≥);")
 			self.curClass.methodLines.push self.fill("≤inline≥≤className≥::≤name≥(≤params≥) {")
+			if self.gatherMode then self.curClass.methods.push MethodInfo.Make(self.m.name)
 		// standard method
 		else if self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥(≤params≥) {") then
 			self.enterState State.METHOD
 			self.curClass.declLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥(≤params≥);")
 			self.curClass.methodLines.push self.fill("≤inline≥≤type≥ ≤className≥::≤name≥(≤params≥) {")
+			if self.gatherMode then self.curClass.methods.push MethodInfo.Make(self.m.name)
 		// override method
 		else if self.match("≤scope:w≥ override ≤type:w≥ ≤name:w≥(≤params≥) {") then
 			self.enterState State.METHOD
 			self.curClass.declLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥(≤params≥);")
 			self.curClass.methodLines.push self.fill("≤inline≥≤type≥ ≤className≥::≤name≥(≤params≥) {")
+			if self.gatherMode then self.curClass.methods.push MethodInfo.Make(self.m.name)
 		end if
 	end if
 end function
@@ -606,7 +655,10 @@ Transpiler.updateStateMETHOD = function
 	comment = self.line.comment
 
 	// outdent method lines by 1 tab
-	if line.full.startsWith(TAB) then line.full = line.full[1:]
+	if line.full.startsWith(TAB) then
+		line.full = line.full[1:]
+		line.indentation = line.indentation[1:]
+	end if
 	
 	if line.full.startsWith("}") then
 		self.curClass.methodLines.push line.full
@@ -616,6 +668,28 @@ Transpiler.updateStateMETHOD = function
 	
 	// if in gather mode, just skip the method internals
 	if self.gatherMode then return
+	
+	// check for local variable declarations
+	if self.match("≤type:w≥ ≤name:w≥ = ≤expr≥ as ≤type2:w≥;") then
+		if self.m.type == "var" then self.m.type = self.m.type2
+		self.localVars.push VariableInfo.Make(self.m.name, self.m.type, Scope.LOCAL)
+		print "NOTED LOCAL VAR WITH TYPECAST: " + self.localVars[-1]
+		self.curClass.methodLines.push line.indentation +
+		  self.fill("≤type≥ ≤name≥ = As<≤type2≥, ≤type2≥Storage>(≤expr≥);")
+		return
+	end if
+	if self.match("var ≤name:w≥ = new ≤type:w≥(≤args≥);") then
+		self.localVars.push VariableInfo.Make(self.m.name, self.m.type, Scope.LOCAL)
+		print "NOTED LOCAL VAR WITH VAR: " + self.localVars[-1]
+		self.curClass.methodLines.push line.indentation +
+		  self.fill("≤type≥ ≤name≥ = new ≤type≥(≤args≥);")
+		return
+	end if
+	if (self.match("≤type:w≥ ≤name:w≥;") or
+	   self.match("≤type:w≥ ≤name:w≥ = ≤expr≥;")) and not isKeyword(self.m.type) then
+		self.localVars.push VariableInfo.Make(self.m.name, self.m.type, Scope.LOCAL)
+		print "NOTED LOCAL VAR: " + self.localVars[-1]
+	end if
 	
 	// otherwise, apply standard transformations, then write out
 	cline = line.full
@@ -779,6 +853,9 @@ runUnitTests = function
 	cls.methods[-1].type = "Widget"
 	cls.methods[-1].static = true
 	t.allClasses.push cls
+	t.localVars = []
+	t.localVars.push VariableInfo.Make("leftNum", "Widget", Scope.LOCAL)
+	t.localVars.push VariableInfo.Make("rightNum", "Widget", Scope.LOCAL)
 	
 	check t.transformStatement("x = Factory.MakeWidget().size;"),
 			"x = Factory.MakeWidget().size();"
@@ -788,6 +865,9 @@ runUnitTests = function
 
 	check t.transformStatement("Factory.MakeWidget().size = 42;"),
 			"Factory.MakeWidget().set_size(42);"
+
+	check t.transformStatement("return new Holder(leftNum.size + rightNum.size);"),
+			"return new Holder(leftNum.size() + rightNum.size());"
 
 	print "All " + count + " unit tests completed successfully."
 end function
@@ -799,7 +879,9 @@ if locals == globals then
 	if debugMode then runUnitTests
 	
 	t = Transpiler.Make
-	if shellArgs[1][0] == "/" then
+	if version.hostName == "Mini Micro" then
+		dir = "tests/class"
+	else if shellArgs[1][0] == "/" then
 		dir = shellArgs[1]
 	else
 		dir = file.child(env.MS_SCRIPT_DIR, shellArgs[1])
