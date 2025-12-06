@@ -104,7 +104,7 @@ struct NumberNode : public ASTNode {
 
 	private: NumberNodeStorage* get() { return static_cast<NumberNodeStorage*>(storage.get()); }
 
-	public: Double get_value() { return get()->value; }
+	public: Double value() { return get()->value; }
 	public: void set_value(Double _v) { get()->value = _v; }
 }; // end of class NumberNode
 
@@ -116,11 +116,11 @@ struct BinaryOpNode : public ASTNode {
 
 	private: BinaryOpNodeStorage* get() { return static_cast<BinaryOpNodeStorage*>(storage.get()); }
 
-	public: String get_op() { return get()->op; }
+	public: String op() { return get()->op; }
 	public: void set_op(String _v) { get()->op = _v; }
-	public: ASTNode get_left() { return get()->left; }
+	public: ASTNode left() { return get()->left; }
 	public: void set_left(ASTNode _v) { get()->left = _v; }
-	public: ASTNode get_right() { return get()->right; }
+	public: ASTNode right() { return get()->right; }
 	public: void set_right(ASTNode _v) { get()->right = _v; }
 }; // end of class BinaryOpNode
 

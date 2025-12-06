@@ -16,11 +16,11 @@ ASTNode BinaryOpNodeStorage::Simplify() {
 	NumberNode rightNum = As<NumberNode, NumberNodeStorage>(simplifiedRight);
 	if (!IsNull(leftNum) && !IsNull(rightNum)) {
 		if (op == "PLUS") {
-			return NumberNode(leftNum.get_value() + rightNum.get_value());
+			return NumberNode(leftNum.value() + rightNum.value());
 		} else if (op == "MINUS") {
-			return NumberNode(leftNum.get_value() - rightNum.get_value());
+			return NumberNode(leftNum.value() - rightNum.value());
 		} else if (op == "TIMES") {
-			return NumberNode(leftNum.get_value() * rightNum.get_value());
+			return NumberNode(leftNum.value() * rightNum.value());
 		}
 	}
 

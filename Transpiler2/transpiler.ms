@@ -47,7 +47,7 @@ fixStringInterpolation = function(s)
 			pos1 = s.indexOf("""", pos1)
 		end while
 		content = s[pos0+2:pos1]  // string content, not including quotes
-		print "content: " + content
+		//print "content: " + content
 		args = [content]
 		i = -1
 		while true
@@ -59,10 +59,42 @@ fixStringInterpolation = function(s)
 		end while
 		args[0] = """" + content + """"
 		revisedContent = "Interp(" + args.join(", ") + ")"
-		print "revisedContent: " + revisedContent
+		//print "revisedContent: " + revisedContent
 		s = s[:pos0] + revisedContent + s[pos1+1:]
 	end while
 	return s
+end function
+
+isIdentifierChar = function(c, isFirstChar)
+	return ("a" <= c <= "z") or ("A" <= c <= "Z") or c == "_" or
+	  (not isFirstChar and ("0" <= c <= "9"))
+end function
+
+roughTokenize = function(s)
+	// Roughly tokenize the given string, which is mostly about separating
+	// out the identifiers.  Anything that's not an identifier can be lumped
+	// together with whitespace and neighboring operators, etc.  Example:
+	//      "if foo.bar == 40+2 {" 
+	// -->  ["if", " ", "foo", ".", "bar", " == 40+2 {"]
+	result = []
+	tokStart = 0
+	inIdentifier = false
+	for i in s.indexes
+		c = s[i]
+		if inIdentifier then
+			if isIdentifierChar(c, false) then continue
+			if i then result.push s[tokStart:i]
+			tokStart = i
+			inIdentifier = false
+		else
+			if not isIdentifierChar(c, true) then continue
+			if i then result.push s[tokStart:i]
+			tokStart = i
+			inIdentifier = true
+		end if
+	end for
+	result.push s[tokStart:]
+	return result
 end function
 
 //--------------------------------------------------------------------------------
@@ -158,11 +190,14 @@ end function
 VariableInfo = {}				// used for fields, parameters, and local vars
 VariableInfo.name = ""
 VariableInfo.type = ""
-VariableInfo.scope = ""			// Scope.PUBLIC, etc. (not used for 
+VariableInfo.scope = ""			// Scope.PUBLIC, etc.
+VariableInfo.static = false
 
-VariableInfo.Make = function(name="")
+VariableInfo.Make = function(name="", type="", scope="")
 	noob = new VariableInfo
 	noob.name = name
+	if type then noob.type = type
+	if scope then noob.scope = scope
 	return noob
 end function
 
@@ -171,6 +206,7 @@ MethodInfo = {}
 MethodInfo.name = ""
 MethodInfo.type = "void"		// (return type)
 MethodInfo.scope = ""			// Scope.PUBLIC, etc.
+MethodInfo.static = false
 MethodInfo.params = null		// list of VariableInfo
 MethodInfo.inline = false
 
@@ -250,6 +286,101 @@ Transpiler.subclassesOf = function(class)
 		if cl.superclass == class then result.push cl
 	end for
 	return result
+end function
+
+Transpiler.lookup = function(identifier, context)
+	// Return info on the given identifier.  If context is given, then look only
+	// at types within that class; otherwise, start with locals and work up to
+	// globals, considering current transpiler state.
+	// Returns a VariableInfo, MethodInfo, or ClassInfo, or null if not recognized.
+
+	// 0. Look in given context (only), if there is one
+	if context isa ClassInfo then
+		for fld in context.fields
+			if fld.name == identifier then return fld
+		end for
+		for meth in context.methods
+			if meth.name == identifier then return meth
+		end for
+		// TODO: superclasses
+		return null
+	end if		
+	
+	// 1. locals, including curMethod parameters (TODO)
+	// 2. fields and methods of the current class
+	if self.curClass then
+		for fld in self.curClass.fields
+			if fld.name == identifier then return fld
+		end for
+		for meth in self.curClass.methods
+			if meth.name == identifier then return meth
+		end for
+		// TODO: superclasses (and we should refactor this to DRY it out)
+	end if
+	// 3. class names
+	for cls in self.allClasses
+		if cls.name == identifier then return cls
+	end for
+	// 4. give up :P
+	return null
+end function
+
+Transpiler.transformStatement = function(trimmedLine)
+	// Here's one of our hardest tasks: transforming a statement (trimmed
+	// of indentation and comment) from C++ to C#, taking into account all
+	// the symbols we know.  That means resolving identifiers to their 
+	// type, so that we can add () after class field getters, and convert
+	// assignment to class fields to a set_X() call.
+	
+	// Start with a rough tokenization, separating each identifier and
+	// non-identifier string.
+	tokens = roughTokenize(trimmedLine)
+	//print "TOKENS: " + tokens
+	
+	// Then iterate and analyze each one.  We'll encounter things we don't 
+	// recognize; that's OK.  Just keep track of stuff we do.
+	didAssignment = false
+	curInfo = null
+	for i in tokens.indexes
+		if tokens[i] == "." then continue  // dot operator: continue the context chain
+		if tokens[i][0] == "(" and curInfo then  // method call!
+			curInfo = self.lookup(curInfo.type)
+			//print "METHOD CALL returns: " + curInfo
+			continue
+		end if
+		nextInfo = self.lookup(tokens[i], curInfo)
+		//print tokens[i] + " info: " + nextInfo
+		if curInfo isa ClassInfo and curInfo.type == ClassType.CLASS and
+		  nextInfo isa VariableInfo then
+			// Found a field lookup!  Or maybe an assignment.  Check the next token
+			// to determine which.
+			if i+1 < tokens.len and tokens[i+1].trimLeft.startsWith("= ") then
+				//print "FIELD ASSIGNMENT (" + curInfo.name + "." + nextInfo.name + ") FOUND!!!"
+				// Change this to a set_ call.
+				tokens[i] = "set_" + tokens[i] + "("
+				tokens[i+1] = tokens[i+1][2:].trimLeft
+				nextInfo = null
+				didAssignment = true
+			else
+				//print "FIELD LOOKUP (" + curInfo.name + "." + nextInfo.name + ") FOUND!!!"
+				// Just add () to call the getter.
+				tokens[i] += "()"
+				nextInfo = self.lookup(nextInfo.type)
+			end if
+		end if
+		curInfo = nextInfo
+	end for
+	
+	result = tokens.join("")
+	if didAssignment then
+		// insert closing ')' (for the set_X call) before the semicolon
+		pos = result.lastIndexOf(";")
+		if pos == null then pos = result.len
+		result = result[:pos] + ")" + result[pos:]
+	end if
+	//print "Transformed statement: " + result
+	return result
+	
 end function
 
 Transpiler.enterState = function(newState, initAsNew=true)
@@ -446,7 +577,7 @@ Transpiler.updateStateCLASS = function
 		else if self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥;") then
 			if self.curClass.type == ClassType.CLASS then
 				self.curClass.storageLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥;")
-				self.curClass.wrapperLines.push self.fill("\t≤scope≥: ≤type≥ get_≤name≥() { return get()->≤name≥; }")
+				self.curClass.wrapperLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥() { return get()->≤name≥; }")
 				self.curClass.wrapperLines.push self.fill("\t≤scope≥: void set_≤name≥(≤type≥ _v) { get()->≤name≥ = v; }")
 			else
 				self.curClass.declLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥;")
@@ -458,6 +589,11 @@ Transpiler.updateStateCLASS = function
 			self.curClass.methodLines.push self.fill("≤inline≥≤className≥::≤name≥(≤params≥) {")
 		// standard method
 		else if self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥(≤params≥) {") then
+			self.enterState State.METHOD
+			self.curClass.declLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥(≤params≥);")
+			self.curClass.methodLines.push self.fill("≤inline≥≤type≥ ≤className≥::≤name≥(≤params≥) {")
+		// override method
+		else if self.match("≤scope:w≥ override ≤type:w≥ ≤name:w≥(≤params≥) {") then
 			self.enterState State.METHOD
 			self.curClass.declLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥(≤params≥);")
 			self.curClass.methodLines.push self.fill("≤inline≥≤type≥ ≤className≥::≤name≥(≤params≥) {")
@@ -483,6 +619,7 @@ Transpiler.updateStateMETHOD = function
 	
 	// otherwise, apply standard transformations, then write out
 	cline = line.full
+	cline = self.transformStatement(cline)
 	cline = fixStringInterpolation(cline)
 	self.curClass.methodLines.push cline
 
@@ -624,6 +761,33 @@ runUnitTests = function
 	check fixStringInterpolation(
 	  "x = $""{greeting}, {name}!"";"),
 	  "x = Interp(""{}, {}!"", greeting, name);"
+
+	check roughTokenize("if foo.bar == 40+2 {"),
+	  ["if", " ", "foo", ".", "bar", " == 40+2 {"]
+
+	// To test transformStatement, we need to set up a context with some classes,
+	// methods, and fields.
+	t = Transpiler.Make
+	cls = ClassInfo.Make("Widget")
+	cls.fields.push VariableInfo.Make("size", "int", Scope.PUBLIC)
+	cls.fields.push VariableInfo.Make("secret", "String", Scope.PRIVATE)
+	t.allClasses.push cls
+	cls = ClassInfo.Make("Factory")
+	cls.fields.push VariableInfo.Make("defaultWidget", "Widget", Scope.PUBLIC)
+	cls.fields[-1].static = true
+	cls.methods.push MethodInfo.Make("MakeWidget")
+	cls.methods[-1].type = "Widget"
+	cls.methods[-1].static = true
+	t.allClasses.push cls
+	
+	check t.transformStatement("x = Factory.MakeWidget().size;"),
+			"x = Factory.MakeWidget().size();"
+
+	check t.transformStatement("x = Factory.defaultWidget.size;"),
+			"x = Factory.defaultWidget().size();"
+
+	check t.transformStatement("Factory.MakeWidget().size = 42;"),
+			"Factory.MakeWidget().set_size(42);"
 
 	print "All " + count + " unit tests completed successfully."
 end function
