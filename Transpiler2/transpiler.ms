@@ -2,6 +2,7 @@ import "stringUtil"
 import "listUtil"
 import "mapUtil"
 import "fancyMatch"
+import "qa"
 
 //--------------------------------------------------------------------------------
 // Constants
@@ -33,6 +34,54 @@ debugMode = false
 debugPrint = function(s)
 	if debugMode then print s
 end function
+
+list.find = function(maps, key, valueToFind)
+	// Search the given list of maps for one with [key] = valueToFind.
+	// Return the item, or null if not found.
+	for m in maps
+		if m.get(@key) == @valueToFind then return m
+	end for
+	return null
+end function
+
+string.splitQuoted = function(delimiter=" ", maxCount=-1, openQuote="""", closeQuote=null)
+	if not self then return [""]
+	if closeQuote == null then closeQuote = openQuote
+	result = []
+	start = 0
+	inQuote = false
+	delimiterLen = delimiter.len
+	i = 0
+	while true
+		if inQuote then
+			// while in a quote, ignore anything but a close quote
+			if self[i] == closeQuote then
+				inQuote = false
+				if not delimiter then
+					result.push self[start:i+1]
+					start = i+1
+				end if
+			end if
+		else
+			// while not in a quote, watch for open quotes or delimiters
+			if self[i] == openQuote then
+				inQuote = true
+			else if not delimiter then
+				result.push self[i]
+			else if self[i:i+delimiterLen] == delimiter then
+				result.push self[start:i]
+				i += delimiterLen - 1
+				start = i + 1
+			end if
+		end if
+		i += 1
+		if i >= self.len or (maxCount > 0 and result.len + 1 == maxCount) then
+			result.push self[start:]
+			return result
+		end if
+	end while
+end function
+				
 
 fixStringInterpolation = function(s)
 	// Look for C#-style string interpolation, and replace it with a
@@ -99,8 +148,11 @@ roughTokenize = function(s)
 	result = []
 	tokStart = 0
 	inIdentifier = false
+	inString = false
 	for i in s.indexes
 		c = s[i]
+		if c == """" then inString = not inString
+		if inString then continue
 		if inIdentifier then
 			if isIdentifierChar(c, false) then continue
 			if i then result.push s[tokStart:i]
@@ -115,6 +167,19 @@ roughTokenize = function(s)
 	end for
 	result.push s[tokStart:]
 	return result
+end function
+
+parameterNames = function(s)
+	// Strip types and default values from the given parameter declaration.
+	if not s then return s
+	result = []
+	print s.splitQuoted(",")
+	for param in s.splitQuoted(",")
+		typeAndRest = param.trim.split(" ", 2)
+		nameEtc = typeAndRest[1].split("=", 2)
+		result.push nameEtc[0]
+	end for
+	return result.join(", ")
 end function
 
 //--------------------------------------------------------------------------------
@@ -210,24 +275,21 @@ ClassInfo.lookup = function(identifier, allClasses)
 	// Look up the given identifier among our symbols, including inherited ones.
 	cls = self
 	while cls
-		for fld in cls.fields
-			if fld.name == identifier then return fld
-		end for
-		for meth in cls.methods
-			if meth.name == identifier then return meth
-		end for
-		// find superclass
+		result = list.find(cls.fields, "name", identifier)
+		if result == null then result = list.find(cls.methods, "name", identifier)
+		if result then return result
 		if not cls.superclass then return null
-		for baseCls in allClasses
-			if baseCls.name == cls.superclass then
-				cls = baseCls
-				continue
-			end if
-		end for
-		return null
+		cls = list.find(allClasses, "name", cls.superclass)
 	end while
 end function
 
+ClassInfo.rootClass = function(allClasses)
+	cls = self
+	while cls.superclass
+		cls = list.find(allClasses, "name", cls.superclass)
+	end while
+	return cls
+end function
 
 //--------------------------------------------------------------------------------
 VariableInfo = {}				// used for fields, parameters, and local vars
@@ -314,10 +376,16 @@ Transpiler.fill = function(pattern, addComment=true)
 	return result
 end function
 
-Transpiler.findOrMakeClass = function(name)
+Transpiler.findClass = function(name)
 	for cl in self.allClasses
 		if cl.name == name then return cl
 	end for
+	return null
+end function
+
+Transpiler.findOrMakeClass = function(name)
+	cl = self.findClass(name)
+	if cl then return cl
 	cl = ClassInfo.Make(name)
 	self.allClasses.push cl
 	return cl
@@ -380,17 +448,52 @@ Transpiler.transformStatement = function(trimmedLine)
 	didAssignment = false
 	curInfo = null
 	for i in tokens.indexes
+		if not tokens[i] then continue
 		if tokens[i] == "." then   // dot operator: resolve var type and continue
 			if curInfo isa VariableInfo then curInfo = self.lookup(curInfo.type)
+			if i and tokens[i-1] == "this" then
+				curInfo = self.curClass
+				tokens[i] = "->"
+			end if
+			continue
+		else if tokens[i] == "new" then
+			// when `new` is followed by the name of a C# class (which we convert
+			// using our storage-wrapper pattern), just remove `new`.
+			cl = self.findClass(tokens[i+2])  // (skipping space)
+			if cl and cl.type == ClassType.CLASS then
+				tokens[i] = ""
+				continue
+			end if
+		else if tokens[i] == "this" and (i+1 >= tokens.len or tokens[i+1] != ".") then
+			tokens[i] = self.curClass.name + "(shared_from_this())";
+			curInfo = self.curClass;
 			continue
 		else if tokens[i][0] == "(" and curInfo then  // method call!
 			curInfo = self.lookup(curInfo.type)	// TODO: type stack, store until ')'
 			//print "METHOD CALL returns: " + curInfo
 			continue
+		else if tokens[i] == "null" then
+			// How we translate null depends on the context...
+			prevTok = tokens[i-1].trim
+			if prevTok == "!=" or prevTok == "==" then
+				// TODO: make helper method to find start of expression at token i-1.
+				// For now we'll just do a crude hack:
+				exprStart = i - 2
+				while exprStart > 1 and tokens[exprStart-1] == "."
+					exprStart -= 2
+				end while
+				tokens[exprStart] = "IsNull(" + tokens[exprStart]
+				if prevTok == "!=" then tokens[exprStart] = "!" + tokens[exprStart]
+				tokens[i-1] = ")"
+				tokens[i] = ""
+				curInfo = null
+				continue
+			end if
 		end if
 		nextInfo = self.lookup(tokens[i], curInfo)
+		if self.curClass then curClassName = self.curClass.name else curClassName = ""
 		if curInfo isa ClassInfo and curInfo.type == ClassType.CLASS and
-		  nextInfo isa VariableInfo then
+		  nextInfo isa VariableInfo and curInfo.name != curClassName then
 			// Found a field lookup!  Or maybe an assignment.  Check the next token
 			// to determine which.
 			if i+1 < tokens.len and tokens[i+1].trimLeft.startsWith("= ") then
@@ -540,8 +643,9 @@ Transpiler.updateStateNAMESPACE = function
 		self.enterState State.CLASS
 		// wrapper class (we'll take care to write this one out before all storage classes later)
 		self.curClass.wrapperLines.push self.fill("struct ≤name≥ {");
-		self.curClass.wrapperLines.push self.fill("	protected: std::shared_ptr<≤name≥Storage stor) : storage(stor) {}")
+		self.curClass.wrapperLines.push self.fill("	protected: std::shared_ptr<≤name≥Storage> storage;");
 		self.curClass.wrapperLines.push "  public:"
+		self.curClass.wrapperLines.push self.fill("	≤name≥(std::shared_ptr<≤name≥Storage> stor) : storage(stor) {}")
 		self.curClass.wrapperLines.push self.fill("	≤name≥() : storage(nullptr) {}")
 		self.curClass.wrapperLines.push self.fill("	friend bool IsNull(≤name≥ inst) { return inst.storage == nullptr; }")
 		if self.subclassesOf(self.curClass) then
@@ -616,35 +720,71 @@ Transpiler.updateStateCLASS = function
 	else
 		// constant
 		if self.match("≤scope:w≥ const ≤type:w≥ ≤name:w≥ = ≤value≥;") then
-			self.curClass.declLines.push self.fill("\t≤scope≥: static const ≤type≥ ≤name≥;")
+			self.curClass.declLines.push self.fill("	≤scope≥: static const ≤type≥ ≤name≥;")
 			self.curClass.defLines.push self.fill("const ≤type≥ ≤className≥::≤name≥ = ≤value≥;")
+
 		// ordinary field
 		else if self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥;") then
 			if self.curClass.type == ClassType.CLASS then
-				self.curClass.storageLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥;")
-				self.curClass.wrapperLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥() { return get()->≤name≥; }")
-				self.curClass.wrapperLines.push self.fill("\t≤scope≥: void set_≤name≥(≤type≥ _v) { get()->≤name≥ = v; }")
+				self.curClass.storageLines.push self.fill("	≤scope≥: ≤type≥ ≤name≥;")
+				self.curClass.wrapperLines.push self.fill("	≤scope≥: ≤type≥ ≤name≥() { return get()->≤name≥; }")
+				self.curClass.wrapperLines.push self.fill("	≤scope≥: void set_≤name≥(≤type≥ _v) { get()->≤name≥ = _v; }")
 			else
-				self.curClass.declLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥;")
+				self.curClass.declLines.push self.fill("	≤scope≥: ≤type≥ ≤name≥;")
 			end if
 			if self.gatherMode then self.curClass.fields.push VariableInfo.Make(self.m.name, self.m.type, self.m.scope)
+
 		// constructor method (no return type)
 		else if self.match("≤scope:w≥ ≤name:w≥(≤params≥) {") then
 			self.enterState State.METHOD
-			self.curClass.declLines.push self.fill("\t≤scope≥: ≤name≥(≤params≥);")
-			self.curClass.methodLines.push self.fill("≤inline≥≤className≥::≤name≥(≤params≥) {")
+			self.m.paramNames = parameterNames(self.m.params)
+			if self.curClass.type == ClassType.CLASS then
+				self.curClass.storageLines.push self.fill("	≤scope≥: ≤name≥Storage(≤params≥);")
+				self.m.rootClass = self.curClass.rootClass(self.allClasses).name
+				self.curClass.wrapperLines.push self.fill(
+				  "	≤scope≥: ≤name≥(≤params≥) : ≤rootClass≥(std::make_shared<≤name≥Storage>(≤paramNames≥)) {}")
+				self.curClass.methodLines.push self.fill("≤inline≥≤className≥Storage::≤name≥Storage(≤params≥) {")
+			else
+				self.curClass.declLines.push self.fill("	≤scope≥: ≤name≥(≤params≥);")
+				self.curClass.methodLines.push self.fill("≤inline≥≤className≥::≤name≥(≤params≥) {")
+			end if
 			if self.gatherMode then self.curClass.methods.push MethodInfo.Make(self.m.name)
+
 		// standard method
 		else if self.match("≤scope:w≥ ≤type:w≥ ≤name:w≥(≤params≥) {") then
 			self.enterState State.METHOD
-			self.curClass.declLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥(≤params≥);")
-			self.curClass.methodLines.push self.fill("≤inline≥≤type≥ ≤className≥::≤name≥(≤params≥) {")
+			if self.curClass.type == ClassType.CLASS then
+				self.curClass.storageLines.push self.fill("	≤scope≥: ≤type≥ ≤name≥(≤params≥);")
+				self.curClass.methodLines.push self.fill("≤inline≥≤type≥ ≤className≥Storage::≤name≥(≤params≥) {")
+			else
+				self.curClass.declLines.push self.fill("	≤scope≥: ≤type≥ ≤name≥(≤params≥);")
+				self.curClass.methodLines.push self.fill("≤inline≥≤type≥ ≤className≥::≤name≥(≤params≥) {")
+			end if
 			if self.gatherMode then self.curClass.methods.push MethodInfo.Make(self.m.name)
+
+		// abstract method: in C++ we actually implement this (inline) on the wrapper
+		// struct, calling through to the storage, where it may be overridden.
+		else if self.match("≤scope:w≥ abstract ≤type:w≥ ≤name:w≥(≤params≥);") then
+			qa.assert self.curClass.type == ClassType.CLASS
+			self.curClass.wrapperLines.push self.fill("	≤scope≥: ≤type≥ ≤name≥(≤params≥);")
+			self.curClass.storageLines.push self.fill("	≤scope≥: virtual ≤type≥ ≤name≥(≤params≥) = 0;")
+			self.m.paramNames = parameterNames(self.m.params)
+			// Also todo: strip defaults but NOT types, for use in implementation;
+			// we'll need that in several places here (anywhere we have a method body).
+			self.curClass.inlineLines.push self.fill(
+			  "inline ≤type≥ ≤className≥::≤name≥(≤params≥) { return storage->≤name≥(≤paramNames≥); }")
+			if self.gatherMode then self.curClass.methods.push MethodInfo.Make(self.m.name)
+
 		// override method
 		else if self.match("≤scope:w≥ override ≤type:w≥ ≤name:w≥(≤params≥) {") then
 			self.enterState State.METHOD
-			self.curClass.declLines.push self.fill("\t≤scope≥: ≤type≥ ≤name≥(≤params≥);")
-			self.curClass.methodLines.push self.fill("≤inline≥≤type≥ ≤className≥::≤name≥(≤params≥) {")
+			if self.curClass.type == ClassType.CLASS then
+				self.curClass.storageLines.push self.fill("	≤scope≥: ≤type≥ ≤name≥(≤params≥);")
+				self.curClass.methodLines.push self.fill("≤inline≥≤type≥ ≤className≥Storage::≤name≥(≤params≥) {")
+			else
+				self.curClass.declLines.push self.fill("	≤scope≥: ≤type≥ ≤name≥(≤params≥);")
+				self.curClass.methodLines.push self.fill("≤inline≥≤type≥ ≤className≥::≤name≥(≤params≥) {")
+			end if
 			if self.gatherMode then self.curClass.methods.push MethodInfo.Make(self.m.name)
 		end if
 	end if
@@ -693,8 +833,8 @@ Transpiler.updateStateMETHOD = function
 	
 	// otherwise, apply standard transformations, then write out
 	cline = line.full
-	cline = self.transformStatement(cline)
 	cline = fixStringInterpolation(cline)
+	cline = self.transformStatement(cline)
 	self.curClass.methodLines.push cline
 
 end function
@@ -702,7 +842,8 @@ end function
 Transpiler.generateOutput = function
 	headerLines = []
 	cppLines = []
-	
+	baseName = self.sourceName - ".cs"
+
 	// Generate the header
 	headerLines.push "// AUTO-GENERATED FILE.  DO NOT MODIFY."
 	headerLines.push "// Transpiled from: " + self.sourceName
@@ -716,8 +857,8 @@ Transpiler.generateOutput = function
 	headerLines.push ""
 	for class in self.allClasses
 		if class.type != ClassType.CLASS then continue
-		headerLines.push "struct ≤name≥Storage;".fill(class)
-		headerLines.push "class ≤name≥;".fill(class)
+		headerLines.push "struct ≤name≥;".fill(class)
+		headerLines.push "class ≤name≥Storage;".fill(class)
 	end for
 
 	headerLines.push ""
@@ -763,6 +904,7 @@ Transpiler.generateOutput = function
 	cppLines.push "// AUTO-GENERATED FILE.  DO NOT MODIFY."
 	cppLines.push "// Transpiled from: " + self.sourceName
 	cppLines.push ""
+	cppLines.push "#include """ + baseName + ".g.h"""
 	cppLines += self.cppLines
 	cppLines.push ""
 	cppLines.push "namespace " + self.namespace + " {"
@@ -774,7 +916,6 @@ Transpiler.generateOutput = function
 	cppLines.push ""
 	cppLines.push "} // end of namespace " + self.namespace
 
-	baseName = self.sourceName - ".cs"
 	headerPath = file.child(self.outputFolder, baseName + ".g.h")
 	cppPath = file.child(self.outputFolder, baseName + ".g.cpp")
 	file.writeLines headerPath, headerLines
@@ -829,6 +970,12 @@ runUnitTests = function
 		print "  ACTUAL: " + actual
 		exit
 	end function
+
+	check "This is ""a quoted"" test".splitQuoted,
+		["This", "is", """a quoted""", "test"]
+
+	check "Double x=42, Widget widget, String foo=""bar, baz""".splitQuoted(","),
+		["Double x=42", " Widget widget", " String foo=""bar, baz"""]
 	
 	check fixStringInterpolation("No interp here"), "No interp here"
 	
@@ -838,6 +985,12 @@ runUnitTests = function
 
 	check roughTokenize("if foo.bar == 40+2 {"),
 	  ["if", " ", "foo", ".", "bar", " == 40+2 {"]
+
+	check roughTokenize("if (x == ""a = (b)"") {"),
+	  ["if", " (", "x", " == ""a = (b)"") {"]
+	
+	check parameterNames("Double x=42, Widget widget, String foo=""bar=baz"""),
+	  "x, widget, foo"
 
 	// To test transformStatement, we need to set up a context with some classes,
 	// methods, and fields.

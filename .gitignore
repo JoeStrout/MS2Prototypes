@@ -27,6 +27,10 @@ build/
 MS2Proto3/generated/
 MS2Proto4/generated/
 MS2Proto5/generated/
+Transpiler2/
+Transpiler2/tests/*/generated/
+test_expected
+test_generated
 
 # C# / .NET / Mono Build Products
 *.exe

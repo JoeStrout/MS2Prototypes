@@ -9,7 +9,7 @@ namespace MiniScript {
 public abstract class ASTNode {
 
 	// Each node type should override this to provide a string representation
-	public abstract new String Str();
+	public abstract String Str();
 
 	// Simplify this node (constant folding and other optimizations)
 	// Returns a simplified version of this node (may be a new node, or this node unchanged)
