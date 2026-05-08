@@ -23,9 +23,11 @@ public class MyClass {
 }
 ```
 
-## Brace Placement
+## Brace placement
 
-Braces should always go at the end of the line, not on a line by themselves.
+- Always put an **opening brace at the end of a line**, never on a line by itself.
+
+- Put a **close brace at the start of a line**.  It will usually be the *only* thing on that line, except for something like `} else {` or in a `switch` statement, `} break;`.
 
 
 ## Inline Methods
@@ -54,6 +56,8 @@ public struct Token {
 }
 ```
 
+This will cue the transpiler to put the method body in the header, rather than in the .cpp file.
+
 ## Data Types (Basic)
 
 Use the type names from `System` instead of the shorthand types.  For example, instead of `int`, write `Int32`.  (These compile to the same thing in C# but are more explicit.)
@@ -69,7 +73,7 @@ Consider carefully what you use to encapsulate functions and data.  Rules of thu
 - Use `static class` when you need no data at all, but just need to collect together a bunch of static methods or constants.
 - The only generic classes allowed currently are `List` and `Dictionary`.
 
-Here's the breakdown of how various C#  
+Here's the breakdown of how various C# concepts transpile to C++ (or not):
 - class  -->  class (with our smart_ptr wrapper approach)
 - struct  -->  struct
 - enum  -->  enum class
