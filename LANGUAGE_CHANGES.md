@@ -13,7 +13,7 @@ Solution:
 Maps and lists will have an internal _frozen_ flag.  Some new intrinsics will interact with this flag:
 
 - **freeze(x)** will recursively set the frozen flag on `x` and its contents, then return `x`.
-- **frozen(x)** will return true if `x` is frozen, false if not.
+- **frozen(x)** (or maybe `isFrozen(x)`?) will return true if `x` is frozen, false if not.
 - **frozenCopy(x)** will return `x` if `x` is already frozen; otherwise it will return a copy of it with the frozen bit set (and do the same recursively for its contents).
 
 And, **using any list or map as a map key actually uses a frozenCopy**.
@@ -24,5 +24,7 @@ Any attempt to mutate a frozen list/map will result in a runtime `Attempt to mod
 
 `function`...`end function` will comprise an _expression_, not a statement.  This just cleans up various odd corners of the syntax.  The effect of this expression is still to create a funcRef, with code that is compiled (just once) for whatever's between the keywords, and `outer` (if needed) assigned to the locals of the function evaluating this expression.
 
+## Function Notes
 
+Similar to Python doc strings, we may associate a string with a function definition by having the first statement of the function body evaluate to a string constant.  This constant could be accessible via the funcRef, e.g. as `someFunc.note`, and should be displayed by a REPL when the input expression evaluates to a funcRef.
 

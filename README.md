@@ -17,4 +17,5 @@ The subdirectories here, in order of creation, are:
 - MS2Proto5: same as MS2Proto4, but we've removed the old MemPool stuff completely, and simplified the parser so that instead of performing arbitrary operations, it always generates an AST.
 - TranspilerCS: an attempt to "transpile" (convert) code from C# to C++, using the C# compiler infrastructure (aka Roslyn).
 - TranspilerMS: the same thing as TranspilerCS, but written in MiniScript.  This version is considerably easier to write and maintain, and seems to be working better too.  The goal here is to enable us to write MiniScript 2.0 mostly in C#, with auto-generated code for the C++ version.
-
+- Transpiler2: a rewrite of TranspilerMS, with a cleaner architecture and driven by test cases.
+- GCApproach2: a revised approach to garbage collection.

@@ -1,0 +1,6 @@
+# C++ build output
+cpp/build/
+
+# C# build output
+cs/bin/
+cs/obj/
